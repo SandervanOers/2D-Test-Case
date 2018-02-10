@@ -23,6 +23,9 @@ Vec GradJacobiP(const Vec &r, const double &alpha, const double &beta, const uns
 extern Mat Vandermonde1D(const Vec &r, const unsigned int &N);
 // Initialize the 1D Vandermonde matrix, V_{ij} = phi_j(r_i);
 /*--------------------------------------------------------------------------*/
+extern Mat Vandermonde1D_inverse(const Mat V, const unsigned int &N);
+// Compute the inverse of the Vandermonde Matrix
+// Needed for N > 18
 Mat GradVandermonde1D(const Vec &r, const unsigned int &N);
 // Initialize  the gradient of modal basis (i) at (r) at order N
 /*--------------------------------------------------------------------------*/

@@ -37,7 +37,6 @@ extern Mat mesh_generation_1D_EtoV(const double &xmin, const double &xmax, const
 /*--------------------------------------------------------------------------*/
 Mat FaceToFace_1D(const unsigned int &Number_Of_Elements, const Mat &EtoV)
 {
-    std::cout << "\n\n\n HERE \n\n\n";
     int Nfaces = 2;
     int Total_Faces = Nfaces*Number_Of_Elements;
     int Nv = Number_Of_Elements+1;
@@ -49,17 +48,15 @@ Mat FaceToFace_1D(const unsigned int &Number_Of_Elements, const Mat &EtoV)
     MatCreateSeqAIJ(PETSC_COMM_WORLD, Total_Faces, Nv, 1, NULL, &FtoV);
     PetscInt sk = 0;
 
-    const PetscInt idxn[2]={0,1};
     PetscInt ir[1]={0};
     PetscInt ic[1]={0};
     for (unsigned int k=0; k<Number_Of_Elements; k++)
     {
         for (unsigned int f=0; f<Nfaces; f++)
         {
-            //vn(face)
             ir[0] = k;
             ic[0] = f;
-            PetscScalar val;//[1];
+            PetscScalar val;
             MatGetValues(EtoV, 1, ir, 1, ic, &val);
             MatSetValue(FtoV, sk, val, 1.0, INSERT_VALUES);
             sk++;
@@ -149,7 +146,7 @@ Mat FaceToFace_1D(const unsigned int &Number_Of_Elements, const Mat &EtoV)
         }
         MatRestoreRow(EtoE,row,&ncols,&cols,&vals);
         MatGetRow(EtoF,row,&ncols,&cols,&vals);
-        for (unsigned int col=0; col<ncols; col++)
+        for (PetscInt col=0; col<ncols; col++)
         {
                 MatSetValue(EtoEF, Number_Of_Elements+row, col, vals[col], INSERT_VALUES);
         }
@@ -159,7 +156,7 @@ Mat FaceToFace_1D(const unsigned int &Number_Of_Elements, const Mat &EtoV)
     MatDestroy(&EtoE);
     MatDestroy(&EtoF);
     MatAssemblyBegin(EtoEF,  MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(EtoEF,    MAT_FINAL_ASSEMBLY);
-    std::cout << "\n\n\n HERE END \n\n\n";
+    MatAssemblyEnd(EtoEF,  MAT_FINAL_ASSEMBLY);
+
     return EtoEF;
 }
