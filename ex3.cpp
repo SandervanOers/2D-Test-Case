@@ -309,71 +309,79 @@ int main(int argc,char **args)
     Mat invM;
     invM = MassMatrix_inverse_local(V, DeltaX);
     //MatView(invM, viewer_dense);
-    //MatView(Dr, viewer_dense);
 
+    // Physical Mass Matrix
+    Mat Mk;
+    MatDuplicate(M, MAT_COPY_VALUES, &Mk);
+    MatScale(Mk, DeltaX/2.0);
 
-
-
-    //Mat Mk;
-    //MatDuplicate(M, MAT_COPY_VALUES, &Mk);
-    //MatScale(Mk, DeltaX/2.0);
     double H0 =0.0;
-    H0 = calculate_Hamiltonian(M, Initial_Condition, Number_Of_Elements, Np);
-
+    H0 = calculate_Hamiltonian(Mk, Initial_Condition, Number_Of_Elements, Np);
     std::cout << "Initial Energy    = " << std::setprecision(16) << H0 << std::endl;
-    //MatDestroy(&Mk);
+
+    Mat GLL;
+
+    Mat EmatR;
+    MatCreate(PETSC_COMM_WORLD,&EmatR);
+    MatSetSizes(EmatR, Np, Np, Np, Np);
+    MatSetType(EmatR, MATSEQDENSE);
+    MatSetUp(EmatR);
+
+    MatSetValue(EmatR, Np-1, Np-1, 1, INSERT_VALUES);
+    MatAssemblyBegin(EmatR, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(EmatR, MAT_FINAL_ASSEMBLY);
+    PetscScalar nxR = -1.0;
+    MatScale(EmatR, nxR);
+    MatScale(EmatR, (1.0-theta));
+
+    Mat LiftR;
+    Mat IntermediateR;
+    MatTransposeMatMult(V, EmatR, MAT_INITIAL_MATRIX, 1.0, &IntermediateR);
+    MatMatMult(V, IntermediateR, MAT_INITIAL_MATRIX, 1.0, &LiftR);
+    MatDestroy(&EmatR);
+    MatDestroy(&IntermediateR);
+
+    Mat EmatL;
+    MatCreate(PETSC_COMM_WORLD,&EmatL);
+    MatSetSizes(EmatL, Np, Np, Np, Np);
+    MatSetType(EmatL, MATSEQDENSE);
+    MatSetUp(EmatL);
+
+    MatSetValue(EmatL, 0, 0, 1, INSERT_VALUES);
+    MatAssemblyBegin(EmatL, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(EmatL, MAT_FINAL_ASSEMBLY);
+    PetscScalar nxL = 1.0;
+    MatScale(EmatL, nxL);
+    MatScale(EmatL, -theta);
+
+    Mat LiftL;
+    Mat IntermediateL;
+    MatTransposeMatMult(V, EmatL, MAT_INITIAL_MATRIX, 1.0, &IntermediateL);
+    MatMatMult(V, IntermediateL, MAT_INITIAL_MATRIX, 1.0, &LiftL);
+    MatDestroy(&EmatL);
+    MatDestroy(&IntermediateL);
+
 
     // Need inverse Jacobian: rx=1./J
     // to transform from the reference element r in [-,1,1] to the physical element x in[x_l, x_r]
     Mat RHS;
     Mat S;
     MatMatMult(M, Dr, MAT_INITIAL_MATRIX, 1.0, &S);
-    //MatScale(S, 2.0/DeltaX);
-    //MatView(S, viewer_dense);
+
+    MatAXPY(S, 1.0, LiftR, SAME_NONZERO_PATTERN);
+    MatAXPY(S, 1.0, LiftL, SAME_NONZERO_PATTERN);
+
     MatMatMult(invM, S, MAT_INITIAL_MATRIX, 1.0, &RHS);
-    {
-        //MatDuplicate(Dr,MAT_COPY_VALUES,&RHS);
-        MatScale(RHS, 2.0/DeltaX); // 2.0/DeltaX = rx = 1/J
-    }
-    /*{
-    Mat RHS_intermediate1;
-    MatMatMult(M, S, MAT_INITIAL_MATRIX, 1.0, &RHS_intermediate1);
-    Mat RHS_intermediate2;
-    MatMatMult(RHS_intermediate1, invM, MAT_INITIAL_MATRIX, 1.0, &RHS_intermediate2);
-    MatMatMult(RHS_intermediate2, invM, MAT_INITIAL_MATRIX, 1.0, &RHS);
-    MatDestroy(&RHS_intermediate1);
-    MatDestroy(&RHS_intermediate2);
-    MatDestroy(&S);
-    std::cout << "~~~~~~~~~~~~ RHS ~~~~~~~~~~~~" << std::endl;
-    MatView(RHS, viewer_dense);
-    }*/
-
-
+    MatScale(RHS, 2.0/DeltaX);
     // Implicit Midpoint
     // Construct Global Matrices A and B
     //MatView(RHS, viewer_info);
     Mat RHS_T;
     Mat S_T;
     MatTranspose(S, MAT_INITIAL_MATRIX, &S_T);
-    //MatTranspose(S, MAT_INITIAL_MATRIX, &RHS_T);
     MatMatMult(invM, S_T, MAT_INITIAL_MATRIX, 1.0, &RHS_T);
     MatScale(RHS_T, 2.0/DeltaX);
     MatScale(RHS_T, -1.0);
-
-
-
-    std::cout << std::endl << std::endl << "Start Viewing Matrices " << std::endl;
-    //MatView(V, viewer_dense);
-    //MatView(M, viewer_dense);
-    /*MatView(invM, viewer_dense);/*
-    MatView(Dr, viewer_dense);
-    MatView(S, viewer_dense);
-    MatView(S_T, viewer_dense);
-    MatView(RHS, viewer_dense);
-    MatView(RHS_T, viewer_dense);
-    std::cout << "End Viewing Matrices " << std::endl << std::endl<< std::endl;
-*/
-
     MatDestroy(&S);
     MatDestroy(&S_T);
 
@@ -443,6 +451,7 @@ int main(int argc,char **args)
     KSPSetOperators(ksp,A,A);
     KSPGetPC(ksp,&pc);
     KSPSetUp(ksp);
+    KSPSetTolerances(ksp, 1e-12, 1e-12, 1e-12, PETSC_DEFAULT);
 
     //KSPSetType(ksp,KSPCG);
     KSPSetType(ksp,KSPGMRES);
@@ -476,7 +485,7 @@ int main(int argc,char **args)
     KSPSolve(ksp, QX, Sol);
 
     //VecView(Sol, viewer_dense);
-    H1 = calculate_Hamiltonian(M, Sol, Number_Of_Elements, Np);
+    H1 = calculate_Hamiltonian(Mk, Sol, Number_Of_Elements, Np);
     std::cout << "Energy      = " << std::setprecision(16) << H1 << std::endl;
 
     //VecCopy()
@@ -494,6 +503,8 @@ int main(int argc,char **args)
     std::cout << "Initial Energy    = " << std::setprecision(16) << H0 << std::endl;
     std::cout << "Final Energy      = " << std::setprecision(16) << H1 << std::endl;
     std::cout << "Difference Energy = " << std::setprecision(16) << H1-H0 << std::endl;
+
+        MatView(RHS, viewer_dense);
 
     VecDestroy(&VX);
     VecDestroy(&r);
