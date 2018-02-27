@@ -18,7 +18,7 @@ extern Vec mesh_generation_1D_VX(const double &xmin, const double &xmax, const u
 /*--------------------------------------------------------------------------*/
 extern Mat mesh_generation_1D_EtoV(const double &xmin, const double &xmax, const unsigned int &Number_Of_Elements)
 {
-    Mat EtoV; // Element to Vector connectivity
+    Mat EtoV; // Element to Vertex connectivity
     MatCreate(PETSC_COMM_WORLD,&EtoV);
     MatSetType(EtoV,MATSEQAIJ);
     MatSetSizes(EtoV, Number_Of_Elements, 2, PETSC_DECIDE, PETSC_DECIDE);
@@ -37,7 +37,7 @@ extern Mat mesh_generation_1D_EtoV(const double &xmin, const double &xmax, const
 /*--------------------------------------------------------------------------*/
 Mat FaceToFace_1D(const unsigned int &Number_Of_Elements, const Mat &EtoV)
 {
-    int Nfaces = 2;
+    unsigned int Nfaces = 2;
     int Total_Faces = Nfaces*Number_Of_Elements;
     int Nv = Number_Of_Elements+1;
 

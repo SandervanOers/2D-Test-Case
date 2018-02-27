@@ -32,7 +32,8 @@ initial_cond.o: initial_cond.cpp initial_cond.hpp
 mesh_gen.o: mesh_gen.cpp mesh_gen.hpp
 Legendre_Gauss_Lobatto.o: Legendre_Gauss_Lobatto.cpp Legendre_Gauss_Lobatto.hpp
 HIGW.o: HIGW.cpp HIGW.hpp
-OBJS3 = ex3.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o
+Elements.o: Elements.cpp Elements.hpp
+OBJS3 = ex3.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o
 
 ex3: ${OBJS3} chkopts
 	-${CLINKER} -o ex3 ${OBJS3} ${PETSC_KSP_LIB} ${SLEPC_LIB}

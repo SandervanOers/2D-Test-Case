@@ -37,6 +37,59 @@ extern Vec JacobiGL(const double &alpha, const double &beta, const unsigned int 
     return x;
 }
 /*--------------------------------------------------------------------------*/
+extern Vec JacobiGL_withWeights(const double &alpha, const double &beta, const unsigned int &N, Vec &Weights)
+{
+// function [x] = JacobiGL(alpha,beta,N)
+// Purpose: Compute the N'th order Gauss Lobatto quadrature
+//          points, x, associated with the Jacobi polynomial,
+//          of type (alpha,beta) > -1 ( <> -0.5).
+
+    Vec x;
+    VecCreateSeq(PETSC_COMM_WORLD, N+1, &x);
+    VecCreateSeq(PETSC_COMM_WORLD, N+1, &Weights);
+    if (N==0)
+    {
+        VecSetValue(x, 0, 0.0, INSERT_VALUES);
+    }
+    else if (N==1)
+    {
+        VecSetValue(x, 0, -1.0, INSERT_VALUES);
+        VecSetValue(x, 1, 1.0, INSERT_VALUES);
+    }
+    else
+    {
+        VecSetValue(x, 0, -1.0, INSERT_VALUES);
+        VecSetValue(Weights, 0, 2.0/(N+1)/(N), INSERT_VALUES);
+        Vec xint;
+        xint = JacobiGQ(alpha+1, beta+1, N-2);
+        PetscScalar    *array;
+        VecGetArray(xint,&array);
+        Vec ww = JacobiP(xint, 0, 0, N);
+        VecScale(ww, sqrt(2.0/(2.0*(N)+1.0)));
+        PetscScalar    *warray;
+        VecGetArray(ww,&warray);
+        for (unsigned int i = 1; i < N; i++)
+        {
+            VecSetValue(x, i, array[i-1], INSERT_VALUES);
+            double w = warray[i-1];
+            w = w*w;
+            w = 2.0/N/(N+1.0)/w;
+            VecSetValue(Weights, i, w, INSERT_VALUES);
+        }
+        VecRestoreArray(xint, &array);
+        VecRestoreArray(ww,&warray);
+        VecSetValue(x, N, 1.0, INSERT_VALUES);
+        VecSetValue(Weights, N, 2.0/N/(N+1.0), INSERT_VALUES);
+        VecDestroy(&xint);
+
+    }
+    VecAssemblyBegin(x);
+    VecAssemblyEnd(x);
+    VecAssemblyBegin(Weights);
+    VecAssemblyEnd(Weights);
+    return x;
+}
+/*--------------------------------------------------------------------------*/
 Vec JacobiGQ(const double &alpha, const double &beta, const unsigned int &N)
 {
     Vec x;
@@ -129,9 +182,113 @@ Vec JacobiGQ(const double &alpha, const double &beta, const unsigned int &N)
 
     //VecView(x, PETSC_VIEWER_STDOUT_SELF);
     return x;
+}/*--------------------------------------------------------------------------*/
+Vec JacobiGQ_withWeights(const double &alpha, const double &beta, const unsigned int &N, Vec &Weights)
+{
+    Vec x;
+    VecCreateSeq(PETSC_COMM_WORLD, N+1, &x);
+    VecCreateSeq(PETSC_COMM_WORLD, N+1, &Weights);
+    if (N==0)
+    {
+        VecSetValue(x, 0, -(alpha-beta)/(alpha+beta+2.0), INSERT_VALUES);
+        VecSetValue(x, 1, 2.0, INSERT_VALUES);
+    }
+    else
+    {
+        PetscScalar h1[N+1];
+        PetscScalar a[(N+1)*(N+1)]={0};
+        for (unsigned int j=0; j<=N; j++)
+        {
+            h1[j] = 2.0*j+alpha+beta;
+        }
+        for (unsigned int j = 0; j<=N; j++)
+        {
+            double value = -0.5*(alpha*alpha-beta*beta)/(h1[j]+2.0)/h1[j];
+            a[j+(N+1)*j]= value;
+            if (j < N)
+            {
+                double value1 = 2.0/(h1[j]+2.0)*sqrt((j+1.0)*(j+1.0+alpha+beta)*(j+1.0+alpha)*(j+1.0+beta)/(h1[j]+1.0)/(h1[j]+3.0));
+                a[j+(N+1)*(j+1)] = value1;
+                a[j+1+(N+1)*(j)] = value1;
+            }
+        }
+        if ((alpha+beta) <= 10.0*std::numeric_limits<double>::epsilon())
+            a[0] = 0.0;
+        Mat J;
+        MatCreate(PETSC_COMM_WORLD,&J);
+        MatSetSizes(J, N+1, N+1, N+1, N+1);
+        MatSetType(J, MATSEQDENSE);
+        MatSeqDenseSetPreallocation(J,a);
+        MatAssemblyBegin(J, MAT_FINAL_ASSEMBLY);
+        MatAssemblyEnd(J, MAT_FINAL_ASSEMBLY);
+        //MatView(J, PETSC_VIEWER_STDOUT_SELF);
+
+        // Solve for eigenvalues and eigenvectors
+        EPS eps;
+        SlepcInitializeNoArguments();
+
+        EPSCreate(PETSC_COMM_WORLD,&eps);
+        EPSSetOperators(eps,J,NULL);
+        EPSSetProblemType(eps,EPS_HEP);
+        EPSSetFromOptions(eps);
+        EPSSetDimensions(eps, N+1, 2*(N+1), PETSC_DEFAULT);
+        EPSSetTarget(eps, -1.0);
+        EPSSetWhichEigenpairs(eps, EPS_TARGET_REAL);
+        EPSSolve(eps);
+
+        PetscReal      re;
+        PetscScalar    kr,ki;
+        Vec            xr,xi;
+        PetscInt       i,nconv;
+
+        MatCreateVecs(J,NULL,&xr);
+        MatCreateVecs(J,NULL,&xi);
+
+        EPSGetConverged(eps,&nconv);
+
+        PetscScalar lam[nconv];
+        PetscScalar w[nconv];
+        if (nconv>0)
+        {
+            for (i=0;i<nconv;i++)
+            {
+                EPSGetEigenpair(eps,i,&kr,&ki,xr,xi);
+                #if defined(PETSC_USE_COMPLEX)
+                    re = PetscRealPart(kr);
+                #else
+                    re = kr;
+                #endif
+                lam[i] = (double)re;
+                PetscScalar *xa;
+                VecGetArray(xr, &xa);
+                w[i] = xa[0]*xa[0]*pow(2,(alpha+beta+1.0)/(alpha+beta+1.0)*tgamma(alpha+1.0)*tgamma(beta+1.0)/tgamma(alpha+beta+1.0));
+                VecRestoreArray(xr, &xa);
+            }
+        }
+        EPSDestroy(&eps);
+        VecDestroy(&xr);
+        VecDestroy(&xi);
+        MatDestroy(&J);
+        SlepcFinalize();
+
+        PetscInt ix[N+1];
+        for (unsigned int k=0;k<=N+1; k++)
+            ix[k] = k;
+
+        VecSetValues(x, N+1, ix, lam, INSERT_VALUES);
+        //VecSetValues(x, N+1, ix, w, INSERT_VALUES);
+        VecSetValues(Weights, N+1, ix, w, INSERT_VALUES);
+    }
+    VecAssemblyBegin(x);
+    VecAssemblyEnd(x);
+    VecAssemblyBegin(Weights);
+    VecAssemblyEnd(Weights);
+
+    //VecView(x, PETSC_VIEWER_STDOUT_SELF);
+    return x;
 }
 /*--------------------------------------------------------------------------*/
-Vec JacobiP(const Vec &x, const double &alpha, const double &beta, const unsigned int &N)
+extern Vec JacobiP(const Vec &x, const double &alpha, const double &beta, const unsigned int &N)
 {
     Vec P;
     Mat PL;
@@ -213,12 +370,17 @@ extern Mat Vandermonde1D(const Vec &r, const unsigned int &N)
     Mat V;
     MatCreate(PETSC_COMM_WORLD,&V);
     MatSetType(V,MATSEQAIJ);
-    MatSetSizes(V, N+1, N+1, PETSC_DECIDE, PETSC_DECIDE);
-    MatSeqAIJSetPreallocation(V, N+1, NULL);
+    PetscInt size_r;
+    VecGetSize(r, &size_r);
+    //MatSetSizes(V, N+1, N+1, PETSC_DECIDE, PETSC_DECIDE);
+    MatSetSizes(V, size_r, N+1, PETSC_DECIDE, PETSC_DECIDE);
+    MatSeqAIJSetPreallocation(V, size_r, NULL);
 
-    PetscInt ix[N+1];
+    //PetscInt ix[N+1];
+    PetscInt ix[size_r];
     PetscInt ir[1]={0};
-    for (unsigned int k=0;k<=N+1; k++)
+    //for (unsigned int k=0;k<=N+1; k++)
+    for (unsigned int k=0;k<size_r; k++)
     {
         ix[k] = k;
     }
@@ -230,7 +392,8 @@ extern Mat Vandermonde1D(const Vec &r, const unsigned int &N)
         PetscScalar *a;
         VecGetArray(P, &a);
         ir[0]=l;
-        MatSetValues(V, N+1, ix, 1, ir, a, INSERT_VALUES);
+        //MatSetValues(V, N+1, ix, 1, ir, a, INSERT_VALUES);
+        MatSetValues(V, size_r, ix, 1, ir, a, INSERT_VALUES);
         VecRestoreArray(P, &a);
         VecDestroy(&P);
     }
@@ -239,125 +402,6 @@ extern Mat Vandermonde1D(const Vec &r, const unsigned int &N)
 
     //MatView(V, PETSC_VIEWER_STDOUT_SELF);
     return V;
-}
-/*--------------------------------------------------------------------------*/
-extern Mat Vandermonde1D_inverse(const Mat V, const unsigned int &N)
-{
-    std::cout << "start" << std::endl;
-    unsigned int Np = N+1;
-    MatView(V, PETSC_VIEWER_STDOUT_SELF);
-    /// Step 1: Row Scaling
-    //Vec diag, ones, inversediag;
-    //VecCreateSeq(PETSC_COMM_WORLD,N+1, &diag);
-    //VecCreateSeq(PETSC_COMM_WORLD,N+1, &ones);
-    //VecCreateSeq(PETSC_COMM_WORLD,N+1, &inversediag);
-    //VecShift(ones, 1.0);
-    //MatGetRowSum(V, diag);
-    Mat DV;
-    MatDuplicate(V, MAT_DO_NOT_COPY_VALUES, &DV);
-
-    PetscInt idxn[Np];
-    for (unsigned int n=0; n<Np; n++)
-        idxn[n] = n;
-
-    for (unsigned int n=0; n<Np; n++)
-    {
-        const PetscInt idxm[1] = {n};
-        PetscScalar v[Np];
-
-        MatGetValues(V, 1, idxm, Np, idxn, v);
-
-        double sum=0;
-        for (unsigned int i=0; i<Np;i++)
-        {
-            sum += abs(v[i]);
-
-        }
-        for (unsigned int i=0; i<Np; i++)
-        {
-            v[i] /= sum;
-        }
-
-        MatSetValues(DV, 1, idxm, Np, idxn, v, INSERT_VALUES);
-        /*
-        const PetscScalar *rowval;
-
-        /// MatGetValues
-        MatGetRow(V,n,NULL, NULL, &rowval);
-
-
-        double sum=0;
-        for (unsigned int a=0; a<Np; a++)
-        {
-            sum += abs(rowval[a]);
-        }
-        std::cout<< sum << std::endl;
-        /// Scale Row by Sum
-
-        /// MatSetValues
-        MatRestoreRow(V,n,NULL, NULL, &rowval);
-        */
-    }
-    MatAssemblyBegin(DV, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(DV, MAT_FINAL_ASSEMBLY);
-
-    MatView(DV, PETSC_VIEWER_STDOUT_SELF);
-
-    //VecPointwiseDivide(inversediag, ones, diag);
-    //Mat DV;
-    //MatDuplicate(V, MAT_COPY_VALUES, &DV);
-
-
-    //VecView(diag, PETSC_VIEWER_STDOUT_SELF);
-
-
-    //MatDiagonalScale(DV, inversediag, NULL);
-
-
-    //MatView(DV , PETSC_VIEWER_STDOUT_SELF);
-    //VecDestroy(&diag);
-    //VecDestroy(&inversediag);
-    //VecDestroy(&ones);
-    /// End Step 1: Matrix has been scaled
-/*
-    /// Step 2: Partial Pivoting
-    for (unsigned int n=0; n<1; n++) //Np
-    {
-        Vec ColumnVector;
-        VecCreateSeq(PETSC_COMM_WORLD,N+1, &ColumnVector);
-        MatGetColumnVector(DV, ColumnVector, n);
-        VecAbs(ColumnVector);
-        PetscInt p;
-        PetscReal v;
-        VecMax(ColumnVector, &p, &v);
-
-        std::cout << "Maximum Found at Index " << p << " with value " << v << std::endl;
-    }*/
-
-
-    /// LU Factor
-    /*
-    // Calculate inverse Vandermonde Matrix
-    Mat A, B, X;
-    MatDuplicate(VV,MAT_COPY_VALUES,&A);
-    MatDuplicate(VV,MAT_DO_NOT_COPY_VALUES,&X);
-    MatDuplicate(VV,MAT_DO_NOT_COPY_VALUES,&B);
-    MatConvert(B, MATSEQDENSE, MAT_INPLACE_MATRIX, &B);
-    MatConvert(X, MATSEQDENSE, MAT_INPLACE_MATRIX, &X);
-
-    MatShift(B, 1.0);
-    MatOrderingType rtype = MATORDERINGNATURAL;
-    IS row, col;
-    MatGetOrdering(A, rtype, &row, &col);
-    MatFactorInfo info;
-    MatFactorInfoInitialize(&info);
-    info.fill=1.0;
-    MatLUFactor(A, row, col, &info);
-    MatMatSolve(A, B, X);
-    MatView(X, PETSC_VIEWER_STDOUT_SELF);
-    */
-    std::cout << "end" << std::endl;
-    return DV;
 }
 /*--------------------------------------------------------------------------*/
 extern Mat DMatrix1D(const Vec &r, const unsigned int &N, const Mat &V)
@@ -505,5 +549,73 @@ extern Mat normals1D(const unsigned int &N, const unsigned int &Number_Of_Elemen
     MatAssemblyEnd(nx, MAT_FINAL_ASSEMBLY);
 
     return nx;
+}
+/*--------------------------------------------------------------------------*/
+extern double LagrangePolynomial(const Vec &r, const double &x, const unsigned int &i)
+{
+    PetscInt size_r;
+    VecGetSize(r, &size_r);
+    PetscScalar *ra;
+    VecGetArray(r, &ra);
+    double returnvalue = 1;
+    for (PetscInt j = 0; j < size_r; j++)
+    {
+        if (i!=j)
+        {
+            returnvalue *= (x-ra[j])/(ra[i]-ra[j]);
+        }
+    }
+    VecRestoreArray(r, &ra);
+
+    return returnvalue;
+}
+/*--------------------------------------------------------------------------*/
+extern double LagrangePolynomialDeriv(const Vec &r, const double &x, const unsigned int &i)
+{
+    PetscInt size_r;
+    VecGetSize(r, &size_r);
+    PetscScalar *ra;
+    VecGetArray(r, &ra);
+    double returnvalue = 0;
+    /*
+    for (PetscInt j = 0; j < size_r; j++)
+    {
+        if (i!=j)
+        {
+            returnvalue += 1.0/(x-ra[j]);
+            std::cout << x << " " << ra[j] << std::endl;
+        }
+    }
+    */
+    for (PetscInt k = 0; k < size_r; k++)
+    {
+        double product=1;
+        if (k!=i)
+        {
+            for (PetscInt l = 0; l < size_r; l++)
+            {
+                if(l!=k && l!=i)
+                {
+                    product *= x-ra[l];
+                }
+            }
+        }
+        returnvalue += product;
+    }
+    double denom=1;
+    for (PetscInt k = 0; k < size_r; k++)
+    {
+        if(k!=i)
+        {
+            denom *= ra[i]-ra[k];
+        }
+    }
+    VecRestoreArray(r, &ra);
+
+    //double LP = LagrangePolynomial(r, x, i);
+    returnvalue /= denom;
+    //returnvalue *= LP;
+
+    return returnvalue;
 }
 /*--------------------------------------------------------------------------*/

@@ -14,3 +14,14 @@ extern double Exact_Solution_p(const double &x, const double &t, const double &N
 {
     return exp(-0.5*N2*x)*(N2/4.0/sigma/PETSC_PI*sin(2.0*PETSC_PI*k*x)+k/sigma*cos(2.0*PETSC_PI*k*x))*cos(2.0*PETSC_PI*sigma*(t+0.0));
 }
+/*--------------------------------------------------------------------------*/
+extern double rho_0(const double &x, const double &N2)
+{
+    return exp(-N2*x);
+}
+/*--------------------------------------------------------------------------*/
+extern double rho_0_deriv(const double &x, const double &N2)
+{
+    return -N2*exp(-N2*x);
+}
+/*--------------------------------------------------------------------------*/
