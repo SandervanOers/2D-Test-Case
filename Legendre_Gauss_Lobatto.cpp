@@ -577,21 +577,11 @@ extern double LagrangePolynomialDeriv(const Vec &r, const double &x, const unsig
     PetscScalar *ra;
     VecGetArray(r, &ra);
     double returnvalue = 0;
-    /*
-    for (PetscInt j = 0; j < size_r; j++)
-    {
-        if (i!=j)
-        {
-            returnvalue += 1.0/(x-ra[j]);
-            std::cout << x << " " << ra[j] << std::endl;
-        }
-    }
-    */
     for (PetscInt k = 0; k < size_r; k++)
     {
-        double product=1;
         if (k!=i)
         {
+            double product=1;
             for (PetscInt l = 0; l < size_r; l++)
             {
                 if(l!=k && l!=i)
@@ -599,8 +589,8 @@ extern double LagrangePolynomialDeriv(const Vec &r, const double &x, const unsig
                     product *= x-ra[l];
                 }
             }
+            returnvalue += product;
         }
-        returnvalue += product;
     }
     double denom=1;
     for (PetscInt k = 0; k < size_r; k++)
@@ -611,10 +601,7 @@ extern double LagrangePolynomialDeriv(const Vec &r, const double &x, const unsig
         }
     }
     VecRestoreArray(r, &ra);
-
-    //double LP = LagrangePolynomial(r, x, i);
     returnvalue /= denom;
-    //returnvalue *= LP;
 
     return returnvalue;
 }

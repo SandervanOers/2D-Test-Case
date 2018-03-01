@@ -204,17 +204,18 @@ int main(int argc,char **args)
 
     Mat nx;
     nx = normals1D(N, Number_Of_Elements);
-    /*
-    //MatView(nx, PETSC_VIEWER_STDOUT_SELF);
-    Mat EtoEF;
-    EtoEF = FaceToFace_1D(Number_Of_Elements, EtoV);
-    */
+
+    //MatView(x, PETSC_VIEWER_STDOUT_SELF);
+    //MatConvert(x, MATSEQDENSE,  MAT_INPLACE_MATRIX, &x);
+    //MatView(x, viewer_dense);
+
+    MatDestroy(&x);
+
     MatDestroy(&EtoV);
     MatDestroy(&nx);
 
 
     MatDestroy(&Dr);
-    MatDestroy(&x);
     MatDestroy(&J);
     MatDestroy(&nx);
 
@@ -256,12 +257,13 @@ int main(int argc,char **args)
         std::vector<double> xCoor;
         xCoor = (*k).get_VertexCoordinates();
         int i = 0;
+        double t = 0;
         for (auto c = xCoor.begin(); c < xCoor.end(); c++)
         {
-            double value = Exact_Solution_m(*c, 0, N2, sigma, kmode);
+            double value = Exact_Solution_m(*c, t, N2, sigma, kmode);
             VecSetValue(VecU, pos + i, value, INSERT_VALUES);
             VecSetValue(Initial_Condition, pos + i, value, INSERT_VALUES);
-            value = Exact_Solution_p(*c, 0, N2, sigma, kmode);
+            value = Exact_Solution_p(*c, t, N2, sigma, kmode);
             VecSetValue(VecP, pos + i, value, INSERT_VALUES);
             VecSetValue(Initial_Condition, Number_Of_Elements*Np+pos + i, value, INSERT_VALUES);
             i++;
@@ -309,7 +311,6 @@ int main(int argc,char **args)
     {
         in[n] = n;
     }
-
     MatAssemblyBegin(invM_Elemental, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(invM_Elemental, MAT_FINAL_ASSEMBLY);
     MatGetValues(invM_Elemental, Np, in, Np, in, invM_values);
@@ -324,7 +325,7 @@ int main(int argc,char **args)
     for (auto e = List_Of_Elements.begin(); e < List_Of_Elements.end(); e++)
     {
         unsigned int ID = (*e).getID();
-        unsigned int pos = ID*Np;
+        unsigned int pos = ID*Np;   // Assumes Ordering
         unsigned int Order_Polynomials = (*e).getOrderOfPolynomials();
         //unsigned int Order_Gaussian_Quadrature = ceil(Order_Polynomials+1+N_Q); // + higher order for rho_0 term
         unsigned int Order_Gaussian_Quadrature = ceil(Order_Polynomials+3+N_Q); // + higher order for rho_0 term
@@ -370,15 +371,16 @@ int main(int argc,char **args)
                     }
                     // w_q drho_0(r_q)/dr l_i(r_q) l_j(r_q)
                     double Lj = LagrangePolynomial(ri, qp[q], j);
-                    double rho0deriv = 0;
+                    double rho0deriv = rho_0_deriv(physical_x, N2);
                     value_e += w[q]*rho0deriv*Li*Lj*DeltaX/2.0;
 
-                    value_m += w[q]*Li*Lj/rho0*DeltaX/2.0;   /// Scale: det Jac = DeltaX/2.0
+                    value_m += w[q]*Li*Lj/rho0*DeltaX/2.0;
                 }
                 double factor = 1.0;
-                //MatSetValue(E, pos+i, pos+j, factor*value_e, ADD_VALUES);
+                MatSetValue(E, pos+i, pos+j, factor*value_e, ADD_VALUES);
                 value_e = - value_e;
-                //MatSetValue(ET, pos+j, pos+i, factor*value_e, ADD_VALUES);
+                MatSetValue(ET, pos+j, pos+i, factor*value_e, ADD_VALUES);
+                //MatSetValue(ET, pos+i, pos+j, factor*value_e, ADD_VALUES);
 
                 MatSetValue(M1, pos+i, pos+j, value_m, ADD_VALUES);
             }
@@ -393,7 +395,8 @@ int main(int argc,char **args)
     MatAssemblyBegin(invM, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(invM, MAT_FINAL_ASSEMBLY);
 
-    MatView(M1, PETSC_VIEWER_STDOUT_SELF);
+    //MatView(M1, PETSC_VIEWER_STDOUT_SELF);
+    //MatView(invM, PETSC_VIEWER_STDOUT_SELF);
 
     MatDestroy(&invM_Elemental);
 
@@ -424,15 +427,19 @@ int main(int argc,char **args)
             //MatSetValue(GLL, posL+i, posL+j, rho0*(1-theta), ADD_VALUES);
             double factor = -1.0;
             MatSetValue(E, posL+i, posL+j, factor*rho0*(1-theta), ADD_VALUES);
-            MatSetValue(ET, posL+j, posL+i, factor*-rho0*(1-theta), ADD_VALUES); /// Exchange i and j?
+            MatSetValue(ET, posL+j, posL+i, factor*-rho0*(1-theta), ADD_VALUES);
 
             //MatSetValue(GLR, posL+i, posR+0, -rho0*(1-theta), ADD_VALUES);
             MatSetValue(E, posL+i, posR+0, factor*-rho0*(1-theta), ADD_VALUES);
             MatSetValue(ET, posR+0, posL+i, factor*rho0*(1-theta), ADD_VALUES);
+            //MatSetValue(E, posL+0, posR+i, factor*-rho0*(1-theta), ADD_VALUES);
+            //MatSetValue(ET, posR+i, posL+0, factor*rho0*(1-theta), ADD_VALUES);
 
             //MatSetValue(GRL, posR+0, posL+j, rho0*theta, ADD_VALUES);
             MatSetValue(E, posR+0, posL+j, factor*rho0*theta, ADD_VALUES);
             MatSetValue(ET, posL+j, posR+0, factor*-rho0*theta, ADD_VALUES);
+            //MatSetValue(E, posR+j, posL+0, factor*rho0*theta, ADD_VALUES);
+            //MatSetValue(ET, posL+0, posR+j, factor*-rho0*theta, ADD_VALUES);
 
             //MatSetValue(GRR, posR+0, posR+0, -rho0*theta, ADD_VALUES);
             MatSetValue(E, posR+0, posR+0, factor*-rho0*theta, ADD_VALUES);
@@ -463,8 +470,8 @@ int main(int argc,char **args)
     MatAssemblyBegin(ET, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(ET, MAT_FINAL_ASSEMBLY);
 
-    MatView(E, viewer_dense);
-    MatView(ET, viewer_dense);
+    //MatView(E, viewer_dense);
+    //MatView(ET, viewer_dense);
     std::cout << "Finished Assembly DIV Matrices" << std::endl;
 
     //MatAXPY(E, 1.0, GLL, DIFFERENT_NONZERO_PATTERN);
@@ -504,8 +511,8 @@ int main(int argc,char **args)
     MatDestroy(&DIV_TEMP1);
     MatDestroy(&DIV_TEMP2);
 
-    MatDestroy(&E);
-    MatDestroy(&ET);
+    ///MatDestroy(&E);
+    ///MatDestroy(&ET);
     MatDestroy(&invM);
 
     Mat A, B;    // factor 2 = Number of Variables
@@ -592,14 +599,27 @@ int main(int argc,char **args)
     //MatDuplicate(Initial_Condition,MAT_COPY_VALUES,&Sol);
     double H1 = 0.0;
 
+    char szFileName[255] = {0};
+
+
     // Solve Linear System
     std::cout << "Start Time Stepping" << std::endl;
-    for (unsigned int t = 0; t< Number_Of_Periods*Number_Of_TimeSteps_In_One_Period; t++)
+    double time = 0.0;
+    for (unsigned int t = 0; t <= Number_Of_Periods*Number_Of_TimeSteps_In_One_Period; t++)
     {
+        time = (t+1)*DeltaT;
         MatMult(B, Sol, QX);
         KSPSolve(ksp, QX, Sol);
         H1 = calculate_Hamiltonian(M1, Sol, Number_Of_Elements, Np);
-        std::cout << "Energy      = " << std::setprecision(16) << H1 << std::endl;
+
+        std::cout << "Energy = " << std::setprecision(16) << H1 ;
+        std::cout << "  Time = " << time << " " << std::endl;
+
+        PetscViewer viewer2;
+        sprintf(szFileName, "solution%d.txt", t);
+        PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
+        VecView(Sol, viewer2);
+        PetscViewerDestroy(&viewer2);
     }
     std::cout << "End Time Stepping" << std::endl;
     KSPDestroy(&ksp);
@@ -612,16 +632,55 @@ int main(int argc,char **args)
     std::cout << "Initial Energy    = " << std::setprecision(16) << H0 << std::endl;
     std::cout << "Final Energy      = " << std::setprecision(16) << H1 << std::endl;
     std::cout << "Difference Energy = " << std::setprecision(16) << H1-H0 << std::endl;
-    MatView(A, PETSC_VIEWER_STDOUT_SELF);
+
+
+    //MatView(A, PETSC_VIEWER_STDOUT_SELF);
     MatConvert(A, MATSEQDENSE,  MAT_INPLACE_MATRIX, &A);
-    MatView(A, viewer_dense);
+    //MatView(A, viewer_dense);
+    //MatView(B, PETSC_VIEWER_STDOUT_SELF);
+    MatConvert(B, MATSEQDENSE,  MAT_INPLACE_MATRIX, &B);
+    ///MatView(B, viewer_dense);
+
+    //VecView(Initial_Condition, viewer);
 
     PetscReal      norm;
     VecAXPY(Sol,-1.0,Initial_Condition);
     VecNorm(Sol,NORM_2,&norm);
     norm *= sqrt(DeltaX);
     PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error %1.9e\n",(double)norm);
+    VecAXPY(Sol,+1.0,Initial_Condition);
 
+    // Exact Solution
+    Vec Exact_Solution;
+    VecCreateSeq(PETSC_COMM_WORLD, 2*Number_Of_Elements*Np,&Exact_Solution);
+    for (auto k = List_Of_Elements.begin(); k < List_Of_Elements.end(); k++)
+    {
+        unsigned int ID = (*k).getID();
+        unsigned int pos = ID*Np;
+        std::vector<double> xCoor;
+        xCoor = (*k).get_VertexCoordinates();
+        int i = 0;
+        for (auto c = xCoor.begin(); c < xCoor.end(); c++)
+        {
+            double value = Exact_Solution_m(*c, time, N2, sigma, kmode);
+            VecSetValue(Exact_Solution, pos + i, value, INSERT_VALUES);
+            value = Exact_Solution_p(*c, time, N2, sigma, kmode);
+            VecSetValue(Exact_Solution, Number_Of_Elements*Np+pos + i, value, INSERT_VALUES);
+            i++;
+        }
+    }
+    VecAssemblyBegin(Exact_Solution);
+    VecAssemblyEnd(Exact_Solution);
+
+    PetscReal      norm2;
+    VecAXPY(Sol,-1.0,Exact_Solution);
+    VecNorm(Sol,NORM_2,&norm2);
+    norm *= sqrt(DeltaX);
+    PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error %1.9e\n",(double)norm2);
+
+
+    //MatView(E, PETSC_VIEWER_STDOUT_SELF);
+    //MatView(ET, PETSC_VIEWER_STDOUT_SELF);
 
     VecDestroy(&Sol);
 
