@@ -9,6 +9,7 @@ static char help[] = "Solves a 1D test case for a stratified fluid.\n\n";
 #include "Legendre_Gauss_Lobatto.hpp"
 #include "HIGW.hpp"
 #include "Elements.hpp"
+#include <chrono>
 //#include <slepceps.h>
 //#include <slepcsys.h>
 
@@ -143,7 +144,7 @@ int main(int argc,char **args)
 
     MatAssemblyBegin(x, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(x, MAT_FINAL_ASSEMBLY);
-    MatView(x, PETSC_VIEWER_STDOUT_SELF);
+    //MatView(x, PETSC_VIEWER_STDOUT_SELF);
 
     Mat J;
     J = GeometricFactors1D(x, Dr);
@@ -228,6 +229,7 @@ int main(int argc,char **args)
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
     PetscScalar   DeltaX = 1.0/(double)Number_Of_Elements;
     std::cout << Number_Of_Elements << " => " << DeltaX << std::endl;
+    Number_Of_TimeSteps_In_One_Period = 10*Number_Of_Elements*Number_Of_Elements;
     PetscScalar DeltaT=1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
     /// Check for CFL condition (when explicit)
 
@@ -474,22 +476,6 @@ int main(int argc,char **args)
     //MatView(ET, viewer_dense);
     std::cout << "Finished Assembly DIV Matrices" << std::endl;
 
-    //MatAXPY(E, 1.0, GLL, DIFFERENT_NONZERO_PATTERN);
-    //MatAXPY(ET, -1.0, GLL, DIFFERENT_NONZERO_PATTERN);
-
-    //MatAXPY(E, 1.0, GRR, DIFFERENT_NONZERO_PATTERN);
-    //MatAXPY(ET, -1.0, GRR, DIFFERENT_NONZERO_PATTERN);
-
-    /*
-    MatAXPY(E, 1.0, GLR, DIFFERENT_NONZERO_PATTERN);
-    Mat GLR_T, GRL_T;
-    MatTranspose(GLR, MAT_INITIAL_MATRIX, &GLR_T);
-    MatAXPY(E, -1.0, GLR_T, DIFFERENT_NONZERO_PATTERN);
-
-    MatAXPY(E, 1.0, GRL, DIFFERENT_NONZERO_PATTERN);
-    MatTranspose(GRL, MAT_INITIAL_MATRIX, &GRL_T);
-    MatAXPY(E, -1.0, GRL_T, DIFFERENT_NONZERO_PATTERN);
-    */
     //MatDestroy(&GLL);
     //MatDestroy(&GLR);
     //MatDestroy(&GRL);
@@ -569,6 +555,8 @@ int main(int argc,char **args)
     double H0 = calculate_Hamiltonian(M1, Initial_Condition, Number_Of_Elements, Np);
     std::cout << "Initial Energy      = " << std::setprecision(16) << H0 << std::endl;
 
+    //clock_t start = clock();
+    auto t1 = std::chrono::high_resolution_clock::now();
     KSP ksp;
     PC pc;
     KSPCreate(PETSC_COMM_WORLD,&ksp);
@@ -576,12 +564,13 @@ int main(int argc,char **args)
     //KSPSetOperators(ksp,AA,AA);
     KSPGetPC(ksp,&pc);
     KSPSetUp(ksp);
-    KSPSetTolerances(ksp, 1e-12, 1e-12, 1e-12, PETSC_DEFAULT);
+    //KSPSetTolerances(ksp, 1e-12, 1e-12, 1e-12, PETSC_DEFAULT);
+    KSPSetTolerances(ksp, 1e-12, 1e-12, 1e30, PETSC_DEFAULT);
 
+    KSPSetType(ksp,KSPPREONLY);
     //KSPSetType(ksp,KSPCG);
     //KSPSetType(ksp,KSPGMRES);
     //KSPSetType(ksp,KSPBCGS);
-    KSPSetType(ksp,KSPPREONLY);
     //KSPSetInitialGuessNonzero(ksp,PETSC_TRUE);
 
     KSPGetPC(ksp,&pc);
@@ -602,54 +591,115 @@ int main(int argc,char **args)
     char szFileName[255] = {0};
 
 
+    int direct = 0;
+    Mat Prop;
+    if (direct==1)
+    {
+    // Calculate inverse Vandermonde Matrix
+    Mat AA, BB, XX;
+    MatDuplicate(A,MAT_COPY_VALUES,&AA);
+    MatDuplicate(A,MAT_DO_NOT_COPY_VALUES,&XX);
+    MatDuplicate(A,MAT_DO_NOT_COPY_VALUES,&BB);
+    MatConvert(BB, MATSEQDENSE, MAT_INPLACE_MATRIX, &BB);
+    MatConvert(XX, MATSEQDENSE, MAT_INPLACE_MATRIX, &XX);
+
+    MatShift(BB, 1.0);
+
+    MatOrderingType rtype = MATORDERINGNATURAL;
+    IS row, col;
+    MatGetOrdering(AA, rtype, &row, &col);
+    MatFactorInfo info;
+    MatFactorInfoInitialize(&info);
+    info.fill=1.0;
+    info.dtcol=1.0;
+
+    MatLUFactor(AA, row, col, &info);
+    MatMatSolve(AA, BB, XX);
+    //MatView(X, PETSC_VIEWER_STDOUT_SELF);
+    // X is the inverse
+    MatDestroy(&BB);
+    MatDestroy(&AA);
+
+
+    MatMatMult(XX, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Prop);
+    }
+    //PetscPrintf(PETSC_COMM_SELF,"Size Global Matrices %6.4e\n",(double)sigma);
+    // MatView(A, viewer_info);
+
     // Solve Linear System
     std::cout << "Start Time Stepping" << std::endl;
     double time = 0.0;
-    for (unsigned int t = 0; t <= Number_Of_Periods*Number_Of_TimeSteps_In_One_Period; t++)
+    for (unsigned int t = 0; t < Number_Of_Periods*Number_Of_TimeSteps_In_One_Period; t++)
     {
         time = (t+1)*DeltaT;
-        MatMult(B, Sol, QX);
-        KSPSolve(ksp, QX, Sol);
-        H1 = calculate_Hamiltonian(M1, Sol, Number_Of_Elements, Np);
 
-        std::cout << "Energy = " << std::setprecision(16) << H1 ;
-        std::cout << "  Time = " << time << " " << std::endl;
 
-        PetscViewer viewer2;
-        sprintf(szFileName, "solution%d.txt", t);
-        PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
-        VecView(Sol, viewer2);
-        PetscViewerDestroy(&viewer2);
+        if (direct==1)
+        {
+            MatMult(Prop, Sol, QX);
+            VecCopy(QX, Sol);
+        }
+        else
+        {
+            MatMult(B, Sol, QX);
+            KSPSolve(ksp, QX, Sol);
+        }
+        //H1 = calculate_Hamiltonian(M1, Sol, Number_Of_Elements, Np);
+
+        //std::cout << "Energy = " << std::setprecision(16) << H1 ;
+        //std::cout << "  Time = " << time << " " << std::endl;
+
+        //PetscViewer viewer2;
+        //sprintf(szFileName, "solution%d.txt", t);
+        //PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
+        //VecView(Sol, viewer2);
+        //PetscViewerDestroy(&viewer2);
     }
+    H1 = calculate_Hamiltonian(M1, Sol, Number_Of_Elements, Np);
     std::cout << "End Time Stepping" << std::endl;
     KSPDestroy(&ksp);
     //PCDestroy(&pc);
     VecDestroy(&QX);
     MatDestroy(&M1);
     MatDestroy(&Mk);
-
-
+    auto t2 = std::chrono::high_resolution_clock::now();
     std::cout << "Initial Energy    = " << std::setprecision(16) << H0 << std::endl;
     std::cout << "Final Energy      = " << std::setprecision(16) << H1 << std::endl;
     std::cout << "Difference Energy = " << std::setprecision(16) << H1-H0 << std::endl;
 
-
+    std::cout << "Time Loop took "
+              << std::chrono::duration_cast<std::chrono::seconds>(t2-t1).count()
+              << " seconds\n";
     //MatView(A, PETSC_VIEWER_STDOUT_SELF);
+
+    /*
     MatConvert(A, MATSEQDENSE,  MAT_INPLACE_MATRIX, &A);
+    MatConvert(B, MATSEQDENSE,  MAT_INPLACE_MATRIX, &B);
+
+
+    PetscViewer Aviewer;
+    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "matrixA.txt", &Aviewer);
+    MatView(A,Aviewer);
+    PetscViewerDestroy(&Aviewer);
+    PetscViewer Bviewer;
+    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "matrixB.txt", &Bviewer);
+    MatView(B,Bviewer);
+    PetscViewerDestroy(&Bviewer);
+*/
     //MatView(A, viewer_dense);
     //MatView(B, PETSC_VIEWER_STDOUT_SELF);
-    MatConvert(B, MATSEQDENSE,  MAT_INPLACE_MATRIX, &B);
-    ///MatView(B, viewer_dense);
+    //MatView(B, viewer_dense);
 
-    //VecView(Initial_Condition, viewer);
-
+    Vec Sol2;
+    VecDuplicate(Sol, &Sol2);
+    VecCopy(Sol, Sol2);
     PetscReal      norm;
     VecAXPY(Sol,-1.0,Initial_Condition);
     VecNorm(Sol,NORM_2,&norm);
     norm *= sqrt(DeltaX);
     PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error %1.9e\n",(double)norm);
-    VecAXPY(Sol,+1.0,Initial_Condition);
 
+    /*
     // Exact Solution
     Vec Exact_Solution;
     VecCreateSeq(PETSC_COMM_WORLD, 2*Number_Of_Elements*Np,&Exact_Solution);
@@ -673,12 +723,14 @@ int main(int argc,char **args)
     VecAssemblyEnd(Exact_Solution);
 
     PetscReal      norm2;
-    VecAXPY(Sol,-1.0,Exact_Solution);
-    VecNorm(Sol,NORM_2,&norm2);
-    norm *= sqrt(DeltaX);
+    VecAXPY(Sol2,-1.0,Exact_Solution);
+    VecNorm(Sol2,NORM_2,&norm2);
+    norm2 *= sqrt(DeltaX);
     PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error %1.9e\n",(double)norm2);
-
-
+    VecDestroy(&Exact_Solution);
+*/
+    //VecView(Initial_Condition, PETSC_VIEWER_STDOUT_SELF);
+    //VecView(Exact_Solution, PETSC_VIEWER_STDOUT_SELF);
     //MatView(E, PETSC_VIEWER_STDOUT_SELF);
     //MatView(ET, PETSC_VIEWER_STDOUT_SELF);
 
