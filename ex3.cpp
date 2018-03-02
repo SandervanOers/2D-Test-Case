@@ -228,9 +228,10 @@ int main(int argc,char **args)
     sigma = calculate_sigma(N2, kmode);
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
     PetscScalar   DeltaX = 1.0/(double)Number_Of_Elements;
-    std::cout << Number_Of_Elements << " => " << DeltaX << std::endl;
-    Number_Of_TimeSteps_In_One_Period = 10*Number_Of_Elements*Number_Of_Elements;
+    Number_Of_TimeSteps_In_One_Period = 10*Number_Of_Elements*Number_Of_Elements*Number_Of_Elements;
     PetscScalar DeltaT=1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
+    std::cout << Number_Of_Elements << " => " << DeltaX << std::endl;
+    std::cout << Number_Of_TimeSteps_In_One_Period << " => " << DeltaT << std::endl;
     /// Check for CFL condition (when explicit)
 
     // Initial Condition
@@ -378,7 +379,7 @@ int main(int argc,char **args)
 
                     value_m += w[q]*Li*Lj/rho0*DeltaX/2.0;
                 }
-                double factor = 1.0;
+                double factor = -1.0;
                 MatSetValue(E, pos+i, pos+j, factor*value_e, ADD_VALUES);
                 value_e = - value_e;
                 MatSetValue(ET, pos+j, pos+i, factor*value_e, ADD_VALUES);
@@ -427,7 +428,7 @@ int main(int argc,char **args)
             unsigned int j = Order_Polynomials_left;
 
             //MatSetValue(GLL, posL+i, posL+j, rho0*(1-theta), ADD_VALUES);
-            double factor = -1.0;
+            double factor = 1.0;
             MatSetValue(E, posL+i, posL+j, factor*rho0*(1-theta), ADD_VALUES);
             MatSetValue(ET, posL+j, posL+i, factor*-rho0*(1-theta), ADD_VALUES);
 
@@ -497,8 +498,8 @@ int main(int argc,char **args)
     MatDestroy(&DIV_TEMP1);
     MatDestroy(&DIV_TEMP2);
 
-    ///MatDestroy(&E);
-    ///MatDestroy(&ET);
+    MatDestroy(&E);
+    MatDestroy(&ET);
     MatDestroy(&invM);
 
     Mat A, B;    // factor 2 = Number of Variables
@@ -589,40 +590,6 @@ int main(int argc,char **args)
     double H1 = 0.0;
 
     char szFileName[255] = {0};
-
-
-    int direct = 0;
-    Mat Prop;
-    if (direct==1)
-    {
-    // Calculate inverse Vandermonde Matrix
-    Mat AA, BB, XX;
-    MatDuplicate(A,MAT_COPY_VALUES,&AA);
-    MatDuplicate(A,MAT_DO_NOT_COPY_VALUES,&XX);
-    MatDuplicate(A,MAT_DO_NOT_COPY_VALUES,&BB);
-    MatConvert(BB, MATSEQDENSE, MAT_INPLACE_MATRIX, &BB);
-    MatConvert(XX, MATSEQDENSE, MAT_INPLACE_MATRIX, &XX);
-
-    MatShift(BB, 1.0);
-
-    MatOrderingType rtype = MATORDERINGNATURAL;
-    IS row, col;
-    MatGetOrdering(AA, rtype, &row, &col);
-    MatFactorInfo info;
-    MatFactorInfoInitialize(&info);
-    info.fill=1.0;
-    info.dtcol=1.0;
-
-    MatLUFactor(AA, row, col, &info);
-    MatMatSolve(AA, BB, XX);
-    //MatView(X, PETSC_VIEWER_STDOUT_SELF);
-    // X is the inverse
-    MatDestroy(&BB);
-    MatDestroy(&AA);
-
-
-    MatMatMult(XX, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Prop);
-    }
     //PetscPrintf(PETSC_COMM_SELF,"Size Global Matrices %6.4e\n",(double)sigma);
     // MatView(A, viewer_info);
 
@@ -632,28 +599,19 @@ int main(int argc,char **args)
     for (unsigned int t = 0; t < Number_Of_Periods*Number_Of_TimeSteps_In_One_Period; t++)
     {
         time = (t+1)*DeltaT;
-
-
-        if (direct==1)
-        {
-            MatMult(Prop, Sol, QX);
-            VecCopy(QX, Sol);
-        }
-        else
-        {
             MatMult(B, Sol, QX);
             KSPSolve(ksp, QX, Sol);
-        }
+
         //H1 = calculate_Hamiltonian(M1, Sol, Number_Of_Elements, Np);
 
         //std::cout << "Energy = " << std::setprecision(16) << H1 ;
         //std::cout << "  Time = " << time << " " << std::endl;
 
-        //PetscViewer viewer2;
-        //sprintf(szFileName, "solution%d.txt", t);
-        //PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
-        //VecView(Sol, viewer2);
-        //PetscViewerDestroy(&viewer2);
+        PetscViewer viewer2;
+        sprintf(szFileName, "solution%d.txt", t);
+        PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
+        VecView(Sol, viewer2);
+        PetscViewerDestroy(&viewer2);
     }
     H1 = calculate_Hamiltonian(M1, Sol, Number_Of_Elements, Np);
     std::cout << "End Time Stepping" << std::endl;
@@ -698,7 +656,7 @@ int main(int argc,char **args)
     VecNorm(Sol,NORM_2,&norm);
     norm *= sqrt(DeltaX);
     PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error %1.9e\n",(double)norm);
-
+    VecDestroy(&Sol2);
     /*
     // Exact Solution
     Vec Exact_Solution;
@@ -729,10 +687,6 @@ int main(int argc,char **args)
     PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error %1.9e\n",(double)norm2);
     VecDestroy(&Exact_Solution);
 */
-    //VecView(Initial_Condition, PETSC_VIEWER_STDOUT_SELF);
-    //VecView(Exact_Solution, PETSC_VIEWER_STDOUT_SELF);
-    //MatView(E, PETSC_VIEWER_STDOUT_SELF);
-    //MatView(ET, PETSC_VIEWER_STDOUT_SELF);
 
     VecDestroy(&Sol);
 
