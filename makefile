@@ -39,6 +39,34 @@ ex3: ${OBJS3} chkopts
 	-${CLINKER} -o ex3 ${OBJS3} ${PETSC_KSP_LIB} ${SLEPC_LIB}
 	${RM} ${OBJS3}
 
+ex4.o: ex4.cpp
+OBJS4 = ex4.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o
+
+ex4: ${OBJS4} chkopts
+	-${CLINKER} -o ex4 ${OBJS4} ${PETSC_KSP_LIB} ${SLEPC_LIB}
+	${RM} ${OBJS4}
+
+ex5.o: ex5.cpp
+OBJS5 = ex5.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o
+
+ex5: ${OBJS5} chkopts
+	-${CLINKER} -o ex5 ${OBJS5} ${PETSC_KSP_LIB} ${SLEPC_LIB}
+	${RM} ${OBJS5}
+
+ex6.o: ex6.cpp
+OBJS6 = ex6.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o
+
+ex6: ${OBJS6} chkopts
+	-${CLINKER} -o ex6 ${OBJS6} ${PETSC_KSP_LIB} ${SLEPC_LIB}
+	${RM} ${OBJS6}
+
+ex7.o: ex7.cpp
+OBJS7 = ex7.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o
+
+ex7: ${OBJS7} chkopts
+	-${CLINKER} -o ex7 ${OBJS7} ${PETSC_KSP_LIB} ${SLEPC_LIB}
+	${RM} ${OBJS7}
+
 ex1: ex1.o  chkopts
 	-${CLINKER} -o ex1 ex1.o  ${PETSC_KSP_LIB}
 	${RM} ex1.o
@@ -55,25 +83,9 @@ ex2f: ex2f.o  chkopts
 	-${FLINKER} -o ex2f ex2f.o  ${PETSC_KSP_LIB}
 	${RM} ex2f.o
 
-ex4: ex4.o  chkopts
-	-${CLINKER} -o ex4 ex4.o  ${PETSC_KSP_LIB}
-	${RM} ex4.o
-
-ex5: ex5.o  chkopts
-	-${CLINKER} -o ex5 ex5.o  ${PETSC_KSP_LIB}
-	${RM} ex5.o
-
-ex6: ex6.o  chkopts
-	-${CLINKER} -o ex6 ex6.o  ${PETSC_KSP_LIB}
-	${RM} ex6.o
-
 ex6f: ex6f.o  chkopts
 	-${FLINKER} -o ex6f ex6f.o  ${PETSC_KSP_LIB}
 	${RM} ex6f.o
-
-ex7: ex7.o  chkopts
-	-${CLINKER} -o ex7 ex7.o  ${PETSC_KSP_LIB}
-	${RM} ex7.o
 
 ex8: ex8.o  chkopts
 	-${CLINKER} -o ex8 ex8.o  ${PETSC_KSP_LIB}

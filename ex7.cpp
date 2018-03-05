@@ -1,4 +1,4 @@
-static char help[] = "Solves a 1D test case for a stratified fluid (only grad/div) \n\n";
+static char help[] = "Solves the 1D Compressible Viscous System. \n\n";
 
 #include <petscksp.h>
 #include <iostream>
@@ -18,12 +18,15 @@ static char help[] = "Solves a 1D test case for a stratified fluid (only grad/di
 int main(int argc,char **args)
 {
     PetscInitialize(&argc,&args,(char*)0,help);
+
+    auto t1 = std::chrono::high_resolution_clock::now();
     // Read in options from command line
     PetscInt   Number_Of_Elements_Petsc=10, Number_Of_TimeSteps_In_One_Period=10, Method=1;
     PetscInt   Number_Of_Periods=1, kmode=1;
     PetscScalar N2 = 0.0;//1.0;
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 1, N_Q=0;
+    PetscScalar nu = 0.0;
 
     PetscOptionsGetInt(NULL, NULL, "-n", &Number_Of_Elements_Petsc, NULL);
     PetscOptionsGetInt(NULL, NULL, "-k", &kmode, NULL);
@@ -34,6 +37,7 @@ int main(int argc,char **args)
     PetscOptionsGetScalar(NULL, NULL, "-theta", &theta, NULL);
     PetscOptionsGetInt(NULL, NULL, "-Order", &N_Petsc, NULL);
     PetscOptionsGetInt(NULL, NULL, "-QuadratureAdded", &N_Q, NULL);
+    PetscOptionsGetScalar(NULL, NULL, "-nu", &nu, NULL);
 
     unsigned int Number_Of_Elements = Number_Of_Elements_Petsc;
     unsigned int N = N_Petsc;
@@ -129,27 +133,34 @@ int main(int argc,char **args)
     MatAssemblyBegin(x, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(x, MAT_FINAL_ASSEMBLY);
     //MatView(x, PETSC_VIEWER_STDOUT_SELF);
-    MatDestroy(&x);
     MatDestroy(&Dr);
     VecDestroy(&r);
+
+    MatConvert(x, MATSEQDENSE,  MAT_INPLACE_MATRIX, &x);
+    PetscViewer xviewer;
+    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "coordinates.txt", &xviewer);
+    MatView(x,xviewer);
+    PetscViewerDestroy(&xviewer);
+    MatDestroy(&x);
     /*--------------------------------------------------------------------------*/
     /* Problem Specific */
     /*--------------------------------------------------------------------------*/
 
     PetscScalar   sigma;
-    sigma = calculate_sigma(N2, kmode);
+    sigma = calculate_sigma_system1dcom(N2, kmode);
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
     PetscScalar   DeltaX = 1.0/(double)Number_Of_Elements;
-    Number_Of_TimeSteps_In_One_Period = 10*Number_Of_Elements*Number_Of_Elements;//*Number_Of_Elements;
+    Number_Of_TimeSteps_In_One_Period = 10*pow(Number_Of_Elements, (Np+1)/2);//Number_Of_Elements*Number_Of_Elements;
     PetscScalar DeltaT=1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
     std::cout << Number_Of_Elements << " => " << DeltaX << std::endl;
     std::cout << Number_Of_TimeSteps_In_One_Period << " => " << DeltaT << std::endl;
     /// Check for CFL condition (when explicit)
 
     // Initial Condition
-    Vec Initial_Condition, VecU, VecP;
-    VecCreateSeq(PETSC_COMM_WORLD, 2*Number_Of_Elements*Np,&Initial_Condition);
+    Vec Initial_Condition, VecU, VecR, VecP;
+    VecCreateSeq(PETSC_COMM_WORLD, 3*Number_Of_Elements*Np,&Initial_Condition);
     VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Elements*Np, &VecU);
+    VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Elements*Np, &VecR);
     VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Elements*Np, &VecP);
 
     for (auto k = List_Of_Elements.begin(); k < List_Of_Elements.end(); k++)
@@ -162,11 +173,14 @@ int main(int argc,char **args)
         double t = 0;
         for (auto c = xCoor.begin(); c < xCoor.end(); c++)
         {
-            double value = Exact_Solution_m(*c, t, N2, sigma, kmode);
+            double value = Exact_Solution_m_system1dcom(*c, t, N2, sigma, kmode);
             VecSetValue(VecU, pos + i, value, INSERT_VALUES);
             VecSetValue(Initial_Condition, pos + i, value, INSERT_VALUES);
-            value = Exact_Solution_p(*c, t, N2, sigma, kmode);
+            value = Exact_Solution_p_system1dcom(*c, t, N2, sigma, kmode);
             VecSetValue(VecP, pos + i, value, INSERT_VALUES);
+            VecSetValue(Initial_Condition, 2*Number_Of_Elements*Np+pos + i, value, INSERT_VALUES);
+            value = Exact_Solution_r_system1dcom(*c, t, N2, sigma, kmode);
+            VecSetValue(VecR, pos + i, value, INSERT_VALUES);
             VecSetValue(Initial_Condition, Number_Of_Elements*Np+pos + i, value, INSERT_VALUES);
             i++;
         }
@@ -175,6 +189,8 @@ int main(int argc,char **args)
     VecAssemblyEnd(Initial_Condition);
     VecAssemblyBegin(VecU);
     VecAssemblyEnd(VecU);
+    VecAssemblyBegin(VecR);
+    VecAssemblyEnd(VecR);
     VecAssemblyBegin(VecP);
     VecAssemblyEnd(VecP);
 
@@ -190,6 +206,7 @@ int main(int argc,char **args)
     MatScale(Mk, DeltaX/2.0);
     MatDestroy(&M);
 
+    MatDestroy(&Mk);
     // Inverse Mass Matrix (local): blocked
     Mat invM_Elemental;
     invM_Elemental = MassMatrix_inverse_local(V);
@@ -204,11 +221,14 @@ int main(int argc,char **args)
     MatAssemblyEnd(invM_Elemental, MAT_FINAL_ASSEMBLY);
     MatGetValues(invM_Elemental, Np, in, Np, in, invM_values);
 
-    Mat E, ET, invM, M1;
+    Mat E, ET, invM, M1, M2, NMat, NDerivMat;
     MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,3*Np, NULL, &E);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,3*Np, NULL, &ET);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,2*Np, NULL, &invM);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,2*Np, NULL, &M1);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,2*Np, NULL, &NMat);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,2*Np, NULL, &M2);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,2*Np, NULL, &NDerivMat);
 
     std::cout << " Start Elemental Calculations " << std::endl;
     for (auto e = List_Of_Elements.begin(); e < List_Of_Elements.end(); e++)
@@ -246,12 +266,15 @@ int main(int argc,char **args)
                 // E Matrix
                 double value_e = 0.0;
                 double value_m = 0.0;
+                double value_n = 0.0;
+                double value_m2 = 0.0;
+                double value_n_deriv = 0.0;
                 for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
                 {
                     //w_q rho_0(r_q) l_i(r_q) dl_j(r_q)/dr
                     double Li = LagrangePolynomial(ri, qp[q], i);
                     double physical_x = (*e).get_xCoordinateLeft()+0.5*(1.0+qp[q])*((*e).get_xCoordinateRight()-(*e).get_xCoordinateLeft());
-                    double rho0 = rho_0(physical_x, N2);
+                    double rho0 = rho_0_compressible(physical_x, N2);
                     if (Order_Polynomials > 0)
                     {
                         double Ljderiv = LagrangePolynomialDeriv(ri, qp[q], j);
@@ -259,10 +282,18 @@ int main(int argc,char **args)
                     }
                     // w_q drho_0(r_q)/dr l_i(r_q) l_j(r_q)
                     double Lj = LagrangePolynomial(ri, qp[q], j);
-                    double rho0deriv = rho_0_deriv(physical_x, N2);
+                    double rho0deriv = rho_0_deriv_compressible(physical_x, N2);
                     value_e += w[q]*rho0deriv*Li*Lj*DeltaX/2.0;
 
                     value_m += w[q]*Li*Lj/rho0*DeltaX/2.0;
+
+                    value_n += w[q]*rho0*Li*Lj*DeltaX/2.0;
+
+                    double N2_val = N_2_compressible(physical_x, N2); // N2 is actually rate: rho(-beta*x) => N2 = beta-1
+
+                    value_m2 += w[q]*Li*Lj/rho0/N2_val*DeltaX/2.0;
+
+                    value_n_deriv += w[q]*Li*Lj*rho0deriv*DeltaX/2.0; /// Should we rewrite this: second term value_e => add and subtract same term
                 }
                 double factor = -1.0;
                 MatSetValue(E, pos+i, pos+j, factor*value_e, ADD_VALUES);
@@ -270,6 +301,9 @@ int main(int argc,char **args)
                 MatSetValue(ET, pos+j, pos+i, factor*value_e, ADD_VALUES);
 
                 MatSetValue(M1, pos+i, pos+j, value_m, ADD_VALUES);
+                MatSetValue(NMat, pos+i, pos+j, value_n, ADD_VALUES);
+                MatSetValue(NDerivMat, pos+i, pos+j, value_n_deriv, ADD_VALUES);
+                MatSetValue(M2, pos+i, pos+j, value_m2, ADD_VALUES);
             }
         }
         VecDestroy(&ri);
@@ -279,11 +313,14 @@ int main(int argc,char **args)
     }
     MatAssemblyBegin(M1, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(M1, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(M2, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(M2, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(NMat, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(NMat, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(NDerivMat, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(NDerivMat, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(invM, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(invM, MAT_FINAL_ASSEMBLY);
-
-    //MatView(M1, PETSC_VIEWER_STDOUT_SELF);
-    //MatView(invM, PETSC_VIEWER_STDOUT_SELF);
 
     MatDestroy(&invM_Elemental);
 
@@ -302,7 +339,7 @@ int main(int argc,char **args)
             unsigned int Order_Polynomials_right = (List_Of_Elements[right]).getOrderOfPolynomials();
 
             double physical_x = (*f).getxCoordinate();
-            double rho0 = rho_0(physical_x, N2);
+            double rho0 = rho_0_compressible(physical_x, N2);
             unsigned int i = Order_Polynomials_left;
             unsigned int j = Order_Polynomials_left;
 
@@ -332,43 +369,99 @@ int main(int argc,char **args)
     //MatView(E, viewer_dense);
     //MatView(ET, viewer_dense);
     std::cout << "Finished Assembly DIV Matrices" << std::endl;
-
-    Mat BF1, DIV;
     double fillBF = 1;
-    Mat BF1_TEMP1, BF1_TEMP2;
+
+    Mat BF1, BF1_TEMP1, BF1_TEMP2;
     MatMatMult(E, invM, MAT_INITIAL_MATRIX, fillBF, &BF1_TEMP1);
     MatMatMult(BF1_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &BF1_TEMP2);
     MatMatMult(invM, BF1_TEMP2, MAT_INITIAL_MATRIX, fillBF, &BF1);
     MatDestroy(&BF1_TEMP1);
     MatDestroy(&BF1_TEMP2);
 
-    Mat DIV_TEMP1, DIV_TEMP2;
+    Mat BF2, BF2_TEMP1, BF2_TEMP2;
+    MatMatMult(E, invM, MAT_INITIAL_MATRIX, fillBF, &BF2_TEMP1);
+    MatMatMult(BF2_TEMP1, M2, MAT_INITIAL_MATRIX, fillBF, &BF2_TEMP2);
+    MatMatMult(invM, BF2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &BF2);
+    MatDestroy(&BF2_TEMP1);
+    MatDestroy(&BF2_TEMP2);
+
+    Mat DIV, DIV_TEMP1, DIV_TEMP2;
     MatMatMult(ET, invM, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP1);
     MatMatMult(DIV_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP2);
     MatMatMult(invM, DIV_TEMP2, MAT_INITIAL_MATRIX, fillBF, &DIV);
     MatDestroy(&DIV_TEMP1);
     MatDestroy(&DIV_TEMP2);
 
+    Mat C, C_TEMP1, C_TEMP2;
+    MatMatMult(NMat, invM, MAT_INITIAL_MATRIX, fillBF, &C_TEMP1);
+    MatMatMult(C_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &C_TEMP2);
+    MatMatMult(invM, C_TEMP2, MAT_INITIAL_MATRIX, fillBF, &C);
+    MatDestroy(&C_TEMP1);
+    MatDestroy(&C_TEMP2);
+
+    Mat C2, C2_TEMP1, C2_TEMP2;
+    MatMatMult(NMat, invM, MAT_INITIAL_MATRIX, fillBF, &C2_TEMP1);
+    MatMatMult(C2_TEMP1, M2, MAT_INITIAL_MATRIX, fillBF, &C2_TEMP2);
+    MatMatMult(invM, C2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &C2);
+    MatDestroy(&C2_TEMP1);
+    MatDestroy(&C2_TEMP2);
+
+    Mat D1, D1_TEMP1, D1_TEMP2;
+    MatMatMult(NDerivMat, invM, MAT_INITIAL_MATRIX, fillBF, &D1_TEMP1);
+    MatMatMult(D1_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &D1_TEMP2);
+    MatMatMult(invM, D1_TEMP2, MAT_INITIAL_MATRIX, fillBF, &D1);
+    MatDestroy(&D1_TEMP1);
+    MatDestroy(&D1_TEMP2);
+
+    Mat D2, D2_TEMP1, D2_TEMP2;
+    MatMatMult(NDerivMat, invM, MAT_INITIAL_MATRIX, fillBF, &D2_TEMP1);
+    MatMatMult(D2_TEMP1, M2, MAT_INITIAL_MATRIX, fillBF, &D2_TEMP2);
+    MatMatMult(invM, D2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &D2);
+    MatDestroy(&D2_TEMP1);
+    MatDestroy(&D2_TEMP2);
+
     MatDestroy(&E);
     MatDestroy(&ET);
     MatDestroy(&invM);
+    MatDestroy(&NMat);
+    MatDestroy(&NDerivMat);
+
+    Mat Laplacian;
+	MatMatMult(BF1, DIV, MAT_INITIAL_MATRIX, 1, &Laplacian);
+	MatScale(Laplacian, nu);
+
+	//MatView(Laplacian, viewer_info);
 
     Mat A, B;    // factor 2 = Number of Variables
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, Np*Number_Of_Elements*2, Np*Number_Of_Elements*2, 3*Np+1,  NULL, &A);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, Np*Number_Of_Elements*2, Np*Number_Of_Elements*2, 3*Np+1,  NULL, &B);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, Np*Number_Of_Elements*3, Np*Number_Of_Elements*3, 6*Np+1+3*Np*Np,  NULL, &A);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, Np*Number_Of_Elements*3, Np*Number_Of_Elements*3, 6*Np+1+3*Np*Np,  NULL, &B);
     std::cout << " Global Matrices Preallocated" << std::endl;
 
     for (unsigned int i = 0; i < Np*Number_Of_Elements; i++)
     {
         MatSetValue(A, i, i, 1.0, ADD_VALUES);
         MatSetValue(A, Np*Number_Of_Elements+i, Np*Number_Of_Elements+i, 1.0, ADD_VALUES);
+        MatSetValue(A, 2*Np*Number_Of_Elements+i, 2*Np*Number_Of_Elements+i, 1.0, ADD_VALUES);
         MatSetValue(B, i, i, 1.0, ADD_VALUES);
         MatSetValue(B, Np*Number_Of_Elements+i, Np*Number_Of_Elements+i, 1.0, ADD_VALUES);
+        MatSetValue(B, 2*Np*Number_Of_Elements+i, 2*Np*Number_Of_Elements+i, 1.0, ADD_VALUES);
 
         double dummy=0;
         const PetscInt* cols;
         const PetscScalar* values;
         PetscInt 	numberOfNonZeros;
+
+        MatGetRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
 
         MatGetRow(BF1, i, &numberOfNonZeros, &cols, &values);
         for (int j=0;j<numberOfNonZeros;++j)
@@ -376,11 +469,81 @@ int main(int argc,char **args)
             dummy = (values[j]);
             if (dummy!=0.0)
             {
-                MatSetValue(A, 	i,     Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
             }
         }
         MatRestoreRow(BF1, i, &numberOfNonZeros, &cols, &values);
+        /*
+        MatGetRow(BF2, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
+
+                MatSetValue(A, 	i,     Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     Np*Number_Of_Elements+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(BF2, i, &numberOfNonZeros, &cols, &values);
+        */
+        MatGetRow(C, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+
+                MatSetValue(A, 	2*Np*Number_Of_Elements+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	2*Np*Number_Of_Elements+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(C, i, &numberOfNonZeros, &cols, &values);
+        MatGetRow(C2, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+
+                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(C2, i, &numberOfNonZeros, &cols, &values);
+
+        MatGetRow(D1, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	Np*Number_Of_Elements+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	Np*Number_Of_Elements+i,     cols[j],    -0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(D1, i, &numberOfNonZeros, &cols, &values);
+        MatGetRow(D2, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+
+                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(D2, i, &numberOfNonZeros, &cols, &values);
 
         MatGetRow(DIV, i, &numberOfNonZeros, &cols, &values);
         for (int j=0;j<numberOfNonZeros;++j)
@@ -388,6 +551,9 @@ int main(int argc,char **args)
             dummy = (values[j]);
             if (dummy!=0.0)
             {
+                MatSetValue(A, 	2*Np*Number_Of_Elements+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	2*Np*Number_Of_Elements+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+
                 MatSetValue(A, 	Np*Number_Of_Elements+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
                 MatSetValue(B, 	Np*Number_Of_Elements+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
             }
@@ -402,12 +568,17 @@ int main(int argc,char **args)
     MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY);
     MatDestroy(&BF1);
+    MatDestroy(&BF2);
     MatDestroy(&DIV);
+    MatDestroy(&C);
+    MatDestroy(&C2);
+    MatDestroy(&D1);
+    MatDestroy(&D2);
+    MatDestroy(&Laplacian);
 
-    double H0 = calculate_Hamiltonian(M1, Initial_Condition, Number_Of_Elements, Np);
+    double H0 = calculate_Hamiltonian_comp(M1, M2, Initial_Condition, Number_Of_Elements, Np);
     std::cout << "Initial Energy      = " << std::setprecision(16) << H0 << std::endl;
 
-    auto t1 = std::chrono::high_resolution_clock::now();
     KSP ksp;
     PC pc;
     KSPCreate(PETSC_COMM_WORLD,&ksp);
@@ -432,27 +603,30 @@ int main(int argc,char **args)
     KSPSetFromOptions(ksp);
 
     Vec Sol, QX;
-    VecCreateSeq(PETSC_COMM_WORLD, 2*Number_Of_Elements*Np, &Sol);
-    VecCreateSeq(PETSC_COMM_WORLD, 2*Number_Of_Elements*Np, &QX);
+    VecCreateSeq(PETSC_COMM_WORLD, 3*Number_Of_Elements*Np, &Sol);
+    VecCreateSeq(PETSC_COMM_WORLD, 3*Number_Of_Elements*Np, &QX);
     VecCopy(Initial_Condition, Sol);
     double H1 = 0.0;
 
-    char szFileName[255] = {0};
     //PetscPrintf(PETSC_COMM_SELF,"Size Global Matrices %6.4e\n",(double)sigma);
     // MatView(A, viewer_info);
 
+    char szFileName[255] = {0};
+    FILE *f = fopen("Energy.txt", "w");
     // Solve Linear System
     std::cout << "Start Time Stepping" << std::endl;
     double time = 0.0;
     for (unsigned int t = 0; t < Number_Of_Periods*Number_Of_TimeSteps_In_One_Period; t++)
     {
+
+        H1 = calculate_Hamiltonian_comp(M1, M2, Sol, Number_Of_Elements, Np);
+        fprintf(f, "%1.16e \t %1.16e\n", time, H1);
         time = (t+1)*DeltaT;
             MatMult(B, Sol, QX);
             KSPSolve(ksp, QX, Sol);
 
-        //H1 = calculate_Hamiltonian(M1, Sol, Number_Of_Elements, Np);
-        //std::cout << "Energy = " << std::setprecision(16) << H1 ;
-        //std::cout << "  Time = " << time << " " << std::endl;
+        //std::cout << "Energy Diff= " << std::setprecision(16) << H1-calculate_Hamiltonian(M1, Sol, Number_Of_Elements, Np) <<std::endl;
+
         /*
         PetscViewer viewer2;
         sprintf(szFileName, "solution%d.txt", t);
@@ -460,21 +634,22 @@ int main(int argc,char **args)
         VecView(Sol, viewer2);
         PetscViewerDestroy(&viewer2);
         */
+
     }
-    H1 = calculate_Hamiltonian(M1, Sol, Number_Of_Elements, Np);
+    H1 = calculate_Hamiltonian_comp(M1, M2, Sol, Number_Of_Elements, Np);
+
+    fprintf(f, "%1.16e \t %1.16e\n", time, H1);
+    fclose(f);
+
     std::cout << "End Time Stepping" << std::endl;
     KSPDestroy(&ksp);
     VecDestroy(&QX);
     MatDestroy(&M1);
-    MatDestroy(&Mk);
-    auto t2 = std::chrono::high_resolution_clock::now();
+    MatDestroy(&M2);
     std::cout << "Initial Energy    = " << std::setprecision(16) << H0 << std::endl;
     std::cout << "Final Energy      = " << std::setprecision(16) << H1 << std::endl;
     std::cout << "Difference Energy = " << std::setprecision(16) << H1-H0 << std::endl;
 
-    std::cout << "Time Loop took "
-              << std::chrono::duration_cast<std::chrono::seconds>(t2-t1).count()
-              << " seconds\n";
     //MatView(A, PETSC_VIEWER_STDOUT_SELF);
 
     /*
@@ -490,15 +665,9 @@ int main(int argc,char **args)
     MatView(B,Bviewer);
     PetscViewerDestroy(&Bviewer);
 */
-    Vec Sol2;
-    VecDuplicate(Sol, &Sol2);
-    VecCopy(Sol, Sol2);
-    PetscReal      norm;
-    VecAXPY(Sol,-1.0,Initial_Condition);
-    VecNorm(Sol,NORM_2,&norm);
-    norm *= sqrt(DeltaX);
-    PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error %1.9e\n",(double)norm);
-    VecDestroy(&Sol2);
+    double Enew = calculate_Error(Initial_Condition, Sol, Number_Of_Elements, Np, DeltaX);
+    PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error new %1.3e\n",(double)Enew);
+
 
     /*
     // Exact Solution
@@ -535,6 +704,7 @@ int main(int argc,char **args)
     MatDestroy(&V);
     VecDestroy(&Initial_Condition);
     VecDestroy(&VecU);
+    VecDestroy(&VecR);
     VecDestroy(&VecP);
 
     MatDestroy(&A);
@@ -544,6 +714,12 @@ int main(int argc,char **args)
     PetscViewerDestroy(&viewer_dense);
     PetscViewerDestroy(&viewer_info);
 
+
+    auto t2 = std::chrono::high_resolution_clock::now();
+
+    std::cout << "Time Loop took "
+              << std::chrono::duration_cast<std::chrono::seconds>(t2-t1).count()
+              << " seconds\n";
     PetscFinalize();
     return 1;
 }

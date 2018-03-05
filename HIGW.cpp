@@ -80,44 +80,116 @@ extern double calculate_Hamiltonian(const Mat &M1, const Vec &Solution, const un
 
 }
 /*--------------------------------------------------------------------------*/
-extern double calculate_Hamiltonian_vec(const Mat &M1, const Vec &Solution)
+extern double calculate_Hamiltonian_pres(const Mat &M1, const Mat &M2, const Vec &Solution, const unsigned int &Number_Of_Elements, const unsigned int &Np)
 {
-    //double H = 0.0;
 
-    Vec SolSquared;
-    VecDuplicate(Solution, &SolSquared);
-    VecPointwiseMult(SolSquared, Solution, Solution);
-    //Vec Energy_Elemental;
-    //VecDuplicate(Solution, &Energy_Elemental);
+    double H = 0.0;
+    //PetscInt size_s = Number_Of_Elements*Np;
+    PetscScalar *XTemp;
+    VecGetArray(Solution, &XTemp);
 
-    // M1: Np*Number_Of_Elements x Np*Number_Of_Elements
-    // Solution: 2*Np*Numer_Of_Elements
+    for (unsigned int k = 0; k < Number_Of_Elements; k++)
+    {
+        // Get Submatrix from M1 and M2
+        Mat M1_Elemental, M2_Elemental;
+        IS isrow;
+        ISCreateStride(PETSC_COMM_WORLD, Np, k*Np, 1, &isrow);
+        MatGetSubMatrix(M1,isrow, isrow,MAT_INITIAL_MATRIX, &M1_Elemental);
+        MatGetSubMatrix(M2,isrow, isrow,MAT_INITIAL_MATRIX, &M2_Elemental);
+
+        for (unsigned int i = 0; i < Np; i++)
+        {
+            for (unsigned int j = 0; j < Np; j++)
+            {
+                double massij1, massij2;
+                const PetscInt idxm[1] = {i};
+                const PetscInt idxn[1] = {j};
+
+                MatGetValues(M1_Elemental, 1, idxm, 1,  idxn, &massij1);
+                MatGetValues(M2_Elemental, 1, idxm, 1,  idxn, &massij2);
+                H += 0.5*massij1*(XTemp[k*Np+i]*XTemp[k*Np+j]+XTemp[Np*Number_Of_Elements+k*Np+i]*XTemp[Np*Number_Of_Elements+k*Np+j])+0.5*massij2*(XTemp[Np*Number_Of_Elements+k*Np+i]*XTemp[Np*Number_Of_Elements+k*Np+j]);
+            }
+        }
+        MatDestroy(&M1_Elemental);
+        MatDestroy(&M2_Elemental);
+        ISDestroy(&isrow);
+    }
+
+    VecRestoreArray(Solution, &XTemp);
+    return H;
+
+}
+/*--------------------------------------------------------------------------*/
+extern double calculate_Hamiltonian_comp(const Mat &M1, const Mat &M2, const Vec &Solution, const unsigned int &Number_Of_Elements, const unsigned int &Np)
+{
+
+    double H = 0.0;
+    //PetscInt size_s = Number_Of_Elements*Np;
+    PetscScalar *XTemp;
+    VecGetArray(Solution, &XTemp);
+
+    for (unsigned int k = 0; k < Number_Of_Elements; k++)
+    {
+        // Get Submatrix from M1 and M2
+        Mat M1_Elemental, M2_Elemental;
+        IS isrow;
+        ISCreateStride(PETSC_COMM_WORLD, Np, k*Np, 1, &isrow);
+        MatGetSubMatrix(M1,isrow, isrow,MAT_INITIAL_MATRIX, &M1_Elemental);
+        MatGetSubMatrix(M2,isrow, isrow,MAT_INITIAL_MATRIX, &M2_Elemental);
+
+        for (unsigned int i = 0; i < Np; i++)
+        {
+            for (unsigned int j = 0; j < Np; j++)
+            {
+                double massij1, massij2;
+                const PetscInt idxm[1] = {i};
+                const PetscInt idxn[1] = {j};
+
+                MatGetValues(M1_Elemental, 1, idxm, 1,  idxn, &massij1);
+                MatGetValues(M2_Elemental, 1, idxm, 1,  idxn, &massij2);
+                H += 0.5*massij1*(XTemp[k*Np+i]*XTemp[k*Np+j]+XTemp[2*Np*Number_Of_Elements+k*Np+i]*XTemp[2*Np*Number_Of_Elements+k*Np+j])
+                    +0.5*massij2*(XTemp[Np*Number_Of_Elements+k*Np+i]*XTemp[Np*Number_Of_Elements+k*Np+j]-XTemp[Np*Number_Of_Elements+k*Np+i]*XTemp[2*Np*Number_Of_Elements+k*Np+j]
+                        -XTemp[Np*Number_Of_Elements+k*Np+j]*XTemp[2*Np*Number_Of_Elements+k*Np+i]+XTemp[2*Np*Number_Of_Elements+k*Np+i]*XTemp[2*Np*Number_Of_Elements+k*Np+j]);
+            }
+        }
+        MatDestroy(&M1_Elemental);
+        MatDestroy(&M2_Elemental);
+        ISDestroy(&isrow);
+    }
+
+    VecRestoreArray(Solution, &XTemp);
+    return H;
+
+}
+/*--------------------------------------------------------------------------*/
+extern double calculate_Error(const Vec &Exact, const Vec &Solution, const unsigned int &Number_Of_Elements, const unsigned int &Np, const double &DeltaX)
+{
     PetscInt size_r;
     VecGetSize(Solution, &size_r);
-    size_r /= 2;
-    IS stride;
-    ISCreateStride(PETSC_COMM_SELF, size_r, 0, 1, &stride);
-    Vec U;
-    VecGetSubVector(SolSquared, stride, &U);
-    Vec Energy_Elemental_U;
-    VecDuplicate(U, &Energy_Elemental_U);
-    MatMult(M1, U, Energy_Elemental_U);
-    ISCreateStride(PETSC_COMM_SELF, size_r, size_r+1, 1, &stride);
-    Vec P;
-    VecGetSubVector(SolSquared, stride, &P);
-    Vec Energy_Elemental_P;
-    VecDuplicate(P, &Energy_Elemental_P);
-    MatMult(M1, P, Energy_Elemental_P);
-    VecDestroy(&SolSquared);
+    PetscScalar *ExactTemp, *SolutionTemp;
+    VecGetArray(Exact, &ExactTemp);
+    VecGetArray(Solution, &SolutionTemp);
 
-    VecAXPY(Energy_Elemental_U, 1.0, Energy_Elemental_P);
-    PetscScalar H;
-    VecSum(Energy_Elemental_U, &H);
-    VecDestroy(&Energy_Elemental_U);
-    VecDestroy(&Energy_Elemental_P);
-    ISDestroy(&stride);
+    double error = 0.0;
+    for (unsigned int i=0; i < size_r; i++)
+    {
+        if (Np > 1 && i > 0 && i < size_r-1 && (i+1)%(Np*Number_Of_Elements)!=0   && (i+1)%Np == 0 && i%Np==Np-1)
+        {
+            // Average over Interface
+            SolutionTemp[i+1] = 0.5*(SolutionTemp[i]+SolutionTemp[i+1]);
+        }
+        else
+        {
+            error += (SolutionTemp[i]-ExactTemp[i])*(SolutionTemp[i]-ExactTemp[i]);
+        }
+    }
+    error = sqrt(error);
+    error *= sqrt(DeltaX);
 
-    H *= 0.5;
-    return PetscRealPart(H);
+
+    VecRestoreArray(Exact, &ExactTemp);
+    VecRestoreArray(Solution, &SolutionTemp);
+
+    return error;
 }
 /*--------------------------------------------------------------------------*/

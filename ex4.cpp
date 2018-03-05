@@ -1,4 +1,4 @@
-static char help[] = "Solves a 1D test case for a stratified fluid (only grad/div) \n\n";
+static char help[] = "Solves a 1D test case for a viscous homogeneous fluid.\n\n";
 
 #include <petscksp.h>
 #include <iostream>
@@ -24,6 +24,7 @@ int main(int argc,char **args)
     PetscScalar N2 = 0.0;//1.0;
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 1, N_Q=0;
+    PetscScalar nu = 0.0;
 
     PetscOptionsGetInt(NULL, NULL, "-n", &Number_Of_Elements_Petsc, NULL);
     PetscOptionsGetInt(NULL, NULL, "-k", &kmode, NULL);
@@ -34,6 +35,7 @@ int main(int argc,char **args)
     PetscOptionsGetScalar(NULL, NULL, "-theta", &theta, NULL);
     PetscOptionsGetInt(NULL, NULL, "-Order", &N_Petsc, NULL);
     PetscOptionsGetInt(NULL, NULL, "-QuadratureAdded", &N_Q, NULL);
+    PetscOptionsGetScalar(NULL, NULL, "-nu", &nu, NULL);
 
     unsigned int Number_Of_Elements = Number_Of_Elements_Petsc;
     unsigned int N = N_Petsc;
@@ -137,10 +139,13 @@ int main(int argc,char **args)
     /*--------------------------------------------------------------------------*/
 
     PetscScalar   sigma;
-    sigma = calculate_sigma(N2, kmode);
+    //sigma = calculate_sigma(N2, kmode);
+    sigma = viscous_calculate_sigma(nu, kmode);
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
     PetscScalar   DeltaX = 1.0/(double)Number_Of_Elements;
-    Number_Of_TimeSteps_In_One_Period = 10*Number_Of_Elements*Number_Of_Elements;//*Number_Of_Elements;
+    //Number_Of_TimeSteps_In_One_Period = 10*Number_Of_Elements*Number_Of_Elements;//*Number_Of_Elements;
+
+    Number_Of_TimeSteps_In_One_Period = 100*pow(Number_Of_Elements, (Np+1)/2);
     PetscScalar DeltaT=1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
     std::cout << Number_Of_Elements << " => " << DeltaX << std::endl;
     std::cout << Number_Of_TimeSteps_In_One_Period << " => " << DeltaT << std::endl;
@@ -162,10 +167,12 @@ int main(int argc,char **args)
         double t = 0;
         for (auto c = xCoor.begin(); c < xCoor.end(); c++)
         {
-            double value = Exact_Solution_m(*c, t, N2, sigma, kmode);
+            //double value = Exact_Solution_m(*c, t, N2, sigma, kmode);
+            double value = viscous_Exact_Solution_m(*c, t, nu, sigma, kmode);
             VecSetValue(VecU, pos + i, value, INSERT_VALUES);
             VecSetValue(Initial_Condition, pos + i, value, INSERT_VALUES);
-            value = Exact_Solution_p(*c, t, N2, sigma, kmode);
+            //value = Exact_Solution_p(*c, t, N2, sigma, kmode);
+            value = viscous_Exact_Solution_p(*c, t, nu, sigma, kmode);
             VecSetValue(VecP, pos + i, value, INSERT_VALUES);
             VecSetValue(Initial_Condition, Number_Of_Elements*Np+pos + i, value, INSERT_VALUES);
             i++;
@@ -349,13 +356,24 @@ int main(int argc,char **args)
     MatDestroy(&DIV_TEMP1);
     MatDestroy(&DIV_TEMP2);
 
+    Mat Laplacian;
+	//MatMatMult(DIV, BF1, MAT_INITIAL_MATRIX, 1, &Laplacian);
+	MatMatMult(BF1, DIV, MAT_INITIAL_MATRIX, 1, &Laplacian);
+	MatScale(Laplacian, nu);
+
     MatDestroy(&E);
     MatDestroy(&ET);
     MatDestroy(&invM);
 
+    //MatView(BF1, viewer_info);
+    //MatView(DIV, viewer_info);
+    //MatView(Laplacian, viewer_info);
+
+    std::cout << 3*Np+1 << std::endl;
+    std::cout << 3*Np+1+Np*Np << std::endl;
     Mat A, B;    // factor 2 = Number of Variables
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, Np*Number_Of_Elements*2, Np*Number_Of_Elements*2, 3*Np+1,  NULL, &A);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, Np*Number_Of_Elements*2, Np*Number_Of_Elements*2, 3*Np+1,  NULL, &B);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, Np*Number_Of_Elements*2, Np*Number_Of_Elements*2, 3*Np+1+3*Np*Np,  NULL, &A);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, Np*Number_Of_Elements*2, Np*Number_Of_Elements*2, 3*Np+1+3*Np*Np,  NULL, &B);
     std::cout << " Global Matrices Preallocated" << std::endl;
 
     for (unsigned int i = 0; i < Np*Number_Of_Elements; i++)
@@ -369,6 +387,18 @@ int main(int argc,char **args)
         const PetscInt* cols;
         const PetscScalar* values;
         PetscInt 	numberOfNonZeros;
+
+        MatGetRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
 
         MatGetRow(BF1, i, &numberOfNonZeros, &cols, &values);
         for (int j=0;j<numberOfNonZeros;++j)
@@ -403,6 +433,11 @@ int main(int argc,char **args)
     MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY);
     MatDestroy(&BF1);
     MatDestroy(&DIV);
+
+    MatDestroy(&Laplacian);
+
+
+    //MatView(A, viewer_info);
 
     double H0 = calculate_Hamiltonian(M1, Initial_Condition, Number_Of_Elements, Np);
     std::cout << "Initial Energy      = " << std::setprecision(16) << H0 << std::endl;
@@ -460,6 +495,7 @@ int main(int argc,char **args)
         VecView(Sol, viewer2);
         PetscViewerDestroy(&viewer2);
         */
+
     }
     H1 = calculate_Hamiltonian(M1, Sol, Number_Of_Elements, Np);
     std::cout << "End Time Stepping" << std::endl;
@@ -489,18 +525,8 @@ int main(int argc,char **args)
     PetscViewerASCIIOpen(PETSC_COMM_WORLD, "matrixB.txt", &Bviewer);
     MatView(B,Bviewer);
     PetscViewerDestroy(&Bviewer);
-*/
-    Vec Sol2;
-    VecDuplicate(Sol, &Sol2);
-    VecCopy(Sol, Sol2);
-    PetscReal      norm;
-    VecAXPY(Sol,-1.0,Initial_Condition);
-    VecNorm(Sol,NORM_2,&norm);
-    norm *= sqrt(DeltaX);
-    PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error %1.9e\n",(double)norm);
-    VecDestroy(&Sol2);
+    */
 
-    /*
     // Exact Solution
     Vec Exact_Solution;
     VecCreateSeq(PETSC_COMM_WORLD, 2*Number_Of_Elements*Np,&Exact_Solution);
@@ -513,24 +539,37 @@ int main(int argc,char **args)
         int i = 0;
         for (auto c = xCoor.begin(); c < xCoor.end(); c++)
         {
-            double value = Exact_Solution_m(*c, time, N2, sigma, kmode);
+            //double value = Exact_Solution_m(*c, time, N2, sigma, kmode);
+            double value = viscous_Exact_Solution_m(*c, time, nu, sigma, kmode);
             VecSetValue(Exact_Solution, pos + i, value, INSERT_VALUES);
-            value = Exact_Solution_p(*c, time, N2, sigma, kmode);
+            //value = Exact_Solution_p(*c, time, N2, sigma, kmode);
+            value = viscous_Exact_Solution_p(*c, time, nu, sigma, kmode);
             VecSetValue(Exact_Solution, Number_Of_Elements*Np+pos + i, value, INSERT_VALUES);
             i++;
         }
     }
     VecAssemblyBegin(Exact_Solution);
     VecAssemblyEnd(Exact_Solution);
+    double Enew = calculate_Error(Exact_Solution, Sol, Number_Of_Elements, Np, DeltaX);
+    Vec Sol2;
+    VecDuplicate(Sol, &Sol2);
+    VecCopy(Sol, Sol2);
+    PetscReal      norm;
+    VecAXPY(Sol,-1.0,Initial_Condition);
+    VecNorm(Sol,NORM_2,&norm);
+    norm *= sqrt(DeltaX);
+    //PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error %1.9e\n",(double)norm);
 
     PetscReal      norm2;
     VecAXPY(Sol2,-1.0,Exact_Solution);
     VecNorm(Sol2,NORM_2,&norm2);
     norm2 *= sqrt(DeltaX);
     PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error %1.9e\n",(double)norm2);
-    VecDestroy(&Exact_Solution);
-    */
 
+    PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error new %1.3e\n",(double)Enew);
+    VecDestroy(&Exact_Solution);
+
+    VecDestroy(&Sol2);
     VecDestroy(&Sol);
     MatDestroy(&V);
     VecDestroy(&Initial_Condition);
