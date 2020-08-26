@@ -300,12 +300,14 @@ extern Vec JacobiP(const Vec &x, const double &alpha, const double &beta, const 
     MatSetType(PL, MATSEQAIJ);
     MatSeqAIJSetPreallocation(PL,size_r,NULL);
 
+    VecView(x, 	PETSC_VIEWER_STDOUT_SELF);
+
     // Initial values P_0(x) and P_1(x)
     double gamma0 = pow(2.0, alpha+beta+1.0)/(alpha+beta+1.0)*tgamma(alpha+1.0)*tgamma(beta+1.0)/tgamma(alpha+beta+1.0);
     PetscInt ix[size_r];
     PetscScalar u[size_r];
     PetscInt ir[1]={0};
-    for (PetscInt k=0;k<=size_r; k++)
+    for (PetscInt k=0;k<=size_r-1; k++)
     {
         ix[k] = k;
         u[k] = 1.0/sqrt(gamma0);
@@ -318,7 +320,7 @@ extern Vec JacobiP(const Vec &x, const double &alpha, const double &beta, const 
         PetscScalar *a;
         VecGetArray(x, &a);
         PetscScalar v[size_r];
-        for (PetscInt k=0; k <=size_r; k++)
+        for (PetscInt k=0; k <=size_r-1; k++)
         {
             v[k] = ((alpha+beta+2.0)*a[k]/2.0 + (alpha-beta)/2.0)/sqrt(gamma1);
         }
@@ -334,7 +336,7 @@ extern Vec JacobiP(const Vec &x, const double &alpha, const double &beta, const 
                 PetscScalar anew = 2.0/(h1+2.0)*sqrt( ((double)i+1.0)*((double)i+1.0+alpha+beta)*((double)i+1.0+alpha)*((double)i+1.0+beta)/(h1+1.0)/(h1+3.0));
                 PetscScalar bnew = - (alpha*alpha-beta*beta)/h1/(h1+2.0);
                 PetscScalar w[size_r];
-                for (PetscInt k=0; k <=size_r; k++)
+                for (PetscInt k=0; k <=size_r-1; k++)
                 {
                     w[k] = 1.0/anew*(-aold*u[k]+(a[k]-bnew)*v[k]);
                     u[k] = v[k];
