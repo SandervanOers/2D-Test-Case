@@ -1,4 +1,4 @@
-static char help[] = "Solves the 1D Compressible Viscous System. \n\n";
+static char help[] = "Solves the 1D Compressible Nonviscous System. Creates Convergence Tables\n \n\n";
 
 #include <petscksp.h>
 #include <iostream>
@@ -39,13 +39,6 @@ int main(int argc,char **args)
     PetscOptionsGetInt(NULL, NULL, "-QuadratureAdded", &N_Q, NULL);
     PetscOptionsGetScalar(NULL, NULL, "-nu", &nu, NULL);
 
-    unsigned int Number_Of_Elements = Number_Of_Elements_Petsc;
-    unsigned int N = N_Petsc;
-
-    unsigned int Np = N + 1;
-    unsigned int Nfp = 1;
-    unsigned int Nfaces = 2;
-
     // Viewer Full Digits
     PetscViewer viewer;
     PetscViewerCreate(PETSC_COMM_WORLD, &viewer);
@@ -58,6 +51,32 @@ int main(int argc,char **args)
     PetscViewer viewer_info;
     PetscViewerASCIIOpen(PETSC_COMM_WORLD, NULL, &viewer_info);
     PetscViewerPushFormat(viewer_info, PETSC_VIEWER_ASCII_INFO);
+
+    std::vector<std::vector<double>> L2Errors;
+    FILE *g = fopen("L2Errors.txt", "w");
+    fprintf(g, "1/h \t N \t L2 Error \t \t \t Order \t \t time [s] \n");
+    fclose(g);
+    for (unsigned int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 8; Number_Of_Polynomial_Steps++)
+    {
+    double Eold = 0;
+    FILE *g = fopen("L2Errors.txt", "a");
+    fprintf(g, "\n");
+    fclose(g);
+    for (unsigned int Number_Of_Spatial_Steps = 0; Number_Of_Spatial_Steps < 11-Number_Of_Polynomial_Steps; Number_Of_Spatial_Steps++)
+    {
+    auto t0 = std::chrono::high_resolution_clock::now();
+    unsigned int Number_Of_Elements = pow(2, Number_Of_Spatial_Steps); //Number_Of_Elements_Petsc;
+    unsigned int N = Number_Of_Polynomial_Steps; //N_Petsc;
+
+
+    std::cout << "**********************************************************"<< std::endl;
+    std::cout << "N = " << N << ", 1/h = " << Number_Of_Elements << std::endl;
+    std::cout << "**********************************************************"<< std::endl;
+
+    unsigned int Np = N + 1;
+    unsigned int Nfp = 1;
+    unsigned int Nfaces = 2;
+
 
     double xmin = 0;
     double xmax = 1;
@@ -85,6 +104,7 @@ int main(int argc,char **args)
         Boundaries B(i, leftID, rightID, isInternal, xCoordinate);
         List_Of_Boundaries.push_back(B);
     }
+
     for (unsigned int i=0; i<Number_Of_Elements; i++)
     {
         // Evenly-Spaced
@@ -668,7 +688,6 @@ int main(int argc,char **args)
     double Enew = calculate_Error(Initial_Condition, Sol, Number_Of_Elements, Np, DeltaX);
     PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error new %1.3e\n",(double)Enew);
 
-
     /*
     // Exact Solution
     Vec Exact_Solution;
@@ -710,16 +729,59 @@ int main(int argc,char **args)
     MatDestroy(&A);
     MatDestroy(&B);
 
-    PetscViewerDestroy(&viewer);
-    PetscViewerDestroy(&viewer_dense);
-    PetscViewerDestroy(&viewer_info);
-
 
     auto t2 = std::chrono::high_resolution_clock::now();
 
-    std::cout << "Time Loop took "
+    //std::cout << "Time Loop took "
+    std::cout << "Execution took "
+              << std::chrono::duration_cast<std::chrono::seconds>(t2-t0).count()
+              << " seconds\n";
+
+    std::vector<double> L2Error;
+    L2Error.push_back(Number_Of_Elements);
+    L2Error.push_back(N);
+    L2Error.push_back(Enew);
+    double Order = 0.0;
+    if (Number_Of_Spatial_Steps > 0)
+    {
+        Order = log(Eold/Enew)/log(2);
+    }
+    L2Error.push_back(Order);
+    L2Error.push_back(std::chrono::duration_cast<std::chrono::seconds>(t2-t0).count());
+    L2Errors.push_back(L2Error);
+
+    FILE *g = fopen("L2Errors.txt", "a");
+    fprintf(g, "%d \t %d \t %1.16e \t %1.1e \t %1.1e \n", Number_Of_Elements, N, Enew, Order, std::chrono::duration_cast<std::chrono::milliseconds>(t2-t0).count()/1000.0);
+    fclose(g);
+
+    Eold = Enew;
+    }
+    }
+
+    std::cout << "**********************************************************"<< std::endl;
+    std::cout << "L2 Errors " << std::endl;
+    std::cout << "h N Er O t " << std::endl;
+    for (auto i = L2Errors.begin(); i != L2Errors.end(); ++i)
+    {
+        for (auto j = (*i).begin(); j != (*i).end(); ++j)
+        {
+            std::cout << *j <<  " ";
+        }
+        std::cout << std::endl;
+    }
+    //    std::cout << *i << ' ' << std::endl;
+    std::cout << "**********************************************************"<< std::endl;
+
+    auto t2 = std::chrono::high_resolution_clock::now();
+
+    //std::cout << "Total took "
+    std::cout << "Execution took "
               << std::chrono::duration_cast<std::chrono::seconds>(t2-t1).count()
               << " seconds\n";
+
+    PetscViewerDestroy(&viewer);
+    PetscViewerDestroy(&viewer_dense);
+    PetscViewerDestroy(&viewer_info);
     PetscFinalize();
     return 1;
 }

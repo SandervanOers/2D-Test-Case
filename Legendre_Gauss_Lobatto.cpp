@@ -300,8 +300,6 @@ extern Vec JacobiP(const Vec &x, const double &alpha, const double &beta, const 
     MatSetType(PL, MATSEQAIJ);
     MatSeqAIJSetPreallocation(PL,size_r,NULL);
 
-    VecView(x, 	PETSC_VIEWER_STDOUT_SELF);
-
     // Initial values P_0(x) and P_1(x)
     double gamma0 = pow(2.0, alpha+beta+1.0)/(alpha+beta+1.0)*tgamma(alpha+1.0)*tgamma(beta+1.0)/tgamma(alpha+beta+1.0);
     PetscInt ix[size_r];
