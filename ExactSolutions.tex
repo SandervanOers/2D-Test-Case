@@ -1,0 +1,82 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{amsfonts}
+
+\title{Exact Solutions}
+\begin{document}
+\section{1D compressible Nonviscous Linear Equations}
+\begin{align} \begin{split}
+	\frac{\partial m}{\partial t} &= -\rho -\frac{\partial p}{\partial x} \\
+	\frac{\partial \rho}{\partial t} &= - \frac{\partial m}{\partial x} + S_\rho \\
+	\frac{\partial p}{\partial t} &= - N^2 m - \frac{\partial m}{\partial x}, \\
+	N^2 &= - \frac{1}{\rho_0}\frac{d \rho_0}{dx} - 1, \beta = - \frac{1}{\rho_0}\frac{d \rho_0}{dx}
+\end{split} \end{align}
+\subsection{Constant $N^2$}
+Separation of Variables
+\begin{align} \begin{split}
+	2 \pi \sigma &= \sqrt{4 \pi^2 k^2 + \frac{1}{4} N^4 + \frac{1}{2} N^2 + \frac{1}{4}} \\
+	m &= e^{-\frac{1}{2} \beta x} \sin(2\pi k x) \sin(2 \pi \sigma t) \\
+	\rho &= e^{-\frac{1}{2} \beta x} \left[ -\frac{N^2+1}{4 \pi \sigma} \sin(2\pi k x) + \frac{k}{\sigma} \cos(2\pi k x)\right] \cos(2\pi \sigma t) \\
+	p &=  e^{-\frac{1}{2}\beta x} \left[ \frac{N^2-1}{4 \sigma \pi} \sin(2\pi k x) + \frac{k}{\sigma}\cos(2\pi k x)\right] \cos(2\pi \sigma t)
+\end{split} \end{align}
+\subsection{Linear $N^2$}
+Method of Manufactured Solutions
+\begin{align} \begin{split}
+	N^2(x) &= a x\\ 
+	m &= e^{-\frac{ax+1}{2} x} \sin(2\pi k x) \sin(2 \pi \sigma t) \\
+	\rho &= e^{-\frac{ax+1}{2} x} \left[ \frac{1}{\pi\sigma}  \left(2k^2-2\sigma^2)\pi^2-\frac{a x}{4} -\frac{1}{8}\right)\sin(2\pi k x) + \frac{k(ax+1)}{\sigma}\cos(2\pi k x)\right] \cos(2\pi \sigma t) \\
+	p &=  e^{-\frac{ax+1}{2} x} \left[ \frac{-1}{4 \sigma \pi} \sin(2\pi k x) + \frac{k}{\sigma}\cos(2\pi k x)\right] \cos(2\pi \sigma t) \\
+	S_\rho &= -2 \left[ \left((2k^2-s \sigma^2)\pi^2 + \frac{a x}{4} + \frac{1}{8}\right)\sin(2\pi k x) + a x \pi k \cos(2\pi k x)\right] e^{-\frac{ax+1}{2} x} \sin(2\pi \sigma t) \\
+\end{split} \end{align}
+$a>0$, $k \in \mathbb{Z}$ and $\sigma$ can be freely chosen. 
+\section{1D compressible Viscous Linear Equations}
+\begin{align} \begin{split}
+	\frac{\partial m}{\partial t} &= -\rho -\frac{\partial p}{\partial x} + \nu \left[\frac{\partial^2 m}{\partial x^2} + 2 \beta \frac{\partial m}{\partial x} - 2 \beta^2 m - \frac{1}{\rho_0} \frac{ d^2 \rho_0}{dx^2} m\right] + S_m \\
+	\frac{\partial \rho}{\partial t} &= - \frac{\partial m}{\partial x} + S_\rho \\
+	\frac{\partial p}{\partial t} &= - N^2 m - \frac{\partial m}{\partial x} +S_p, \\
+	N^2 &= - \frac{1}{\rho_0}\frac{d \rho_0}{dx} - 1, \beta = - \frac{1}{\rho_0}\frac{d \rho_0}{dx}
+\end{split} \end{align}
+\subsection{$\beta =0, N^2 = -1$}
+Separation of Variables
+\begin{align} \begin{split}
+	\sigma &= k \sqrt{1-\pi^2k^2 \nu^2} \\
+	m &= e^{-2\pi^2k^2\nu t} \sin(2\pi k x) \sin(2 \pi \sigma t) \\
+	\rho &= \cos(2\pi k x) e^{-2\pi^2k^2\nu t} \left[\frac{\sigma}{k} \cos(2\pi \sigma t) + 2 \pi k \nu \sin(2\pi \sigma t)\right] \\
+	p &=   \left[\cos(2\pi k x) -\frac{1}{2\pi k} \sin(2\pi k x)\right] e^{-2\pi^2k^2\nu t} \left[\frac{\sigma}{k} \cos(2\pi \sigma t) + \pi k \nu \sin(2\pi \sigma t)\right]
+\end{split} \end{align}
+$\nu^2 < \frac{1}{k^2 \pi^2}$
+\subsection{Constant $N^2$}
+Method of Manufactured Solutions
+\begin{align} \begin{split}
+	m &= e^{-\frac{1}{2}\beta x} \sin(2\pi k x) e^{-2\pi^2k^2\nu t} \sin(2 \pi \sigma t) \\
+	\rho &=  \frac {-2 e^{-\frac{1}{2}\beta x} e^{-2\pi^2k^2\nu t} }{\pi\, \left( {\pi}^{2}{k}^{4}{\nu}^{2}+{\sigma}^{2} \right) } \Big( \left[
+	\left({k}^{6}{\pi}^{4}{\nu}^{2}+ \left(  \left( {\frac {11\,{\nu}^{2}{\beta}
+^{2}}{8}}-1 \right) {k}^{4}+{k}^{2}{\sigma}^{2} \right) {\pi}^{2}-{
+\frac { \left(  \left( \beta-2 \right) {k}^{2}-22\,\beta\,{\sigma}^{2}
+ \right) \beta}{16}}\right) \nu \pi \sin(2\pi\sigma t) \right. \\
+ &\left. + \sigma\, \left( {k}^{4}{\pi}^{4}{\nu}^{2}+ \left( -{k}^{2}+{\sigma}^{2
+} \right) {\pi}^{2}-{\frac {{\beta}^{2}}{16}}+{\frac {\beta}{8}}
+ \right) \cos(2 \pi \sigma t) \right] \sin(2 \pi k x) \\
+ &- k \pi \left[
+ \pi\,\nu\, \left( {\pi}^{2}\beta\,{k}^{4}{\nu}^{2}+\beta\,{\sigma}^{2}
++{\frac {{k}^{2}}{2}} \right) 
+ \sin (2 \pi \sigma t) +  \frac{\sigma}{2} \cos(2\pi \sigma t) \right] \cos(2\pi k x) \\
+	p &= e^{-\frac{1}{2}\beta x} e^{-2\pi^2k^2\nu t} {\frac { \left( 4\,k\pi\,\cos \left( 2\,k\pi\,x \right) +\beta\,\sin
+ \left( 2\,k\pi\,x \right) -2\,\sin \left( 2\,k\pi\,x \right) 
+ \right)  \left( {k}^{2}\sin \left( 2\,\pi\,\sigma\,t \right) \pi\,\nu
++\cos \left( 2\,\pi\,\sigma\,t \right) \sigma \right) }{4\,\pi\,
+ \left( {\pi}^{2}{k}^{4}{\nu}^{2}+{\sigma}^{2} \right) }}
+ \\
+	S_\rho &=4 e^{-\frac{1}{2}\beta x} e^{-2\pi^2k^2\nu t} \Big(  \nu\,\beta\,\pi\,\sigma \left[ k\pi\,\cos \left( 2\,k\pi\,x \right) -{\frac {11\,\beta\,\sin
+ \left( 2\,k\pi\,x \right) }{8}} \right] \cos (2\pi \sigma t)  \\
+	&+  \left[\left( {k}^{4}{\pi}^{4}{\nu}^{2}+ \left( {\frac {11\,{\beta}^{2}{k}^{
+2}{\nu}^{2}}{8}}-{k}^{2}+{\sigma}^{2} \right) {\pi}^{2}-{\frac {{\beta
+}^{2}}{16}} \right) \sin \left( 2\,k\pi\,x \right) -{k}^{3}{\pi}^{3}{
+\nu}^{2}\beta\,\cos \left( 2\,k\pi\,x \right) \right] \sin (2\pi \sigma t)	 \Big)
+\end{split} \end{align}
+$k \in \mathbb{Z}$ and $\sigma$ can be freely chosen. 
+\subsection{Linear $N^2$}
+Method of Manufactured Solutions
+
+\end{document}
