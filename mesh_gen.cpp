@@ -14,13 +14,13 @@ void Compute_Vertex_Coordinates_Uniform_Rectangle_2D(const double &xmin, const d
     unsigned int Nx = Number_Of_Elements_X/2+1;
     unsigned int Ny = Number_Of_Elements_Y/2+1;
 
-    std::cout << "Nx = " << Nx << std::endl;
-    std::cout << "Ny = " << Ny << std::endl;
+    //std::cout << "Nx = " << Nx << std::endl;
+    //std::cout << "Ny = " << Ny << std::endl;
     unsigned int Total_Number_Of_Boundary_Elements = (Nx-1)*Ny+Nx*(Ny-1)+(Nx-1)*(Ny-1);
     unsigned int Total_Number_Of_Square_Elements = (Nx-1)*(Ny-1);
     unsigned int Total_Number_Of_Triangular_Elements = Number_Of_Elements_X*Number_Of_Elements_Y;
 
-    std::cout << "Total_Number_Of_Boundary_Elements = " << Total_Number_Of_Boundary_Elements << std::endl;
+    //std::cout << "Total_Number_Of_Boundary_Elements = " << Total_Number_Of_Boundary_Elements << std::endl;
     for (unsigned int j = 1; j <= Ny; j++)
     {
         double yvalue1 = (ymax-ymin)*(double)(j-1)/(Ny-1)+ymin;
@@ -43,166 +43,85 @@ void Compute_Vertex_Coordinates_Uniform_Rectangle_2D(const double &xmin, const d
         }
     }
 
-    for (unsigned int B = 0; B < Total_Number_Of_Boundary_Elements; B++)
-    {
-        //Boundaries2D(unsigned int IDg, int Left_Element, int Right_Element, bool Internal, unsigned int ID_V1, unsigned int ID_V2)
-    }
-
     for (unsigned int I = 1; I <= Total_Number_Of_Square_Elements; I++)
     {
         unsigned int Y = floor(I/Nx);
         unsigned int Is = (I-1)%(Nx-1) + 1;
-        //std::cout << "I-1 = " << I-1 << ", Nx-1 = " << Nx-1 << ", rem = " << remainder(I-1, Nx-1) << ", % = " << (I-1)%(Nx-1) << std::endl;
-        //std::cout << "I = " << I << ", Y = " << Y << ", Is = " << Is << std::endl;
         unsigned int S[4] = {I+Y, I+1+Y, I+Nx+Y, I+1+Nx+Y};
-        // //         int S[4] = {I+Y, I+1+Y, I+1+Nx+Y, I+Nx+Y}; Counterclockwise
-        //std::cout << "V" << ": " << S[0] << ", " << S[1] << ", " << S[2] << ", " << S[3] << std::endl;
 
         unsigned int B1[3] = {Is+Y*(3*Nx-2), Is+Y*(3*Nx-2)+2*Nx-1, Is+Y*(3*Nx-2)+Nx-1};
         unsigned int B2[3] = {Is+(Y+1)*(3*Nx-2), Is+Y*(3*Nx-2)+2*Nx-1, Is+Y*(3*Nx-2)+Nx};
-        //std::cout << "B1" << ": " << B1[0] << ", " << B1[1] << ", " << B1[2]  << std::endl;
-        //std::cout << "B2" << ": " << B2[0] << ", " << B2[1] << ", " << B2[2]  << std::endl;
-
-        //Boundaries2D(ID_Boundaries, int Left_Element, int Right_Element, bool Internal, unsigned int ID_V1, unsigned int ID_V2);
-        //ID_Boundaries++;
-        //Boundaries2D(ID_Boundaries, int Left_Element, int Right_Element, bool Internal, unsigned int ID_V1, unsigned int ID_V2);
-        //ID_Boundaries++;
-        //Boundaries2D(ID_Boundaries, int Left_Element, int Right_Element, bool Internal, unsigned int ID_V1, unsigned int ID_V2);
-        //ID_Boundaries++;
-        //Boundaries2D(ID_Boundaries, int Left_Element, int Right_Element, bool Internal, unsigned int ID_V1, unsigned int ID_V2);
-        //ID_Boundaries++;
-        //Boundaries2D(ID_Boundaries, int Left_Element, int Right_Element, bool Internal, unsigned int ID_V1, unsigned int ID_V2);
-        //ID_Boundaries++;
-
-        if (List_Of_Vertices[S[0]-1].isInternal() + List_Of_Vertices[S[1]-1].isInternal() == 0)
-        {
-            isInternal_Boundary = 0;
-        }
-        else
-        {
-            isInternal_Boundary = 1;
-        }
-        Boundaries2D Boundary1(B1[0], isInternal_Boundary, S[0], S[1]);
-        if (List_Of_Vertices[S[1]-1].isInternal() + List_Of_Vertices[S[2]-1].isInternal() == 0)
-        {
-            isInternal_Boundary = 0;
-        }
-        else
-        {
-            isInternal_Boundary = 1;
-        }
-        Boundaries2D Boundary2(B1[1], isInternal_Boundary, S[1], S[2]);
-        if (List_Of_Vertices[S[2]-1].isInternal() + List_Of_Vertices[S[0]-1].isInternal() == 0)
-        {
-            isInternal_Boundary = 0;
-        }
-        else
-        {
-            isInternal_Boundary = 1;
-        }
-        Boundaries2D Boundary3(B1[2], isInternal_Boundary, S[2], S[0]);
-        List_Of_Boundaries.push_back(Boundary1);
-        List_Of_Boundaries.push_back(Boundary2);
-        List_Of_Boundaries.push_back(Boundary3);
 
         // top boundaries
+        if (List_Of_Vertices[S[2]-1].getyCoordinate() == ymax)
+        {
+            // External
+            Boundaries2D Boundary5(B2[0], 0, S[3], S[2], ID_Elements+1, -1);
+            List_Of_Boundaries.push_back(Boundary5);
+        }
+        else
+        {
+            // Internal
+            Boundaries2D Boundary5(B2[0], 1, S[3], S[2], ID_Elements+1, ID_Elements+2*(Nx-1));
+            List_Of_Boundaries.push_back(Boundary5);
+        }
 
         // right boundaries
+        if (List_Of_Vertices[S[3]-1].getxCoordinate() == xmax)
+        {
+            // External
+            Boundaries2D Boundary5(B2[2], 0, S[1], S[3], ID_Elements+1, -1);
+            List_Of_Boundaries.push_back(Boundary5);
+        }
+        else
+        {
+            // Internal
+            Boundaries2D Boundary5(B2[2], 1, S[1], S[3], ID_Elements+1, ID_Elements+2);
+            List_Of_Boundaries.push_back(Boundary5);
+        }
+        // bottom boundaries
+        if (List_Of_Vertices[S[1]-1].getyCoordinate() == ymin)
+        {
+            // External
+            Boundaries2D Boundary5(B1[0], 0, S[0], S[1], ID_Elements, -1);
+            List_Of_Boundaries.push_back(Boundary5);
+        }
+        else
+        {
+            // Internal
+            //Boundaries2D Boundary5(B1[0], 1, S[0], S[1], ID_Elements, -1);
+            //List_Of_Boundaries.push_back(Boundary5);
+        }
+        // left boundaries
+        if (List_Of_Vertices[S[0]-1].getxCoordinate() == xmin)
+        {
+            Boundaries2D Boundary5(B1[2], 0, S[2], S[0], ID_Elements, -1);
+            List_Of_Boundaries.push_back(Boundary5);
+        }
 
-        // Boundary 14 should be internal, even though it is inbetween two boundary vertices
+        // Internal Boundaries
+        // diagonal boundaries
+        {
+            Boundaries2D Boundary5(B1[1], 1, S[1], S[2], ID_Elements, ID_Elements+1);
+            List_Of_Boundaries.push_back(Boundary5);
+        }
 
-        // Rewrite for three types of boundary elements: horizontal, vertical and diagonal?
+
+
 
 
         Elements2D T1(ID_Elements, B1[0], B1[1], B1[2], S[0], S[1], S[2]);
-        // Set Boundary : Element Data here
         ID_Elements++;
         List_Of_Elements.push_back(T1);
         Elements2D T2(ID_Elements, B2[0], B2[1], B2[2], S[3], S[2], S[1]);
-        // Set Boundary : Element Data here
         ID_Elements++;
         List_Of_Elements.push_back(T2);
 
     }
 
+    std::sort(List_Of_Boundaries.begin(), List_Of_Boundaries.end());
 
-    /*
-    // Define first three vertices
-    double xvalue0 = xmin;
-    double yvalue0 = ymin;
-    unsigned int ID_V1 = ID_Vertices;
-    VertexCoordinates2D V1(ID_Vertices, xvalue0, yvalue0, isInternal_Vertix);
-    List_Of_Vertices.push_back(V1);
-    ID_Vertices++;
-
-    double xvalue1 = (xmax-xmin)*1.0/Number_Of_Elements_X+xmin;
-    unsigned int ID_V2 = ID_Vertices;
-    VertexCoordinates2D V2(ID_Vertices, xvalue1, yvalue0, isInternal_Vertix);
-    List_Of_Vertices.push_back(V2);
-    ID_Vertices++;
-
-    unsigned int ID_B1 = ID_Boundaries;
-    Boundaries2D(ID_Boundaries, ID_Elements, -1.0, 0.0, ID_V1, ID_V2);
-    ID_Boundaries++;
-
-    double yvalue1 = (ymax-ymin)*1/Number_Of_Elements_Y+ymin;
-    unsigned int ID_V3 = ID_Vertices;
-    VertexCoordinates2D V3(ID_Vertices, xvalue0, yvalue1, isInternal_Vertix);
-    List_Of_Vertices.push_back(V3);
-    ID_Vertices++;
-
-    unsigned int ID_B2 = ID_Boundaries;
-    Boundaries2D(ID_Boundaries, ID_Elements, ID_E1+1, 1.0, ID_V2, ID_V3);
-    ID_Boundaries++;
-
-    unsigned int ID_B3 = ID_Boundaries;
-    Boundaries2D(ID_Boundaries, ID_Elements, -1.0, 0.0, ID_V3, ID_V1);
-    ID_Boundaries++;
-
-    unsigned int ID_E1 = ID_Elements;
-    Elements2D(ID_Elements, ID_B1, ID_B2, ID_B3, ID_V1, ID_V2, ID_V3);
-    ID_Elements++;
-
-    unsigned int ID_V4;
-
-    for (unsigned int i = 1; i <= Number_Of_Elements_X; i++)
-    {
-        double xvalue1 = (xmax-xmin)*(double)(i)/Number_Of_Elements_X+xmin;
-
-
-        for (unsigned int j = 1; j <= Number_Of_Elements_Y; j++)
-        {
-            double yvalue1 = (ymax-ymin)*(double)(j)/Number_Of_Elements_Y+ymin;
-
-            if (yvalue1 == ymin || yvalue1 == ymax || xvalue1 == xmin || xvalue1 == xmax )
-            {
-                isInternal_Vertix = 0;
-            }
-            else
-            {
-                isInternal_Vertix = 1;
-            }
-
-            ID_V4 = ID_Vertices;
-            VertexCoordinates2D V4(ID_Vertices, xvalue1, yvalue1, isInternal_Vertix);
-            List_Of_Vertices.push_back(V4);
-            ID_Vertices++;
-
-            // Vertex 4 -- Boundary 3 -- Vertex 3
-            // Boundary 4 Element 1 Boundary 5 Element 2 Boundary 2
-            // Vertex 1 -- Boundary 1 -- Vertex 2
-
-
-
-            // 1: Check Iterator Steps
-            // 2: Define 2D Elements and Boundaries
-            // Vertices V1 V2 V3 and V1 V2 V4 form two elements
-
-        }
-    }
-    */
 }
-/*--------------------------------------------------------------------------*/
 
 /*--------------------------------------------------------------------------*/
 extern Vec mesh_generation_1D_VX(const double &xmin, const double &xmax, const unsigned int &Number_Of_Elements)

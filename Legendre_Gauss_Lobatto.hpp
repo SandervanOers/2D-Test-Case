@@ -6,6 +6,7 @@
 #include <slepcsys.h>
 #include <iostream>
 #include <limits>
+#include <array>
 /*--------------------------------------------------------------------------*/
 extern Vec JacobiGL(const double &alpha, const double &beta, const unsigned int &N);
 /*--------------------------------------------------------------------------*/
@@ -42,5 +43,13 @@ extern Mat normals1D(const unsigned int &N, const unsigned int &Number_Of_Elemen
 extern double LagrangePolynomial(const Vec &r, const double &x, const unsigned int &i);
 /*--------------------------------------------------------------------------*/
 extern double LagrangePolynomialDeriv(const Vec &r, const double &x, const unsigned int &i);
+/*--------------------------------------------------------------------------*/
+// 2D //
+/*--------------------------------------------------------------------------*/
+extern void Nodes2D(unsigned int N, Vec &X, Vec &Y);
+/*--------------------------------------------------------------------------*/
+extern void XYtoRS(const Vec &X, const Vec &Y, Vec &R, Vec &S);
+/*--------------------------------------------------------------------------*/
+Vec Warpfactor(const unsigned int &N, const Vec &rout);
 /*--------------------------------------------------------------------------*/
 #endif

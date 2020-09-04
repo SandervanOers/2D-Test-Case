@@ -62,18 +62,40 @@ int main(int argc,char **args)
     Compute_Vertex_Coordinates_Uniform_Rectangle_2D(0,1, 0,1, 12, 6, List_Of_Vertices, List_Of_Boundaries2D, List_Of_Elements2D);
 
     std::cout << "List of Vertices "  << std::endl;
+    std::cout << "ID : x y isInternal "  << std::endl;
     for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
         std::cout << (*i).getID() << ": " << (*i).getxCoordinate() << "  " << (*i).getyCoordinate() << " " << (*i).isInternal() << std::endl;
 
     std::cout << "List of Boundaries "  << std::endl;
+    std::cout << "ID : isInternal LeftElement RightElement"  << std::endl;
     for(auto i = List_Of_Boundaries2D.begin(); i < List_Of_Boundaries2D.end(); i++)
-        std::cout << (*i).getID() << ": " << (*i).isInternal()  << std::endl;
+        std::cout << (*i).getID() << ": " << (*i).isInternal()  << " " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << std::endl;
 
 
     std::cout << "List of Elements "  << std::endl;
+    std::cout << "ID : V1 V2 V3 : B1 B2 B3"  << std::endl;
     for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
         std::cout << (*i).getID() << ": " << (*i).getVertex_V1() << "  " << (*i).getVertex_V2() << " " << (*i).getVertex_V3() << ": " << (*i).getBoundary_B1() << " " <<  (*i).getBoundary_B2() << " " << (*i).getBoundary_B3() << std::endl;
 
+
+    Vec X, Y;
+    Nodes2D(10, X, Y);
+    std::cout << "X = " << std::endl;
+    VecView(X,viewer);
+    std::cout << "Y = " << std::endl;
+    VecView(Y, viewer);
+
+    Vec R, S;
+    XYtoRS(X, Y, R, S);
+    std::cout << "R = " << std::endl;
+    VecView(R,viewer);
+    std::cout << "S = " << std::endl;
+    VecView(S, viewer);
+
+    VecDestroy(&X);
+    VecDestroy(&Y);
+    VecDestroy(&R);
+    VecDestroy(&S);
     std::cout << "**********************************************************"<< std::endl;
 
     std::vector<std::vector<double>> L2Errors;
@@ -96,8 +118,6 @@ int main(int argc,char **args)
     std::cout << "**********************************************************"<< std::endl;
     std::cout << "N = " << N << ", 1/h = " << Number_Of_Elements << std::endl;
     std::cout << "**********************************************************"<< std::endl;
-
-
 
     unsigned int Np = N + 1;
     unsigned int Nfp = 1;
@@ -148,6 +168,10 @@ int main(int argc,char **args)
 
     Mat V;
     V = Vandermonde1D(r, N);
+
+    PetscInt MS, NS;
+    MatGetSize(V,&MS,&NS);
+    std::cout << "V Size = " << MS << " x " << NS << std::endl;
 
     Mat Dr;
     Dr = DMatrix1D(r, N, V);

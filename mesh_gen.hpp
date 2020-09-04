@@ -4,6 +4,7 @@
 #include <petscksp.h>
 #include <iostream>
 #include <limits>
+#include <algorithm>
 
 #include "Elements.hpp"
 /*--------------------------------------------------------------------------*/
