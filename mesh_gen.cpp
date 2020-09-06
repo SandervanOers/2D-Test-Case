@@ -110,10 +110,10 @@ void Compute_Vertex_Coordinates_Uniform_Rectangle_2D(const double &xmin, const d
 
 
 
-        Elements2D T1(ID_Elements, B1[0], B1[1], B1[2], S[0], S[1], S[2]);
+        Elements2D T1(ID_Elements, B1[0], B1[1], B1[2], S[0], S[1], S[2], 3);
         ID_Elements++;
         List_Of_Elements.push_back(T1);
-        Elements2D T2(ID_Elements, B2[0], B2[1], B2[2], S[3], S[2], S[1]);
+        Elements2D T2(ID_Elements, B2[0], B2[1], B2[2], S[3], S[2], S[1], 3);
         ID_Elements++;
         List_Of_Elements.push_back(T2);
 

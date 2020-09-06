@@ -123,8 +123,8 @@ VertexCoordinates2D::~VertexCoordinates2D()
 {
 }
 /*--------------------------------------------------------------------------*/
-Elements2D::Elements2D(unsigned int IDg, unsigned int ID_B1, unsigned int ID_B2, unsigned int ID_B3, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3):
-    ID(IDg), ID_Boundary_V1V2(ID_B1), ID_Boundary_V2V3(ID_B2), ID_Boundary_V3V1(ID_B3), ID_Vertex_V1(ID_V1), ID_Vertex_V2(ID_V2),ID_Vertex_V3(ID_V3) {}
+Elements2D::Elements2D(unsigned int IDg, unsigned int ID_B1, unsigned int ID_B2, unsigned int ID_B3, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int N_Faces):
+    ID(IDg), ID_Boundary_V1V2(ID_B1), ID_Boundary_V2V3(ID_B2), ID_Boundary_V3V1(ID_B3), ID_Vertex_V1(ID_V1), ID_Vertex_V2(ID_V2),ID_Vertex_V3(ID_V3), Number_Of_Faces(N_Faces) {}
 unsigned int Elements2D::getID()
 {
     return ID;
@@ -153,7 +153,50 @@ unsigned int Elements2D::getBoundary_B3()
 {
     return ID_Boundary_V3V1;
 }
-    Elements2D::~Elements2D()
+unsigned int Elements2D::getNumber_Of_Faces()
+{
+    return Number_Of_Faces;
+}
+void Elements2D::setJacobian(double J)
+{
+    Jacobian = J;
+}
+double Elements2D::getJacobian()
+{
+    return Jacobian;
+}
+void Elements2D::set_Order_Of_Polynomials(unsigned int N)
+{
+    Order_Of_Polynomials = N;
+    Number_Of_Nodes = (N+1)*(N+2)/2;
+}
+unsigned int Elements2D::get_Order_Of_Polynomials()
+{
+    return Order_Of_Polynomials;
+}
+        //void Elements2D::set_Number_Of_Nodes(unsigned int N);
+unsigned int Elements2D::get_Number_Of_Nodes()
+{
+    return Number_Of_Nodes;
+}
+void Elements2D::set_node_coordinates_x(double x)
+{
+    node_coordinates_x.push_back(x);
+}
+void Elements2D::set_node_coordinates_y(double y)
+{
+    node_coordinates_y.push_back(y);
+}
+std::vector<double> Elements2D::get_node_coordinates_x()
+{
+    return node_coordinates_x;
+}
+std::vector<double> Elements2D::get_node_coordinates_y()
+{
+    return node_coordinates_y;
+}
+
+Elements2D::~Elements2D()
 {
 }
 /*--------------------------------------------------------------------------*/

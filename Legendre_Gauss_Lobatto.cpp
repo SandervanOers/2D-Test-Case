@@ -621,7 +621,7 @@ extern void Nodes2D(unsigned int N, Vec &XX, Vec &YY)
     double alpha = 5/3;
     if (N<16)
     {
-        alpha = alpopt[N];
+        alpha = alpopt[N-1];
     }
     // total number of nodes
     unsigned int Np = (N+1)*(N+2)/2;
@@ -642,48 +642,22 @@ extern void Nodes2D(unsigned int N, Vec &XX, Vec &YY)
       L1[sk] = (n-1)/NN;
       L3[sk] = (m-1)/NN;
       L2[sk] = 1.0-L1[sk]-L3[sk];
-      x[sk] = -L2[sk]+L3[sk];
-      y[sk] = (-L2[sk]+L3[sk]+2.0*L1[sk])/sqrt(3.0);
-      std::cout << L1[sk] << " " << L2[sk] << " " << L3[sk] << " " << x[sk] << " " << y[sk] << std::endl;
       ++sk;
     }
   }
-  std::cout << "sk = " << sk << ", Np = " << Np << std::endl;
 
-    Vec X, Y, L1Vec, L2Vec, L3Vec;
-    VecCreateSeqWithArray(PETSC_COMM_WORLD,1,Np,x,&X);
-    VecCreateSeqWithArray(PETSC_COMM_WORLD,1,Np,y,&Y);
+    Vec L1Vec, L2Vec, L3Vec;
     VecCreateSeqWithArray(PETSC_COMM_WORLD,1,Np,L1,&L1Vec);
     VecCreateSeqWithArray(PETSC_COMM_WORLD,1,Np,L2,&L2Vec);
     VecCreateSeqWithArray(PETSC_COMM_WORLD,1,Np,L3,&L3Vec);
-
-    VecAssemblyBegin(X);
-    VecAssemblyEnd(X);
-    VecAssemblyBegin(Y);
-    VecAssemblyEnd(Y);
     VecAssemblyBegin(L1Vec);
     VecAssemblyEnd(L1Vec);
     VecAssemblyBegin(L2Vec);
     VecAssemblyEnd(L2Vec);
     VecAssemblyBegin(L3Vec);
     VecAssemblyEnd(L3Vec);
-
-
-
     // Compute blending function at each node for each edge
     // blend1 = 4*L2.*L3; blend2 = 4*L1.*L3; blend3 = 4*L1.*L2;
-
-    Vec blend1, blend2, blend3;
-    VecDuplicate(L1Vec, &blend1);
-    VecDuplicate(L1Vec, &blend2);
-    VecDuplicate(L1Vec, &blend3);
-
-    VecPointwiseMult(L2Vec, L3Vec, blend1);
-    VecScale(blend1, 4.0);
-    VecPointwiseMult(L1Vec, L3Vec, blend2);
-    VecScale(blend2, 4.0);
-    VecPointwiseMult(L1Vec, L2Vec, blend3);
-    VecScale(blend3, 4.0);
 
     //  Amount of warp for each node, for each edge
     Vec W1;
@@ -695,83 +669,29 @@ extern void Nodes2D(unsigned int N, Vec &XX, Vec &YY)
     VecWAXPY(W1,-1.0,L1Vec,L2Vec);
     Vec warpf3 = Warpfactor(N, W1);
 
-    PetscInt size_warpf1, size_blend1, size_L1Vec, size_W1;
-    VecGetSize(W1,&size_W1);
-    VecGetSize(warpf1,&size_warpf1);
-    VecGetSize(blend1,&size_blend1);
-    VecGetSize(L1Vec,&size_L1Vec);
-    std::cout << " Sizes : " << size_W1 << " " << size_warpf1 << " " << size_blend1 << " " << size_L1Vec << std::endl;
-
     // Combine blend & warp
-    PetscScalar *blend_a, *warpf_a, *L_a;
-    PetscInt size_rout;
-    VecGetSize(blend1,&size_rout);
-    PetscScalar warp[size_rout];
-
-    VecGetArray(blend1, &blend_a);
-    VecGetArray(warpf1, &warpf_a);
-    VecGetArray(L1Vec, &L_a);
-    for (PetscInt i = 0; i < size_rout; i++)
+    PetscScalar *warpf1_a, *warpf2_a, *warpf3_a;
+    VecGetArray(warpf1, &warpf1_a);
+    VecGetArray(warpf2, &warpf2_a);
+    VecGetArray(warpf3, &warpf3_a);
+    for (PetscInt i = 0; i < Np; i++)
     {
-        warp[i] =   blend_a[i]*warpf_a[i]*(1.0+pow(alpha*L_a[i],2.0));
-        std::cout << i << " " << blend_a[i] << " " << warpf_a[i] << " " << L_a[i] << std::endl;
+        double blend1 = 4.0*L2[i]*L3[i];
+        double blend2 = 4.0*L1[i]*L3[i];
+        double blend3 = 4.0*L1[i]*L2[i];
+
+        double warp1 = blend1*warpf1_a[i]*(1.0+pow(alpha*L1[i],2.0));
+        double warp2 = blend2*warpf2_a[i]*(1.0+pow(alpha*L2[i],2.0));
+        double warp3 = blend3*warpf3_a[i]*(1.0+pow(alpha*L3[i],2.0));
+
+        x[i] = -L2[i]+L3[i] + warp1 - 0.5*warp2 - 0.5*warp3;
+        y[i] = (-L2[i]-L3[i]+2.0*L1[i])/sqrt(3.0) + 0.5*sqrt(3)*warp2 -0.5*sqrt(3)*warp3;
+        //std::cout << i << " " << blend1 << " " << blend2 << " " << blend3 << " " << warp1 << " " << blend2 << " " << blend3 << " " << x[i] << " " << y[i] << std::endl;
     }
-    VecRestoreArray(blend1, &blend_a);
-    VecRestoreArray(warpf1, &warpf_a);
-    VecRestoreArray(L1Vec, &L_a);
+    VecRestoreArray(warpf1, &warpf1_a);
+    VecRestoreArray(warpf2, &warpf2_a);
+    VecRestoreArray(warpf3, &warpf3_a);
 
-    Vec warp1;
-    VecCreateSeqWithArray(PETSC_COMM_WORLD,1,size_rout,warp,&warp1);
-    VecAssemblyBegin(warp1);
-    VecAssemblyEnd(warp1);
-
-    VecGetArray(blend2, &blend_a);
-    VecGetArray(warpf2, &warpf_a);
-    VecGetArray(L2Vec, &L_a);
-    for (PetscInt i = 0; i < size_rout; i++)
-    {
-        warp[i] =   blend_a[i]*warpf_a[i]*(1.0+pow(alpha*L_a[i],2.0));
-    }
-    VecRestoreArray(blend2, &blend_a);
-    VecRestoreArray(warpf2, &warpf_a);
-    VecRestoreArray(L2Vec, &L_a);
-
-    Vec warp2;
-    VecCreateSeqWithArray(PETSC_COMM_WORLD,1,size_rout,warp,&warp2);
-    VecAssemblyBegin(warp2);
-    VecAssemblyEnd(warp2);
-
-    VecGetArray(blend3, &blend_a);
-    VecGetArray(warpf3, &warpf_a);
-    VecGetArray(L3Vec, &L_a);
-    for (PetscInt i = 0; i < size_rout; i++)
-    {
-        warp[i] =   blend_a[i]*warpf_a[i]*(1.0+pow(alpha*L_a[i],2.0));
-    }
-    VecRestoreArray(blend3, &blend_a);
-    VecRestoreArray(warpf3, &warpf_a);
-    VecRestoreArray(L3Vec, &L_a);
-
-    Vec warp3;
-    VecCreateSeqWithArray(PETSC_COMM_WORLD,1,size_rout,warp,&warp3);
-    VecAssemblyBegin(warp3);
-    VecAssemblyEnd(warp3);
-
-    // Accumulate deformations associated with each edge
-    // x = x + 1*warp1 + cos(2*pi/3)*warp2 + cos(4*pi/3)*warp3;
-    // y = y + 0*warp1 + sin(2*pi/3)*warp2 + sin(4*pi/3)*warp3;
-
-    VecAXPY(X, 1.0, warp1);
-    VecAXPY(X, cos(2.0/3.0*PETSC_PI), warp2);
-    VecAXPY(X, cos(4.0/3.0*PETSC_PI), warp3);
-
-    //VecAXPY(X, 0.0, warp1);
-    VecAXPY(Y, sin(2.0/3.0*PETSC_PI), warp2);
-    VecAXPY(Y, sin(4.0/3.0*PETSC_PI), warp3);
-
-    VecDestroy(&warp1);
-    VecDestroy(&warp2);
-    VecDestroy(&warp3);
     VecDestroy(&L1Vec);
     VecDestroy(&L2Vec);
     VecDestroy(&L3Vec);
@@ -780,9 +700,16 @@ extern void Nodes2D(unsigned int N, Vec &XX, Vec &YY)
     VecDestroy(&warpf2);
     VecDestroy(&warpf3);
     VecDestroy(&W1);
-    VecDestroy(&blend1);
-    VecDestroy(&blend2);
-    VecDestroy(&blend3);
+
+    Vec X, Y;
+    VecCreateSeqWithArray(PETSC_COMM_WORLD,1,Np,x,&X);
+    VecCreateSeqWithArray(PETSC_COMM_WORLD,1,Np,y,&Y);
+
+
+    VecAssemblyBegin(X);
+    VecAssemblyEnd(X);
+    VecAssemblyBegin(Y);
+    VecAssemblyEnd(Y);
 
     VecDuplicate(X,&XX);
     VecCopy(X, XX);
@@ -976,40 +903,143 @@ Vec Warpfactor(const unsigned int &N, const Vec &rout)
     return Warp;
 }
 /*--------------------------------------------------------------------------*/
-/*
-function [V2D] = Vandermonde2D(N, r, s);
-% function [V2D] = Vandermonde2D(N, r, s);
-% Purpose : Initialize the 2D Vandermonde Matrix,
-%
-V_{ij} = phi_j(r_i, s_i);
-V2D = zeros(length(r),(N+1)*(N+2)/2);
-% Transfer to (a,b) coordinates
-[a, b] = rstoab(r, s);
-% build the Vandermonde matrix
-sk = 1;
-for i=0:N
-for j=0:N - i
-V2D(:,sk) = Simplex2DP(a,b,i,j);
-sk = sk+1;
-end
-end
-return;
-*/
+extern Mat Vandermonde2D(const unsigned int &N, const Vec &r, const Vec &s)
+{
+    // function [V2D] = Vandermonde2D(N, r, s);
+    // Purpose : Initialize the 2D Vandermonde Matrix
+    // V_{ij} = phi_j(r_i, s_i);
+
+    // Transfer to (a,b) coordinates
+    Vec A, B;
+    RStoAB(r, s, A, B);
+
+    unsigned int Np = (N+1)*(N+2)/2;
+
+    Mat V;
+    MatCreate(PETSC_COMM_WORLD,&V);
+    MatSetType(V,MATSEQAIJ);
+    PetscInt size_r;
+    VecGetSize(r, &size_r);
+    MatSetSizes(V, size_r, Np, PETSC_DECIDE, PETSC_DECIDE);
+    MatSeqAIJSetPreallocation(V, size_r, NULL);
+
+    PetscInt ix[size_r];
+    PetscInt ir[1]={0};
+    //for (unsigned int k=0;k<=N+1; k++)
+    for (unsigned int k=0;k<size_r; k++)
+    {
+        ix[k] = k;
+    }
+    unsigned int sk = 0;
+    for (unsigned int i = 0; i <= N; i++)
+    {
+        for (unsigned int j = 0; j <= N - i; j ++)
+        {
+            Vec P;
+            P = Simplex2DP(A, B, i, j);
+
+            PetscScalar *p_a;
+            VecGetArray(P, &p_a);
+            ir[0]=sk;
+
+            MatSetValues(V, size_r, ix, 1, ir, p_a, INSERT_VALUES);
+            VecRestoreArray(P, &p_a);
+            VecDestroy(&P);
+            sk++;
+        }
+    }
+    MatAssemblyBegin(V, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(V, MAT_FINAL_ASSEMBLY);
+
+    VecDestroy(&A);
+    VecDestroy(&B);
+    return V;
+
+}
 /*--------------------------------------------------------------------------*/
-/*
-function [a,b] = rstoab(r,s)
-% function [a,b] = rstoab(r,s)
-% Purpose : Transfer from (r,s) -> (a,b) coordinates in triangle
-Np = length(r); a = zeros(Np,1);
-for n=1:Np
-if(s(n) ~= 1)
-a(n) = 2*(1+r(n))/(1-s(n))-1;
-else a(n) = -1; end
-end
-b = s;
-return;
-/*
+void RStoAB(const Vec &R, const Vec &S, Vec &A, Vec &B)
+{
+    // function [a,b] = rstoab(r,s)
+    // Purpose : Transfer from (r,s) -> (a,b) coordinates in triangle
+
+    PetscScalar *r_a, *s_a;
+    VecGetArray(R, &r_a);
+    VecGetArray(S, &s_a);
+    PetscInt size_r;
+    VecGetSize(R,&size_r);
+    double a [size_r] = {};
+    for (unsigned int i = 0; i < size_r; i++)
+    {
+        if (s_a[i] != 1)
+        {
+            a[i] = 2.0*(1.0+r_a[i])/(1.0-s_a[i])-1.0;
+        }
+        else
+        {
+            a[i] = 1.0;
+        }
+    }
+    VecRestoreArray(R, &r_a);
+    VecRestoreArray(S, &s_a);
+
+    Vec AA;
+    VecCreateSeqWithArray(PETSC_COMM_WORLD,1,size_r,a,&AA);
+
+
+    VecAssemblyBegin(AA);
+    VecAssemblyEnd(AA);
+
+    VecDuplicate(AA,&A);
+    VecCopy(AA, A);
+
+    VecDuplicate(S,&B);
+    VecCopy(S, B);
+
+    VecDestroy(&AA);
+
+}
 /*--------------------------------------------------------------------------*/
+Vec Simplex2DP(const Vec &A, const Vec &B, const unsigned int &i, const unsigned int &j)
+{
+    // function [P] = Simplex2DP(a,b,i,j);
+    // Purpose : Evaluate 2D orthonormal polynomial
+    // on simplex at (a,b) of order (i,j).
+
+    Vec h1, h2;
+    h1 = JacobiP(A, 0, 0, i);
+    h2 = JacobiP(B, 2*i+1, 0, j);
+
+    // P = sqrt(2.0)*h1.*h2.*(1-b).^i;
+    PetscScalar *h1_a, *h2_a, *b_a;
+    VecGetArray(h1, &h1_a);
+    VecGetArray(h2, &h2_a);
+    VecGetArray(B, &b_a);
+    PetscInt size_r;
+    VecGetSize(B,&size_r);
+    double p [size_r] = {};
+    for (unsigned int k = 0; k < size_r; k++)
+    {
+        p[k] = sqrt(2.0)*h1_a[k]*h2_a[k]*pow(1.0-b_a[k],i);
+    }
+    VecRestoreArray(h1, &h1_a);
+    VecRestoreArray(h2, &h2_a);
+    VecRestoreArray(B, &b_a);
+
+    VecDestroy(&h1);
+    VecDestroy(&h2);
+
+    Vec P, PP;
+    VecCreateSeqWithArray(PETSC_COMM_WORLD,1,size_r,p,&PP);
+
+    VecAssemblyBegin(PP);
+    VecAssemblyEnd(PP);
+
+    VecDuplicate(PP, &P);
+    VecCopy(PP, P);
+    VecDestroy(&PP);
+
+    return P;
+}
 /*
 function [P] = Simplex2DP(a,b,i,j);
 % function [P] = Simplex2DP(a,b,i,j);

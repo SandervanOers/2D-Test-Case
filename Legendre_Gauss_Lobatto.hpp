@@ -52,4 +52,10 @@ extern void XYtoRS(const Vec &X, const Vec &Y, Vec &R, Vec &S);
 /*--------------------------------------------------------------------------*/
 Vec Warpfactor(const unsigned int &N, const Vec &rout);
 /*--------------------------------------------------------------------------*/
+extern Mat Vandermonde2D(const unsigned int &N, const Vec &r, const Vec &s);
+/*--------------------------------------------------------------------------*/
+void RStoAB(const Vec &R, const Vec &S, Vec &A, Vec &B);
+/*--------------------------------------------------------------------------*/
+Vec Simplex2DP(const Vec &A, const Vec &B, const unsigned int &i, const unsigned int &j);
+/*--------------------------------------------------------------------------*/
 #endif

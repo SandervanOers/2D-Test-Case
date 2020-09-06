@@ -61,6 +61,7 @@ int main(int argc,char **args)
 
     Compute_Vertex_Coordinates_Uniform_Rectangle_2D(0,1, 0,1, 12, 6, List_Of_Vertices, List_Of_Boundaries2D, List_Of_Elements2D);
 
+    /*
     std::cout << "List of Vertices "  << std::endl;
     std::cout << "ID : x y isInternal "  << std::endl;
     for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
@@ -71,15 +72,24 @@ int main(int argc,char **args)
     for(auto i = List_Of_Boundaries2D.begin(); i < List_Of_Boundaries2D.end(); i++)
         std::cout << (*i).getID() << ": " << (*i).isInternal()  << " " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << std::endl;
 
-
+    */
     std::cout << "List of Elements "  << std::endl;
     std::cout << "ID : V1 V2 V3 : B1 B2 B3"  << std::endl;
+    unsigned int j = 1;
     for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
-        std::cout << (*i).getID() << ": " << (*i).getVertex_V1() << "  " << (*i).getVertex_V2() << " " << (*i).getVertex_V3() << ": " << (*i).getBoundary_B1() << " " <<  (*i).getBoundary_B2() << " " << (*i).getBoundary_B3() << std::endl;
+    {
+        (*i).setJacobian(j);
+        j++;
+    }
 
+    for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
+    {
+        std::cout << (*i).getID() << ": " << (*i).getVertex_V1() << "  " << (*i).getVertex_V2() << " " << (*i).getVertex_V3() << ": " << (*i).getBoundary_B1() << " " <<  (*i).getBoundary_B2() << " " << (*i).getBoundary_B3() << " " << (*i).getJacobian() << std::endl;
+
+    }
 
     Vec X, Y;
-    Nodes2D(10, X, Y);
+    Nodes2D(N_Petsc, X, Y);
     std::cout << "X = " << std::endl;
     VecView(X,viewer);
     std::cout << "Y = " << std::endl;
@@ -92,6 +102,12 @@ int main(int argc,char **args)
     std::cout << "S = " << std::endl;
     VecView(S, viewer);
 
+    Mat V2D;
+    V2D = Vandermonde2D(N_Petsc, R, S);
+    std::cout << "V2D = " << std::endl;
+    MatView(V2D, viewer);
+
+    MatDestroy(&V2D);
     VecDestroy(&X);
     VecDestroy(&Y);
     VecDestroy(&R);

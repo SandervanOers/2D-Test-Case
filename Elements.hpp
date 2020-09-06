@@ -84,7 +84,7 @@ class VertexCoordinates2D
 class Elements2D
 {
     unsigned int ID;
-    //double Jacobian;
+    double Jacobian;
     unsigned int ID_Boundary_V1V2;
     unsigned int ID_Boundary_V2V3;
     unsigned int ID_Boundary_V3V1;
@@ -92,14 +92,17 @@ class Elements2D
     unsigned int ID_Vertex_V1;
     unsigned int ID_Vertex_V2;
     unsigned int ID_Vertex_V3;
-    //double xCoordinateLeft;
-    //double xCoordinateRight;
-    //unsigned int Order_Of_Polynomials;
-    //Mat MassMatrix;
-    //Mat MassMatrixOverRho0;
-    //std::vector<double> vertex_coordinates;
+
+    unsigned int Number_Of_Faces;
+    unsigned int Order_Of_Polynomials;
+    Mat MassMatrix;
+    Mat MassMatrixOverRho0;
+    std::vector<double> node_coordinates_x; // Should we turn this into a list, can we overwrite/change this?
+    std::vector<double> node_coordinates_y;
+    unsigned int Number_Of_Nodes;
+
     public:
-        Elements2D(unsigned int IDg, unsigned int ID_B1, unsigned int ID_B2, unsigned int ID_B3, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3);
+        Elements2D(unsigned int IDg, unsigned int ID_B1, unsigned int ID_B2, unsigned int ID_B3, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int N_Faces);
         //Elements(const Elements&);
         //Elements& operator=(const Elements& that);
         unsigned int getID();
@@ -109,15 +112,18 @@ class Elements2D
         unsigned int getBoundary_B1();
         unsigned int getBoundary_B2();
         unsigned int getBoundary_B3();
-        //unsigned int getLeftBoundaryID();
-        //unsigned int getRightBoundaryID();
-        //double get_xCoordinateLeft();
-        //double get_xCoordinateRight();
-        //unsigned int getOrderOfPolynomials();
-        //double getJacobian();
+        unsigned int getNumber_Of_Faces();
+        void setJacobian(double J);
+        double getJacobian();
+        void set_Order_Of_Polynomials(unsigned int N);
+        unsigned int get_Order_Of_Polynomials();
+        //void set_Number_Of_Nodes(unsigned int N);
+        unsigned int get_Number_Of_Nodes();
 
-        //void set_VertexCoordinates(double x);
-        //std::vector<double> get_VertexCoordinates();
+        void set_node_coordinates_x(double x);
+        void set_node_coordinates_y(double y);
+        std::vector<double> get_node_coordinates_x();
+        std::vector<double> get_node_coordinates_y();
 
         //void set_MassMatrix(Mat M);
         //void set_MassMatrixOverRho0(Mat M1);
