@@ -18,7 +18,9 @@ void Compute_Vertex_Coordinates_Uniform_Rectangle_2D(const double &xmin, const d
     //std::cout << "Ny = " << Ny << std::endl;
     unsigned int Total_Number_Of_Boundary_Elements = (Nx-1)*Ny+Nx*(Ny-1)+(Nx-1)*(Ny-1);
     unsigned int Total_Number_Of_Square_Elements = (Nx-1)*(Ny-1);
-    unsigned int Total_Number_Of_Triangular_Elements = Number_Of_Elements_X*Number_Of_Elements_Y;
+    //std::cout << "Total_Number_Of_Square_Elements = " << Total_Number_Of_Square_Elements << std::endl;
+    unsigned int Total_Number_Of_Triangular_Elements = Number_Of_Elements_X/2*Number_Of_Elements_Y/2*2;
+    //std::cout << "Total_Number_Of_Triangular_Elements = " << Total_Number_Of_Triangular_Elements << std::endl;
 
     //std::cout << "Total_Number_Of_Boundary_Elements = " << Total_Number_Of_Boundary_Elements << std::endl;
     for (unsigned int j = 1; j <= Ny; j++)
@@ -45,12 +47,15 @@ void Compute_Vertex_Coordinates_Uniform_Rectangle_2D(const double &xmin, const d
 
     for (unsigned int I = 1; I <= Total_Number_Of_Square_Elements; I++)
     {
-        unsigned int Y = floor(I/Nx);
+        unsigned int Y = floor((I-1)/(Nx-1));
         unsigned int Is = (I-1)%(Nx-1) + 1;
         unsigned int S[4] = {I+Y, I+1+Y, I+Nx+Y, I+1+Nx+Y};
 
         unsigned int B1[3] = {Is+Y*(3*Nx-2), Is+Y*(3*Nx-2)+2*Nx-1, Is+Y*(3*Nx-2)+Nx-1};
         unsigned int B2[3] = {Is+(Y+1)*(3*Nx-2), Is+Y*(3*Nx-2)+2*Nx-1, Is+Y*(3*Nx-2)+Nx};
+
+        //std::cout << "I = " << I << ", Y = " << Y << ", Is = " << Is << std::endl;
+        //std::cout << "S = " << S[0] << " " << S[1] << " " << S[2] << " " << S[3] << std::endl;
 
         // top boundaries
         if (List_Of_Vertices[S[2]-1].getyCoordinate() == ymax)
@@ -284,3 +289,45 @@ Mat FaceToFace_1D(const unsigned int &Number_Of_Elements, const Mat &EtoV)
 
     return EtoEF;
 }
+/*--------------------------------------------------------------------------*/
+void Calculate_Jacobian(std::vector<Elements2D> &List_Of_Elements2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
+{
+    for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
+    {
+        double x1 = List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate();
+        double y1 = List_Of_Vertices[(*i).getVertex_V1()-1].getyCoordinate();
+        double x2 = List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate();
+        double y2 = List_Of_Vertices[(*i).getVertex_V2()-1].getyCoordinate();
+        double x3 = List_Of_Vertices[(*i).getVertex_V3()-1].getxCoordinate();
+        double y3 = List_Of_Vertices[(*i).getVertex_V3()-1].getyCoordinate();
+
+        double dxdr = (x2-x1)/2.0;
+        double dydr = (y2-y1)/2.0;
+        double dxds = (x3-x1)/2.0;
+        double dyds = (y3-y1)/2.0;
+
+        double Jacobian = dxdr*dyds-dxds*dydr;
+        (*i).setJacobian(Jacobian);
+    }
+}
+/*--------------------------------------------------------------------------*/
+void set_Order_Polynomials_Uniform(std::vector<Elements2D> &List_Of_Elements2D, const unsigned int &N)
+{
+    for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
+    {
+        (*i).set_Order_Of_Polynomials(N); //(rand() % 3) + 1
+    }
+}
+/*--------------------------------------------------------------------------*/
+extern unsigned int get_Number_Of_Nodes(const std::vector<Elements2D> &List_Of_Elements2D)
+{
+    unsigned int Number_Of_Nodes = 0;
+    for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
+    {
+        Number_Of_Nodes += (*i).get_Number_Of_Nodes();
+    }
+    return Number_Of_Nodes;
+}
+/*--------------------------------------------------------------------------*/
+
+

@@ -103,19 +103,19 @@ Boundaries::~Boundaries()
 VertexCoordinates2D::VertexCoordinates2D(unsigned int IDg, double xC, double yC, bool Internal):
     ID(IDg), xCoordinate(xC), yCoordinate(yC), InternalVertex(Internal) {}
 
-unsigned int VertexCoordinates2D::getID()
+unsigned int VertexCoordinates2D::getID() const
 {
     return ID;
 }
-double VertexCoordinates2D::getxCoordinate()
+double VertexCoordinates2D::getxCoordinate() const
 {
     return xCoordinate;
 }
-double VertexCoordinates2D::getyCoordinate()
+double VertexCoordinates2D::getyCoordinate() const
 {
     return yCoordinate;
 }
-bool VertexCoordinates2D::isInternal()
+bool VertexCoordinates2D::isInternal() const
 {
     return InternalVertex;
 }
@@ -125,35 +125,35 @@ VertexCoordinates2D::~VertexCoordinates2D()
 /*--------------------------------------------------------------------------*/
 Elements2D::Elements2D(unsigned int IDg, unsigned int ID_B1, unsigned int ID_B2, unsigned int ID_B3, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int N_Faces):
     ID(IDg), ID_Boundary_V1V2(ID_B1), ID_Boundary_V2V3(ID_B2), ID_Boundary_V3V1(ID_B3), ID_Vertex_V1(ID_V1), ID_Vertex_V2(ID_V2),ID_Vertex_V3(ID_V3), Number_Of_Faces(N_Faces) {}
-unsigned int Elements2D::getID()
+unsigned int Elements2D::getID() const
 {
     return ID;
 }
-unsigned int Elements2D::getVertex_V1()
+unsigned int Elements2D::getVertex_V1() const
 {
     return ID_Vertex_V1;
 }
-unsigned int Elements2D::getVertex_V2()
+unsigned int Elements2D::getVertex_V2() const
 {
     return ID_Vertex_V2;
 }
-unsigned int Elements2D::getVertex_V3()
+unsigned int Elements2D::getVertex_V3() const
 {
     return ID_Vertex_V3;
 }
-unsigned int Elements2D::getBoundary_B1()
+unsigned int Elements2D::getBoundary_B1() const
 {
     return ID_Boundary_V1V2;
 }
-unsigned int Elements2D::getBoundary_B2()
+unsigned int Elements2D::getBoundary_B2() const
 {
     return ID_Boundary_V2V3;
 }
-unsigned int Elements2D::getBoundary_B3()
+unsigned int Elements2D::getBoundary_B3() const
 {
     return ID_Boundary_V3V1;
 }
-unsigned int Elements2D::getNumber_Of_Faces()
+unsigned int Elements2D::getNumber_Of_Faces() const
 {
     return Number_Of_Faces;
 }
@@ -161,7 +161,28 @@ void Elements2D::setJacobian(double J)
 {
     Jacobian = J;
 }
-double Elements2D::getJacobian()
+
+/*void Elements2D::computeJacobian(const std::vector<VertexCoordinates2D> &List_Of_Vertices)
+{
+    // ID_Vertex_V1
+    // ID_Vertex_V2
+    // ID_Vertex_V3
+    double x1 = List_Of_Vertices[ID_Vertex_V1].getxCoordinate();
+    double y1 = List_Of_Vertices[ID_Vertex_V1].getyCoordinate();
+    double x2 = List_Of_Vertices[ID_Vertex_V2].getxCoordinate();
+    double y2 = List_Of_Vertices[ID_Vertex_V2].getyCoordinate();
+    double x3 = List_Of_Vertices[ID_Vertex_V3].getxCoordinate();
+    double y3 = List_Of_Vertices[ID_Vertex_V3].getyCoordinate();
+
+    double dxdr = (x2-x1)/2.0;
+    double dydr = (y2-y1)/2.0;
+    double dxds = (x3-x1)/2.0;
+    double dyds = (y3-y1)/2.0;
+
+    Jacobian = dxdr*dyds-dxds*dydr;
+
+}*/
+double Elements2D::getJacobian() const
 {
     return Jacobian;
 }
@@ -170,12 +191,11 @@ void Elements2D::set_Order_Of_Polynomials(unsigned int N)
     Order_Of_Polynomials = N;
     Number_Of_Nodes = (N+1)*(N+2)/2;
 }
-unsigned int Elements2D::get_Order_Of_Polynomials()
+unsigned int Elements2D::get_Order_Of_Polynomials() const
 {
     return Order_Of_Polynomials;
 }
-        //void Elements2D::set_Number_Of_Nodes(unsigned int N);
-unsigned int Elements2D::get_Number_Of_Nodes()
+unsigned int Elements2D::get_Number_Of_Nodes() const
 {
     return Number_Of_Nodes;
 }
@@ -187,11 +207,11 @@ void Elements2D::set_node_coordinates_y(double y)
 {
     node_coordinates_y.push_back(y);
 }
-std::vector<double> Elements2D::get_node_coordinates_x()
+std::vector<double> Elements2D::get_node_coordinates_x() const
 {
     return node_coordinates_x;
 }
-std::vector<double> Elements2D::get_node_coordinates_y()
+std::vector<double> Elements2D::get_node_coordinates_y() const
 {
     return node_coordinates_y;
 }

@@ -190,4 +190,54 @@ extern double Exact_Solution_p_system1dcom(const double &x, const double &t, con
     return exp(-0.5*beta*x)*((N2-1.0)/4.0/sigma/PETSC_PI*sin(2.0*PETSC_PI*k*x)+k/sigma*cos(2.0*PETSC_PI*k*x))*cos(2.0*PETSC_PI*sigma*(t+0.1));
 }
 /*--------------------------------------------------------------------------*/
+// 2D
+/*--------------------------------------------------------------------------*/
+// System 1 Test Case
+/*--------------------------------------------------------------------------*/
+extern double calculate_sigma_2D_system1(const double &beta, const unsigned int &kx, const unsigned int &kz)
+{
+    double N2 = beta-1.0;
+    return 1;
+}
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_mx_2D_system1(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
+{
+    double N2 = beta-1.0;
+    return 2;
+}
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_mz_2D_system1(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
+{
+    double N2 = beta-1.0;
+    return 3;
+}
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_r_2D_system1(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
+{
+    double N2 = beta-1.0;
+    return 4;
+}
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_p_2D_system1(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
+{
+    double N2 = beta-1.0;
+    return 5;
+}
+/*--------------------------------------------------------------------------*/
+extern double rho_0_2D_system1(const double &z, const double &beta)
+{
+    return exp(-beta*z);
+}
+/*--------------------------------------------------------------------------*/
+extern double rho_0_deriv_2D_system1(const double &z, const double &beta)
+{
+    return -beta*exp(-beta*z);
+}
+/*--------------------------------------------------------------------------*/
+extern double N_2_2D_system1(const double &z, const double &beta)
+{
+    double N2 = beta-1.0;
+    return N2;
+}
+/*--------------------------------------------------------------------------*/
 

@@ -614,8 +614,18 @@ extern void Nodes2D(unsigned int N, Vec &XX, Vec &YY)
     // Purpose  : Compute (x,y) nodes in equilateral triangle for
     //             polynomial of order N
 
+    // total number of nodes
+    unsigned int Np = (N+1)*(N+2)/2;
+    double x [Np] = {};
+    double y [Np] = {};
+
+
+    if (N > 0)
+    {
 
     double alpopt [] = {0.0000, 0.0000, 1.4152, 0.1001, 0.2751, 0.9800, 1.0999,  1.2832, 1.3648, 1.4773, 1.4959, 1.5743, 1.5770, 1.6223, 1.6258};
+
+    double NN = double(N);
 
     // Set optimized parameter, alpha, depending on order N
     double alpha = 5/3;
@@ -623,18 +633,11 @@ extern void Nodes2D(unsigned int N, Vec &XX, Vec &YY)
     {
         alpha = alpopt[N-1];
     }
-    // total number of nodes
-    unsigned int Np = (N+1)*(N+2)/2;
 
     // Create equidistributed nodes on equilateral triangle
-    double NN = double(N);
-
-
     double L1 [Np] = {};
     double L2 [Np] = {};
     double L3 [Np] = {};
-    double x [Np] = {};
-    double y [Np] = {};
 
   int sk = 0;
   for (int n=1; n<=(N+1); ++n) {
@@ -700,6 +703,12 @@ extern void Nodes2D(unsigned int N, Vec &XX, Vec &YY)
     VecDestroy(&warpf2);
     VecDestroy(&warpf3);
     VecDestroy(&W1);
+    }
+    else if (N == 0)
+    {
+        x[0] = 0;
+        y[0] = 0;
+    }
 
     Vec X, Y;
     VecCreateSeqWithArray(PETSC_COMM_WORLD,1,Np,x,&X);
@@ -725,7 +734,7 @@ extern void Nodes2D(unsigned int N, Vec &XX, Vec &YY)
 extern void XYtoRS(const Vec &X, const Vec &Y, Vec &R, Vec &S)
 {
     //function [r,s] = xytors(x, y)
-    // Purpose : From (x,y) in equilateral triangle to (r,s) coordinates in standard triangle
+    // Purpose : From (x,y) in equilateral triangle to (r,s) coordinates in reference triangle
 
     Vec L1;
     VecDuplicate(Y, &L1);
@@ -780,6 +789,9 @@ Vec Warpfactor(const unsigned int &N, const Vec &rout)
 {
     // function warp = Warpfactor(N, rout)
     // Purpose : Compute scaled warp function at order N based on rout interpolation nodes
+
+    // Assumes N > 0
+    // if (N == 0) NN = 1.0;
 
     //Compute LGL and equidistant node distribution
     Vec LGLr = JacobiGL(0, 0, N);
@@ -1040,14 +1052,216 @@ Vec Simplex2DP(const Vec &A, const Vec &B, const unsigned int &i, const unsigned
 
     return P;
 }
-/*
-function [P] = Simplex2DP(a,b,i,j);
-% function [P] = Simplex2DP(a,b,i,j);
-% Purpose : Evaluate 2D orthonormal polynomial
-%
-on simplex at (a,b) of order (i,j).
-h1 = JacobiP(a,0,0,i); h2 = JacobiP(b,2*i+1,0,j);
-P = sqrt(2.0)*h1.*h2.*(1-b).^i;
-return;
-*/
 /*--------------------------------------------------------------------------*/
+void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices, unsigned int N)
+{
+    // Compute the nodes for a equilateral element
+    Vec X, Y;
+    Nodes2D(N, X, Y);
+    // Convert nodes to a reference element
+    Vec R, S;
+    XYtoRS(X, Y, R, S);
+
+    PetscScalar *r_a, *s_a;
+    VecGetArray(R, &r_a);
+    VecGetArray(S, &s_a);
+    PetscInt size_r;
+    VecGetSize(R, &size_r);
+    // Compute the physical location of each node on each element
+    for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
+    {
+        //std::cout << (*i).getID() << " " << List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate() << " " << List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate() << " " << List_Of_Vertices[(*i).getVertex_V3()-1].getxCoordinate() << std::endl;
+        double x_v1 = List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate();
+        double y_v1 = List_Of_Vertices[(*i).getVertex_V1()-1].getyCoordinate();
+        double x_v2 = List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate();
+        double y_v2 = List_Of_Vertices[(*i).getVertex_V2()-1].getyCoordinate();
+        double x_v3 = List_Of_Vertices[(*i).getVertex_V3()-1].getxCoordinate();
+        double y_v3 = List_Of_Vertices[(*i).getVertex_V3()-1].getyCoordinate();
+
+        for(unsigned int k = 0; k < size_r; k++)
+        {
+            double x = 0.5*(-(r_a[k]+s_a[k])*x_v1+(1.0+r_a[k])*x_v2+(1.0+s_a[k])*x_v3);
+            double y = 0.5*(-(r_a[k]+s_a[k])*y_v1+(1.0+r_a[k])*y_v2+(1.0+s_a[k])*y_v3);
+
+            (*i).set_node_coordinates_x(x);
+            (*i).set_node_coordinates_y(y);
+        }
+    }
+    VecRestoreArray(R, &r_a);
+    VecRestoreArray(S, &s_a);
+
+    VecDestroy(&R);
+    VecDestroy(&S);
+    VecDestroy(&X);
+    VecDestroy(&Y);
+}
+/*--------------------------------------------------------------------------*/
+void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
+{
+    unsigned int Nold = 1000;
+    Vec X, Y, R, S;
+    // Compute the physical location of each node on each element
+    for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
+    {
+        unsigned int N = (*i).get_Order_Of_Polynomials();
+        if (N != Nold)
+        {
+            // Compute the nodes for a equilateral element
+            //Vec X, Y;
+            Nodes2D(N, X, Y);
+            // Convert nodes to a reference element
+            //Vec R, S;
+            XYtoRS(X, Y, R, S);
+        }
+        PetscScalar *r_a, *s_a;
+        VecGetArray(R, &r_a);
+        VecGetArray(S, &s_a);
+        PetscInt size_r;
+        VecGetSize(R, &size_r);
+
+        //std::cout << (*i).getID() << " " << List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate() << " " << List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate() << " " << List_Of_Vertices[(*i).getVertex_V3()-1].getxCoordinate() << std::endl;
+        double x_v1 = List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate();
+        double y_v1 = List_Of_Vertices[(*i).getVertex_V1()-1].getyCoordinate();
+        double x_v2 = List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate();
+        double y_v2 = List_Of_Vertices[(*i).getVertex_V2()-1].getyCoordinate();
+        double x_v3 = List_Of_Vertices[(*i).getVertex_V3()-1].getxCoordinate();
+        double y_v3 = List_Of_Vertices[(*i).getVertex_V3()-1].getyCoordinate();
+
+        for(unsigned int k = 0; k < size_r; k++)
+        {
+            double x = 0.5*(-(r_a[k]+s_a[k])*x_v1+(1.0+r_a[k])*x_v2+(1.0+s_a[k])*x_v3);
+            double y = 0.5*(-(r_a[k]+s_a[k])*y_v1+(1.0+r_a[k])*y_v2+(1.0+s_a[k])*y_v3);
+
+            (*i).set_node_coordinates_x(x);
+            (*i).set_node_coordinates_y(y);
+        }
+        VecRestoreArray(R, &r_a);
+        VecRestoreArray(S, &s_a);
+        Nold = N;
+    }
+
+        VecDestroy(&R);
+        VecDestroy(&S);
+        VecDestroy(&X);
+        VecDestroy(&Y);
+}
+/*--------------------------------------------------------------------------*/
+void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elements2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
+{
+    // Efficient for a few elements
+    // More elements => More expensive
+
+    // Sort by N value?
+    unsigned int Nold = 1000;
+    Vec R, S;
+    // Compute the physical location of each node on each element
+    for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
+    {
+        unsigned int N = (*i).get_Order_Of_Polynomials();
+        if (N != Nold)
+        {
+            // Read the nodes for a Reference Element
+            {
+            std::string LocationName = "Nodes2D/";
+            LocationName.append(std::to_string(N));
+            LocationName.append("R.dat");
+            PetscViewer    viewer;
+            PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_READ,&viewer);
+            VecCreate(PETSC_COMM_WORLD,&R);
+            VecLoad(R,viewer);
+            PetscViewerDestroy(&viewer);
+            }
+
+            {
+            std::string LocationName = "Nodes2D/";
+            LocationName.append(std::to_string(N));
+            LocationName.append("S.dat");
+            PetscViewer    viewer;
+            PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_READ,&viewer);
+            VecCreate(PETSC_COMM_WORLD,&S);
+            VecLoad(S,viewer);
+            PetscViewerDestroy(&viewer);
+            }
+        }
+        PetscScalar *r_a, *s_a;
+        VecGetArray(R, &r_a);
+        VecGetArray(S, &s_a);
+        PetscInt size_r;
+        VecGetSize(R, &size_r);
+
+        //std::cout << (*i).getID() << " " << List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate() << " " << List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate() << " " << List_Of_Vertices[(*i).getVertex_V3()-1].getxCoordinate() << std::endl;
+        double x_v1 = List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate();
+        double y_v1 = List_Of_Vertices[(*i).getVertex_V1()-1].getyCoordinate();
+        double x_v2 = List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate();
+        double y_v2 = List_Of_Vertices[(*i).getVertex_V2()-1].getyCoordinate();
+        double x_v3 = List_Of_Vertices[(*i).getVertex_V3()-1].getxCoordinate();
+        double y_v3 = List_Of_Vertices[(*i).getVertex_V3()-1].getyCoordinate();
+
+        for(unsigned int k = 0; k < size_r; k++)
+        {
+            double x = 0.5*(-(r_a[k]+s_a[k])*x_v1+(1.0+r_a[k])*x_v2+(1.0+s_a[k])*x_v3);
+            double y = 0.5*(-(r_a[k]+s_a[k])*y_v1+(1.0+r_a[k])*y_v2+(1.0+s_a[k])*y_v3);
+
+            (*i).set_node_coordinates_x(x);
+            (*i).set_node_coordinates_y(y);
+        }
+        VecRestoreArray(R, &r_a);
+        VecRestoreArray(S, &s_a);
+        Nold = N;
+
+    }
+        VecDestroy(&R);
+        VecDestroy(&S);
+}
+/*--------------------------------------------------------------------------*/
+void store_Nodes_Reference_Triangle()
+{
+
+    for (unsigned int N = 0; N < 20; N ++)
+    {
+    auto t1 = std::chrono::high_resolution_clock::now();
+
+
+
+        // Compute the nodes for a equilateral element
+        Vec X, Y;
+        Nodes2D(N, X, Y);
+        // Convert nodes to a reference element
+        Vec R, S;
+        XYtoRS(X, Y, R, S);
+        {
+        std::string LocationName = "Nodes2D/";
+        LocationName.append(std::to_string(N));
+        LocationName.append("R.dat");
+        PetscViewer    viewer;
+        PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_WRITE,&viewer);
+        VecView(R,viewer);
+        PetscViewerDestroy(&viewer);
+        }
+
+        {
+        std::string LocationName = "Nodes2D/";
+        LocationName.append(std::to_string(N));
+        LocationName.append("S.dat");
+        PetscViewer    viewer;
+        PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_WRITE,&viewer);
+        VecView(S,viewer);
+        PetscViewerDestroy(&viewer);
+        }
+
+        VecDestroy(&R);
+        VecDestroy(&S);
+        VecDestroy(&X);
+        VecDestroy(&Y);
+        auto t2 = std::chrono::high_resolution_clock::now();
+        std::cout << "N = " << N << " Execution took "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()
+              << " milliseconds\n";
+
+
+
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+

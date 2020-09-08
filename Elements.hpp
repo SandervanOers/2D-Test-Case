@@ -72,10 +72,10 @@ class VertexCoordinates2D
 
     public:
         VertexCoordinates2D(unsigned int IDg, double xC, double yC, bool Internal);
-        unsigned int getID();
-        double getxCoordinate();
-        double getyCoordinate();
-        bool isInternal();
+        unsigned int getID() const;
+        double getxCoordinate() const;
+        double getyCoordinate() const;
+        bool isInternal() const;
 
 
         ~VertexCoordinates2D();
@@ -97,33 +97,40 @@ class Elements2D
     unsigned int Order_Of_Polynomials;
     Mat MassMatrix;
     Mat MassMatrixOverRho0;
-    std::vector<double> node_coordinates_x; // Should we turn this into a list, can we overwrite/change this?
+    std::vector<double> node_coordinates_x;
     std::vector<double> node_coordinates_y;
+
     unsigned int Number_Of_Nodes;
 
     public:
         Elements2D(unsigned int IDg, unsigned int ID_B1, unsigned int ID_B2, unsigned int ID_B3, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int N_Faces);
         //Elements(const Elements&);
         //Elements& operator=(const Elements& that);
-        unsigned int getID();
-        unsigned int getVertex_V1();
-        unsigned int getVertex_V2();
-        unsigned int getVertex_V3();
-        unsigned int getBoundary_B1();
-        unsigned int getBoundary_B2();
-        unsigned int getBoundary_B3();
-        unsigned int getNumber_Of_Faces();
+        unsigned int getID() const;
+        unsigned int getVertex_V1() const;
+        unsigned int getVertex_V2() const;
+        unsigned int getVertex_V3() const;
+        unsigned int getBoundary_B1() const;
+        unsigned int getBoundary_B2() const;
+        unsigned int getBoundary_B3() const;
+        unsigned int getNumber_Of_Faces() const;
         void setJacobian(double J);
-        double getJacobian();
+        //void computeJacobian(const std::vector<VertexCoordinates2D> &List_Of_Vertices);
+        double getJacobian() const;
         void set_Order_Of_Polynomials(unsigned int N);
-        unsigned int get_Order_Of_Polynomials();
+        unsigned int get_Order_Of_Polynomials() const;
         //void set_Number_Of_Nodes(unsigned int N);
-        unsigned int get_Number_Of_Nodes();
+        unsigned int get_Number_Of_Nodes() const;
+
+        //void set_node_coordinates_x(double x);
+        //void set_node_coordinates_y(double y);
+        //std::vector<double> get_node_coordinates_x();
+        //std::vector<double> get_node_coordinates_y();
 
         void set_node_coordinates_x(double x);
         void set_node_coordinates_y(double y);
-        std::vector<double> get_node_coordinates_x();
-        std::vector<double> get_node_coordinates_y();
+        std::vector<double> get_node_coordinates_x() const;
+        std::vector<double> get_node_coordinates_y() const;
 
         //void set_MassMatrix(Mat M);
         //void set_MassMatrixOverRho0(Mat M1);

@@ -18,4 +18,10 @@ extern Mat mesh_generation_1D_EtoV(const double &xmin, const double &xmax, const
 /*--------------------------------------------------------------------------*/
 Mat FaceToFace_1D(const unsigned int &Number_Of_Elements, const Mat &EtoV);
 /*--------------------------------------------------------------------------*/
+void Calculate_Jacobian(std::vector<Elements2D> &List_Of_Elements2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
+/*--------------------------------------------------------------------------*/
+void set_Order_Polynomials_Uniform(std::vector<Elements2D> &List_Of_Elements2D, const unsigned int &N);
+/*--------------------------------------------------------------------------*/
+extern unsigned int get_Number_Of_Nodes(const std::vector<Elements2D> &List_Of_Elements2D);
+/*--------------------------------------------------------------------------*/
 #endif
