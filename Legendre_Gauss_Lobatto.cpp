@@ -1263,5 +1263,39 @@ void store_Nodes_Reference_Triangle()
     }
 }
 /*--------------------------------------------------------------------------*/
+extern void Read_RS_Coordinates_Reference_Triangle(const unsigned int &N, Vec &R, Vec &S)
+{
+    Vec RR, SS;
+            // Read the nodes for a Reference Element
+            {
+            std::string LocationName = "Nodes2D/";
+            LocationName.append(std::to_string(N));
+            LocationName.append("R.dat");
+            PetscViewer    viewer;
+            PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_READ,&viewer);
+            VecCreate(PETSC_COMM_WORLD,&RR);
+            VecLoad(RR,viewer);
+            PetscViewerDestroy(&viewer);
+            }
 
+            {
+            std::string LocationName = "Nodes2D/";
+            LocationName.append(std::to_string(N));
+            LocationName.append("S.dat");
+            PetscViewer    viewer;
+            PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_READ,&viewer);
+            VecCreate(PETSC_COMM_WORLD,&SS);
+            VecLoad(SS,viewer);
+            PetscViewerDestroy(&viewer);
+            }
+
+        VecDuplicate(RR, &R);
+        VecCopy(RR, R);
+        VecDuplicate(SS, &S);
+        VecCopy(SS, S);
+
+        VecDestroy(&RR);
+        VecDestroy(&SS);
+}
+/*--------------------------------------------------------------------------*/
 

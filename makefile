@@ -33,6 +33,9 @@ mesh_gen.o: mesh_gen.cpp mesh_gen.hpp
 Legendre_Gauss_Lobatto.o: Legendre_Gauss_Lobatto.cpp Legendre_Gauss_Lobatto.hpp
 HIGW.o: HIGW.cpp HIGW.hpp
 Elements.o: Elements.cpp Elements.hpp
+Cubature2D.o: Cubature2D.cpp Cubature2D.hpp 
+CubatureData2D.0: CubatureData2D.cpp CubatureData2D.hpp
+
 OBJS3 = ex3.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o
 
 ex3: ${OBJS3} chkopts
@@ -75,7 +78,7 @@ ex8: ${OBJS8} chkopts
 	${RM} ${OBJS8}
 
 ex9.o: ex9.cpp
-OBJS9 = ex9.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o 
+OBJS9 = ex9.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o Cubature2D.o CubatureData2D.o
 
 ex9: ${OBJS9} chkopts
 	-${CLINKER} -o ex9 ${OBJS9} ${PETSC_KSP_LIB} ${SLEPC_LIB}

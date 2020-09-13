@@ -69,4 +69,6 @@ void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elemen
 /*--------------------------------------------------------------------------*/
 void store_Nodes_Reference_Triangle();
 /*--------------------------------------------------------------------------*/
+extern void Read_RS_Coordinates_Reference_Triangle(const unsigned int &N, Vec &R, Vec &S);
+/*--------------------------------------------------------------------------*/
 #endif

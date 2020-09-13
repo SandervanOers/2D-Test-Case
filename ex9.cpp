@@ -13,7 +13,7 @@ static char help[] = "Solves the 1D Compressible Nonviscous System. Creates Conv
 #include <chrono>
 //#include <slepceps.h>
 //#include <slepcsys.h>
-
+#include "Cubature2D.hpp"
 
 
 int main(int argc,char **args)
@@ -62,7 +62,8 @@ int main(int argc,char **args)
     std::vector<Boundaries2D> List_Of_Boundaries2D;
     std::vector<VertexCoordinates2D> List_Of_Vertices;
 
-    store_Nodes_Reference_Triangle();
+    // Only Run when Recomputing the Nodes on Reference Triangles
+    //store_Nodes_Reference_Triangle();
 
 
     unsigned int Nel_x = 6;
@@ -284,10 +285,11 @@ int main(int argc,char **args)
 
 
     std::cout << " Start Elemental Calculations " << std::endl;
+    unsigned int Order_Polynomials_old = 1000;
     for (auto e = List_Of_Elements2D.begin(); e < List_Of_Elements2D.end(); e++)
     {
-        unsigned int ID = (*k).getID()-1;
-        unsigned int Np = (*k).get_Number_Of_Nodes();
+        unsigned int ID = (*e).getID()-1;
+        unsigned int Np = (*e).get_Number_Of_Nodes();
         std::cout << "Np = " << Np << std::endl;
         unsigned int pos = ID*Np; // Assumes ordering
 
@@ -300,7 +302,52 @@ int main(int argc,char **args)
             in[n] = n+pos;
         }
 
-        // Quadrature Rules
+        if (Order_Polynomials != Order_Polynomials_old)
+        {
+            // Compute New Quadrature Points and Weights
+
+            // Get Nodal Coordinates Reference Triangle
+            Vec R, S;
+            Read_RS_Coordinates_Reference_Triangle(Order_Polynomials, R, S);
+                VecView(R, viewer);
+                VecView(S, viewer);
+
+            // Get Quadrature Rules Reference Triangle
+            Vec cubR, cubS, cubW;
+            unsigned int Ncub;
+            Cubature2D(Order_Gaussian_Quadrature, cubR, cubS, cubW, Ncub);
+
+            std::cout << "Ncub = " << Ncub << std::endl;
+            std::cout << "cubR = " << std::endl;
+            VecView(cubR, viewer);
+            std::cout << "cubS = " << std::endl;
+            VecView(cubS, viewer);
+            std::cout << "cubW = " << std::endl;
+            VecView(cubW, viewer);
+
+            PetscScalar *w, *qp_r, *qp_s;
+            VecGetArray(cubW, &w);
+            VecGetArray(cubR, &qp_r);
+            VecGetArray(cubS, &qp_s);
+
+
+            VecRestoreArray(cubW, &w);
+            VecRestoreArray(cubR, &qp_r);
+            VecRestoreArray(cubS, &qp_s);
+
+            VecDestroy(&cubR);
+            VecDestroy(&cubS);
+            VecDestroy(&cubW);
+
+            VecDestroy(&R);
+            VecDestroy(&S);
+        }
+        else
+        {
+            // Use old Quadrature Points and Weights
+        }
+
+   /*
         Vec Weights;
         Vec QuadraturePoints;
         QuadraturePoints = JacobiGQ_withWeights(0, 0, Order_Gaussian_Quadrature, Weights);
