@@ -1249,6 +1249,30 @@ void store_Nodes_Reference_Triangle()
         PetscViewerDestroy(&viewer);
         }
 
+
+        Mat V2D = Vandermonde2D(N, R, S);
+        {
+        std::string LocationName = "Vandermonde2D/";
+        LocationName.append(std::to_string(N));
+        LocationName.append("V2D.dat");
+        PetscViewer    viewer;
+        PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_WRITE,&viewer);
+        MatView(V2D,viewer);
+        PetscViewerDestroy(&viewer);
+        }
+        Mat V2DInv = Inverse_Matrix(V2D);
+        {
+        std::string LocationName = "Vandermonde2D/";
+        LocationName.append(std::to_string(N));
+        LocationName.append("V2DInv.dat");
+        PetscViewer    viewer;
+        PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_WRITE,&viewer);
+        MatView(V2DInv,viewer);
+        PetscViewerDestroy(&viewer);
+        }
+        MatDestroy(&V2DInv);
+
+        MatDestroy(&V2D);
         VecDestroy(&R);
         VecDestroy(&S);
         VecDestroy(&X);
@@ -1298,4 +1322,273 @@ extern void Read_RS_Coordinates_Reference_Triangle(const unsigned int &N, Vec &R
         VecDestroy(&SS);
 }
 /*--------------------------------------------------------------------------*/
+void GradSimplex2D(const Vec &a, const Vec &b, const unsigned int &id, const unsigned int &jd, Vec &dmodedr, Vec &dmodeds)
+{
+  // function [dmodedr, dmodeds] = GradSimplex2DP(a,b,id,jd)
+  // Purpose: Return the derivatives of the modal basis (id,jd)
+  //          on the 2D simplex at (a,b).
 
+  Vec fa = JacobiP(a, 0, 0, id);
+  Vec gb = JacobiP(b, 2*id+1, 0, jd);
+
+  Vec dfa = GradJacobiP(a, 0, 0, id);
+  Vec dgb = GradJacobiP(b, 2*id+1, 0, jd);
+
+  PetscScalar *fa_a, *dfa_a, *gb_a, *dgb_a;
+  VecGetArray(fa, &fa_a);
+  VecGetArray(dfa, &dfa_a);
+  VecGetArray(gb, &gb_a);
+  VecGetArray(dgb, &dgb_a);
+
+  // r-derivative
+  // d/dr = da/dr d/da + db/dr d/db = (2/(1-s)) d/da = (2/(1-b)) d/da
+  VecDuplicate(fa, &dmodedr);
+  VecPointwiseMult(dmodedr, dfa, gb);
+
+
+  // s-derivative
+  // d/ds = ((1+a)/2)/((1-b)/2) d/da + d/db
+  VecDuplicate(fa, &dmodeds);
+  VecPointwiseMult(dmodeds, dfa, gb);
+
+
+  Vec tmp;
+  VecDuplicate(a, &tmp);
+  VecCopy(a, tmp);
+  VecShift(tmp, 1.0);
+  VecScale(tmp, 0.5);
+  VecPointwiseMult(dmodeds, dmodeds, tmp);
+
+  PetscScalar *dmodedr_a, *dmodeds_a;
+  VecGetArray(dmodedr, &dmodedr_a);
+  VecGetArray(dmodeds, &dmodeds_a);
+  VecCopy(b, tmp);
+  PetscScalar *b_a;
+  VecGetArray(b, &b_a);
+  PetscScalar *tmp_a;
+  VecGetArray(tmp, &tmp_a);
+  PetscInt size_b;
+  VecGetSize(b, &size_b);
+  for (unsigned int i = 0; i < size_b; i++)
+  {
+      tmp_a[i] = dgb_a[i]*pow(0.5*(1.0-b_a[i]), double(id));
+  }
+  if (id > 0)
+  {
+    for (unsigned int i = 0; i < size_b; i++)
+    {
+        dmodedr_a[i] = dmodedr_a[i]*pow(0.5*(1.0-b_a[i]), (id-1.0));
+        dmodeds_a[i] = dmodedr_a[i]*pow(0.5*(1.0-b_a[i]), (id-1.0));
+        tmp_a[i] = tmp_a[i] - 0.5*double(id)*gb_a[i]*pow(0.5*(1.0-b_a[i]),id-1.0);
+    }
+  }
+  VecRestoreArray(dmodedr, &dmodedr_a);
+  VecRestoreArray(dmodeds, &dmodeds_a);
+  VecRestoreArray(b, &b_a);
+  VecRestoreArray(fa, &fa_a);
+  VecRestoreArray(dfa, &dfa_a);
+  VecRestoreArray(gb, &gb_a);
+  VecRestoreArray(dgb, &dgb_a);
+  VecRestoreArray(tmp, &tmp_a);
+
+  VecPointwiseMult(tmp, fa, tmp);
+  VecAXPY(dmodeds,1.0,tmp);
+
+  // Normalize
+  VecScale(dmodedr, pow(2.0, (id+0.5)));
+  VecScale(dmodeds, pow(2.0, (id+0.5)));
+
+
+  VecDestroy(&fa);
+  VecDestroy(&gb);
+  VecDestroy(&dfa);
+  VecDestroy(&dgb);
+  VecDestroy(&tmp);
+}
+/*--------------------------------------------------------------------------*/
+void GradVandermonde2D(const unsigned int &N, const Vec &R, const Vec &S, Mat &V2Dr, Mat &V2Ds)
+{
+    unsigned int Np = (N+1)*(N+2)/2;
+    PetscInt size_r;
+    VecGetSize(R, &size_r);
+
+    MatCreate(PETSC_COMM_WORLD,&V2Dr);
+    MatCreate(PETSC_COMM_WORLD,&V2Ds);
+    MatSetType(V2Dr,MATSEQAIJ);
+    MatSetType(V2Ds,MATSEQAIJ);
+    MatSetSizes(V2Dr, size_r, Np, PETSC_DECIDE, PETSC_DECIDE);
+    MatSetSizes(V2Ds, size_r, Np, PETSC_DECIDE, PETSC_DECIDE);
+    MatSeqAIJSetPreallocation(V2Dr, size_r, NULL);
+    MatSeqAIJSetPreallocation(V2Ds, size_r, NULL);
+
+    PetscInt ix[size_r];
+    PetscInt ir[1]={0};
+    for (unsigned int k=0;k<size_r; k++)
+    {
+        ix[k] = k;
+    }
+
+    // find tensor-product coordinates
+    Vec A, B;
+    RStoAB(R, S, A, B);
+
+    // Initialize matrices
+    unsigned int sk = 0;
+    for (unsigned int i = 0; i <= N; i++)
+    {
+        for (unsigned int j = 0; j <= (N-i); j++)
+        {
+            Vec ddr, dds;
+            GradSimplex2D(A, B, i, j, ddr, dds);
+
+            PetscScalar *ddr_a, *dds_a;
+            VecGetArray(ddr, &ddr_a);
+            VecGetArray(dds, &dds_a);
+            ir[0]=sk;
+
+            MatSetValues(V2Dr, size_r, ix, 1, ir, ddr_a, INSERT_VALUES);
+            MatSetValues(V2Ds, size_r, ix, 1, ir, dds_a, INSERT_VALUES);
+
+            sk++;
+            VecRestoreArray(ddr, &ddr_a);
+            VecRestoreArray(dds, &dds_a);
+            VecDestroy(&ddr);
+            VecDestroy(&dds);
+        }
+    }
+    VecDestroy(&A);
+    VecDestroy(&B);
+    MatAssemblyBegin(V2Dr, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(V2Dr, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(V2Ds, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(V2Ds, MAT_FINAL_ASSEMBLY);
+}
+/*--------------------------------------------------------------------------*/
+extern void DMatrices2D(const unsigned int &N, const Vec &R, const Vec &S, const Mat &V, Mat &Dr, Mat &Ds)
+{
+  // function [Dr,Ds] = Dmatrices2D(N,r,s,V)
+  // Purpose : Initialize the (r,s) differentiation matrices
+  //	    on the simplex, evaluated at (r,s) at order N
+
+    Mat Vr, Vs;
+    GradVandermonde2D(N, R, S, Vr, Vs);
+
+    // Calculate inverse Vandermonde Matrix
+    Mat A, B, X;
+    MatDuplicate(V,MAT_COPY_VALUES,&A);
+    MatDuplicate(V,MAT_DO_NOT_COPY_VALUES,&X);
+    MatDuplicate(V,MAT_DO_NOT_COPY_VALUES,&B);
+    MatConvert(B, MATSEQDENSE, MAT_INPLACE_MATRIX, &B);
+    MatConvert(X, MATSEQDENSE, MAT_INPLACE_MATRIX, &X);
+
+    MatShift(B, 1.0);
+
+    MatOrderingType rtype = MATORDERINGNATURAL;
+    IS row, col;
+    MatGetOrdering(A, rtype, &row, &col);
+    MatFactorInfo info;
+    MatFactorInfoInitialize(&info);
+    info.fill=1.0;
+    info.dtcol=1.0;
+
+    MatLUFactor(A, row, col, &info);
+    MatMatSolve(A, B, X);
+    //MatView(X, PETSC_VIEWER_STDOUT_SELF);
+    // X is the inverse
+
+    //Dr = Vr *inv(V)
+    MatMatMult(Vr, X, MAT_INITIAL_MATRIX, 1, &Dr);
+    MatMatMult(Vs, X, MAT_INITIAL_MATRIX, 1, &Ds);
+
+    MatDestroy(&Vr);
+    MatDestroy(&A);
+    MatDestroy(&B);
+    MatDestroy(&X);
+    ISDestroy(&row);
+    ISDestroy(&col);
+
+    MatDestroy(&Vr);
+    MatDestroy(&Vs);
+}
+/*--------------------------------------------------------------------------*/
+extern Mat InterpMatrix2D(const unsigned int &N, const Vec &R, const Vec &S)
+{
+  // function [IM] = InterpMatrix2D(rout, sout)
+  // purpose: compute local elemental interpolation matrix
+
+    Mat V2Dc = Vandermonde2D(N, R, S);
+
+    // Build interpolation matrix (nodes->cubature nodes)
+    // Need Element inverse Vandermonde matrix
+    Mat VInv = load_InverseVandermondeMatrix(N);
+    //(*IM) = Vout * this->invV;
+    Mat Interp;
+    MatMatMult(V2Dc, VInv,  MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Interp);
+
+    MatDestroy(&V2Dc);
+    MatDestroy(&VInv);
+    return Interp;
+}
+/*--------------------------------------------------------------------------*/
+extern Mat Inverse_Matrix(const Mat &V)
+{
+    // Calculate inverse Vandermonde Matrix
+    Mat A, B, X;
+    MatDuplicate(V,MAT_COPY_VALUES,&A);
+    MatDuplicate(V,MAT_DO_NOT_COPY_VALUES,&X);
+    MatDuplicate(V,MAT_DO_NOT_COPY_VALUES,&B);
+    MatConvert(B, MATSEQDENSE, MAT_INPLACE_MATRIX, &B);
+    MatConvert(X, MATSEQDENSE, MAT_INPLACE_MATRIX, &X);
+
+    MatShift(B, 1.0);
+    MatOrderingType rtype = MATORDERINGNATURAL;
+    IS row, col;
+    MatGetOrdering(A, rtype, &row, &col);
+    MatFactorInfo info;
+    MatFactorInfoInitialize(&info);
+    info.fill=1.0;
+    MatLUFactor(A, row, col, &info);
+    MatMatSolve(A, B, X);
+    //MatView(X, PETSC_VIEWER_STDOUT_SELF);
+    // X is the inverse
+    MatDestroy(&A);
+    MatDestroy(&B);
+    ISDestroy(&row);
+    ISDestroy(&col);
+
+
+    return X;
+}
+/*--------------------------------------------------------------------------*/
+extern Mat load_VandermondeMatrix(const unsigned int N)
+{
+    Mat V;
+
+    std::string LocationName = "Vandermonde2D/";
+    LocationName.append(std::to_string(N));
+    LocationName.append("V2D.dat");
+    PetscViewer    viewer;
+    PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_READ,&viewer);
+    MatCreate(PETSC_COMM_WORLD,&V);
+    MatLoad(V,viewer);
+    PetscViewerDestroy(&viewer);
+
+    return V;
+}
+/*--------------------------------------------------------------------------*/
+extern Mat load_InverseVandermondeMatrix(const unsigned int N)
+{
+    Mat VInv;
+
+    std::string LocationName = "Vandermonde2D/";
+    LocationName.append(std::to_string(N));
+    LocationName.append("V2DInv.dat");
+    PetscViewer    viewer;
+    PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_READ,&viewer);
+    MatCreate(PETSC_COMM_WORLD,&VInv);
+    MatLoad(VInv,viewer);
+    PetscViewerDestroy(&viewer);
+
+    return VInv;
+}
+/*--------------------------------------------------------------------------*/

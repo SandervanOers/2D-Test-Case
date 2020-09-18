@@ -1,4 +1,4 @@
-static char help[] = "Solves the 1D Compressible Nonviscous System. Creates Convergence Tables\n \n\n";
+    static char help[] = "Solves the 1D Compressible Nonviscous System. Creates Convergence Tables\n \n\n";
 
 #include <petscksp.h>
 #include <iostream>
@@ -56,7 +56,11 @@ int main(int argc,char **args)
     PetscViewerASCIIOpen(PETSC_COMM_WORLD, NULL, &viewer_info);
     PetscViewerPushFormat(viewer_info, PETSC_VIEWER_ASCII_INFO);
 
-    //store_Nodes_Reference_Triangle();
+    /*--------------------------------------------------------------------------*/
+    /* Compute and Store Nodes and Vandermonde Matrices                         */
+    // store_Nodes_Reference_Triangle();
+    /*--------------------------------------------------------------------------*/
+
 
     std::vector<Elements2D> List_Of_Elements2D;
     std::vector<Boundaries2D> List_Of_Boundaries2D;
@@ -156,7 +160,15 @@ int main(int argc,char **args)
     std::cout << "V2D = " << std::endl;
     MatView(V2D, viewer);
 
+    Mat Dr, Ds;
+    GradVandermonde2D(N_Petsc, R, S, Dr, Ds);
+
+    std::cout << "Dr = " << std::endl;
+    MatView(Dr, viewer);
+
     MatDestroy(&V2D);
+    MatDestroy(&Dr);
+    MatDestroy(&Ds);
     VecDestroy(&X);
     VecDestroy(&Y);
     VecDestroy(&R);
@@ -241,7 +253,7 @@ int main(int argc,char **args)
     VecAssemblyBegin(VecP);
     VecAssemblyEnd(VecP);
 
-    VecView(Initial_Condition, viewer);
+    //VecView(Initial_Condition, viewer);
 
 
     /// In the future:
@@ -290,33 +302,45 @@ int main(int argc,char **args)
     {
         unsigned int ID = (*e).getID()-1;
         unsigned int Np = (*e).get_Number_Of_Nodes();
-        std::cout << "Np = " << Np << std::endl;
+        //std::cout << "Np = " << Np << std::endl;
         unsigned int pos = ID*Np; // Assumes ordering
 
         unsigned int Order_Polynomials = (*e).get_Order_Of_Polynomials();
         unsigned int Order_Gaussian_Quadrature = ceil(Order_Polynomials+3+N_Q); // + higher order for rho_0 term
 
         PetscInt in[Np];
-        for (unsigned int n=0;n<=Np; n++)
+        for (unsigned int n=0;n<Np; n++)
         {
             in[n] = n+pos;
         }
 
-        if (Order_Polynomials != Order_Polynomials_old)
-        {
+        //if (Order_Polynomials != Order_Polynomials_old)
+        //{
             // Compute New Quadrature Points and Weights
 
             // Get Nodal Coordinates Reference Triangle
             Vec R, S;
             Read_RS_Coordinates_Reference_Triangle(Order_Polynomials, R, S);
-                VecView(R, viewer);
-                VecView(S, viewer);
+                //VecView(R, viewer);
+                //VecView(S, viewer);
 
             // Get Quadrature Rules Reference Triangle
             Vec cubR, cubS, cubW;
             unsigned int Ncub;
             Cubature2D(Order_Gaussian_Quadrature, cubR, cubS, cubW, Ncub);
 
+            Mat cubV = InterpMatrix2D(Ncub, cubR, cubS);
+
+            //custom mass matrix per element
+            std::cout << "cubV = " << std::endl;
+            MatView(cubV, viewer);
+
+            std::cout << "cubW = " << std::endl;
+            VecView(cubW, viewer);
+
+            MatDestroy(&cubV);
+
+            /*
             std::cout << "Ncub = " << Ncub << std::endl;
             std::cout << "cubR = " << std::endl;
             VecView(cubR, viewer);
@@ -324,16 +348,39 @@ int main(int argc,char **args)
             VecView(cubS, viewer);
             std::cout << "cubW = " << std::endl;
             VecView(cubW, viewer);
+            */
 
-            PetscScalar *w, *qp_r, *qp_s;
-            VecGetArray(cubW, &w);
-            VecGetArray(cubR, &qp_r);
-            VecGetArray(cubS, &qp_s);
+        //}
+        //else
+        //{
+            // Use old Quadrature Points and Weights
+       // }
+            PetscScalar *cubW_a, *cubR_a, *cubS_a;
+            VecGetArray(cubW, &cubW_a);
+            VecGetArray(cubR, &cubR_a);
+            VecGetArray(cubS, &cubS_a);
+
+        for (unsigned int i = 0; i < Np; i++)
+        {
+            for (unsigned int j = 0; j < Np; j++)
+            {
+                double value_m = 0.0;
+                for (unsigned int q = 0; q <= Ncub; q++)
+                {
+                    //double Li = LagrangePolynomial(ri, qp[q], i);
+                    //double Lj = LagrangePolynomial(ri, qp[q], j);
+
+                    //value_m += w[q]*Li*Lj*DeltaX/2.0;
+                }
+
+                MatSetValue(M1, pos+i, pos+j, value_m, ADD_VALUES);
+            }
 
 
-            VecRestoreArray(cubW, &w);
-            VecRestoreArray(cubR, &qp_r);
-            VecRestoreArray(cubS, &qp_s);
+        }
+            VecRestoreArray(cubW, &cubW_a);
+            VecRestoreArray(cubR, &cubR_a);
+            VecRestoreArray(cubS, &cubS_a);
 
             VecDestroy(&cubR);
             VecDestroy(&cubS);
@@ -341,12 +388,6 @@ int main(int argc,char **args)
 
             VecDestroy(&R);
             VecDestroy(&S);
-        }
-        else
-        {
-            // Use old Quadrature Points and Weights
-        }
-
    /*
         Vec Weights;
         Vec QuadraturePoints;
@@ -417,6 +458,9 @@ int main(int argc,char **args)
         MatSetValues(invM,Np, in,Np, in, invM_values, INSERT_VALUES);
         */
     }
+    MatAssemblyBegin(M1, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(M1, MAT_FINAL_ASSEMBLY);
+
     /*
     MatAssemblyBegin(M1, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(M1, MAT_FINAL_ASSEMBLY);
@@ -448,7 +492,7 @@ int main(int argc,char **args)
     MatDestroy(&M2);
 
     /*--------------------------------------------------------------------------*/
-    /* End Initial Condition / Exact Solution                                       */
+    /* End Initial Condition / Exact Solution                                   */
     /*--------------------------------------------------------------------------*/
 
 

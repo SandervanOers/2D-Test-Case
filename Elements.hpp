@@ -95,8 +95,7 @@ class Elements2D
 
     unsigned int Number_Of_Faces;
     unsigned int Order_Of_Polynomials;
-    Mat MassMatrix;
-    Mat MassMatrixOverRho0;
+
     std::vector<double> node_coordinates_x;
     std::vector<double> node_coordinates_y;
 

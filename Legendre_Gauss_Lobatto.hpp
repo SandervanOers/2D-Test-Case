@@ -71,4 +71,18 @@ void store_Nodes_Reference_Triangle();
 /*--------------------------------------------------------------------------*/
 extern void Read_RS_Coordinates_Reference_Triangle(const unsigned int &N, Vec &R, Vec &S);
 /*--------------------------------------------------------------------------*/
+void GradSimplex2D(const Vec &a, const Vec &b, const unsigned int &id, const unsigned int &jd, Vec &dmodedr, Vec &dmodeds);
+/*--------------------------------------------------------------------------*/
+void GradVandermonde2D(const unsigned int &N, const Vec &R, const Vec &S, Mat &V2Dr, Mat &V2Ds);
+/*--------------------------------------------------------------------------*/
+extern void DMatrices2D(const unsigned int &N, const Vec &R, const Vec &S, const Mat &V, Mat &Dr, Mat &Ds);
+/*--------------------------------------------------------------------------*/
+extern Mat InterpMatrix2D(const unsigned int &N, const Vec &R, const Vec &S);
+/*--------------------------------------------------------------------------*/
+extern Mat Inverse_Matrix(const Mat &V);
+/*--------------------------------------------------------------------------*/
+extern Mat load_VandermondeMatrix(const unsigned int N);
+/*--------------------------------------------------------------------------*/
+extern Mat load_InverseVandermondeMatrix(const unsigned int N);
+/*--------------------------------------------------------------------------*/
 #endif
