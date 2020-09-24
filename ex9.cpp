@@ -58,7 +58,7 @@ int main(int argc,char **args)
 
     /*--------------------------------------------------------------------------*/
     /* Compute and Store Nodes and Vandermonde Matrices                         */
-    // store_Nodes_Reference_Triangle();
+     //store_Nodes_Reference_Triangle();
     /*--------------------------------------------------------------------------*/
 
 
@@ -306,7 +306,7 @@ int main(int argc,char **args)
         unsigned int pos = ID*Np; // Assumes ordering
 
         unsigned int Order_Polynomials = (*e).get_Order_Of_Polynomials();
-        unsigned int Order_Gaussian_Quadrature = ceil(Order_Polynomials+3+N_Q); // + higher order for rho_0 term
+        unsigned int Order_Gaussian_Quadrature = 10;//2*Order_Polynomials;//ceil(Order_Polynomials+3+N_Q); // + higher order for rho_0 term
 
         PetscInt in[Np];
         for (unsigned int n=0;n<Np; n++)
@@ -328,27 +328,30 @@ int main(int argc,char **args)
             Vec cubR, cubS, cubW;
             unsigned int Ncub;
             Cubature2D(Order_Gaussian_Quadrature, cubR, cubS, cubW, Ncub);
+            Vec cubA, cubB;
+            RStoAB(cubR, cubS, cubA, cubB);
 
-            Mat cubV = InterpMatrix2D(Ncub, cubR, cubS);
+            Mat cubV = InterpMatrix2D(N_Petsc, cubR, cubS);
+
+            Mat MM =  MassMatrix2D(N_Petsc);
+            Mat MMcub = MassMatrix2D_Cubature(N_Petsc, cubV, cubW, Ncub);
+
 
             //custom mass matrix per element
-            std::cout << "cubV = " << std::endl;
-            MatView(cubV, viewer);
+            std::cout << "MM = " << std::endl;
+            MatView(MM, viewer);
 
-            std::cout << "cubW = " << std::endl;
-            VecView(cubW, viewer);
+            std::cout << "MMcub = " << std::endl;
+            MatView(MMcub, viewer);
 
-            MatDestroy(&cubV);
+            //std::cout << "cubW = " << std::endl;
+            //VecView(cubW, viewer);
 
-            /*
-            std::cout << "Ncub = " << Ncub << std::endl;
-            std::cout << "cubR = " << std::endl;
-            VecView(cubR, viewer);
-            std::cout << "cubS = " << std::endl;
-            VecView(cubS, viewer);
-            std::cout << "cubW = " << std::endl;
-            VecView(cubW, viewer);
-            */
+                    PetscInt size_V1, size_V2;
+                    MatGetSize(cubV, &size_V1, &size_V2);
+                    std::cout << "Size cub V = " << size_V1 << " x " << size_V2 << std::endl;
+
+
 
         //}
         //else
@@ -360,17 +363,41 @@ int main(int argc,char **args)
             VecGetArray(cubR, &cubR_a);
             VecGetArray(cubS, &cubS_a);
 
-        for (unsigned int i = 0; i < Np; i++)
+        for (unsigned int i = 0; i <= Order_Polynomials; i++)
         {
-            for (unsigned int j = 0; j < Np; j++)
+            for (unsigned int j = 0; j <= Order_Polynomials; j++)
             {
                 double value_m = 0.0;
-                for (unsigned int q = 0; q <= Ncub; q++)
+                //for (unsigned int q = 0; q <= Ncub; q++)
                 {
                     //double Li = LagrangePolynomial(ri, qp[q], i);
                     //double Lj = LagrangePolynomial(ri, qp[q], j);
 
                     //value_m += w[q]*Li*Lj*DeltaX/2.0;
+
+                    Vec P;
+                    P = Simplex2DP(cubA, cubB, i, j);
+
+                    PetscInt size_P;
+                    VecGetSize(P, &size_P);
+                    std::cout << "Size P Vec = m = " << size_P << std::endl;
+
+                    Vec L =  LagrangePolynomial2D(cubV, P, Np);
+
+                    std::cout << "P = " << std::endl;
+                    VecView(P, viewer);
+                    std::cout << "L = " << std::endl;
+                    VecView(L, viewer);
+
+            //PetscScalar *p_a;
+            //VecGetArray(P, &p_a);
+            //ir[0]=sk;
+
+            //MatSetValues(V, size_r, ix, 1, ir, p_a, INSERT_VALUES);
+            //VecRestoreArray(P, &p_a);
+
+                    VecDestroy(&P);
+                    VecDestroy(&L);
                 }
 
                 MatSetValue(M1, pos+i, pos+j, value_m, ADD_VALUES);
@@ -388,6 +415,13 @@ int main(int argc,char **args)
 
             VecDestroy(&R);
             VecDestroy(&S);
+            VecDestroy(&cubA);
+            VecDestroy(&cubB);
+
+
+            MatDestroy(&cubV);
+            MatDestroy(&MM);
+            MatDestroy(&MMcub);
    /*
         Vec Weights;
         Vec QuadraturePoints;

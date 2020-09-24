@@ -1251,6 +1251,8 @@ void store_Nodes_Reference_Triangle()
 
 
         Mat V2D = Vandermonde2D(N, R, S);
+            //std::cout << "V2D  = " << std::endl;
+            //MatView(V2D , PETSC_VIEWER_STDOUT_SELF);
         {
         std::string LocationName = "Vandermonde2D/";
         LocationName.append(std::to_string(N));
@@ -1261,6 +1263,10 @@ void store_Nodes_Reference_Triangle()
         PetscViewerDestroy(&viewer);
         }
         Mat V2DInv = Inverse_Matrix(V2D);
+
+
+            //std::cout << "V2DInv  = " << std::endl;
+            //MatView(V2DInv , PETSC_VIEWER_STDOUT_SELF);
         {
         std::string LocationName = "Vandermonde2D/";
         LocationName.append(std::to_string(N));
@@ -1516,11 +1522,13 @@ extern Mat InterpMatrix2D(const unsigned int &N, const Vec &R, const Vec &S)
   // function [IM] = InterpMatrix2D(rout, sout)
   // purpose: compute local elemental interpolation matrix
 
+  // N = order polynomials, not number of cubature points
     Mat V2Dc = Vandermonde2D(N, R, S);
 
     // Build interpolation matrix (nodes->cubature nodes)
     // Need Element inverse Vandermonde matrix
     Mat VInv = load_InverseVandermondeMatrix(N);
+    MatConvert(VInv, MATSEQDENSE, MAT_INPLACE_MATRIX, &VInv);
     //(*IM) = Vout * this->invV;
     Mat Interp;
     MatMatMult(V2Dc, VInv,  MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Interp);
@@ -1530,6 +1538,67 @@ extern Mat InterpMatrix2D(const unsigned int &N, const Vec &R, const Vec &S)
     return Interp;
 }
 /*--------------------------------------------------------------------------*/
+extern Vec LagrangePolynomial2D(const Mat &V, const Vec &P, const unsigned int &Np)
+{
+    Vec L;
+    VecCreateSeq(PETSC_COMM_SELF, Np, &L);
+    //VecDuplicate(P, &L);
+
+    Mat VT;
+    MatTranspose(V,MAT_INITIAL_MATRIX, &VT);
+
+    std::cout << "V = " << std::endl;
+    MatView(V,  PETSC_VIEWER_STDOUT_SELF);
+    std::cout << "VT = " << std::endl;
+    MatView(VT,  PETSC_VIEWER_STDOUT_SELF);
+
+    KSP                solver;
+    PC                 prec;
+    KSPConvergedReason reason;
+    PetscInt           i,j,its;
+    PetscErrorCode     ierr;
+    MPI_Comm comm = MPI_COMM_SELF;
+
+    std::cout << " 1 " << std::endl;
+    KSPCreate(comm,&solver);
+    std::cout << " 2 " << std::endl;
+    KSPSetOperators(solver,VT,VT);
+    std::cout << " 3 " << std::endl;
+
+    KSPSetType(solver, KSPPREONLY);
+    std::cout << " 4 " << std::endl;
+    KSPGetPC(solver,&prec);
+    std::cout << " 4.5 " << std::endl;
+    PCSetType(prec, PCLU);
+    std::cout << " 5 " << std::endl;
+
+    //KSPSetFromOptions(solver);
+    std::cout << " 6 " << std::endl;
+    KSPSetUp(solver);
+    std::cout << " 7 " << std::endl;
+
+                    PetscInt size_V1, size_V2;
+                    MatGetSize(VT, &size_V1, &size_V2);
+                    PetscInt size_P, size_L;
+                    VecGetSize(P, &size_P);
+                    VecGetSize(L, &size_L);
+
+                    std::cout << "matrix size VT = " << size_V1 << " x " << size_V2 << std::endl;
+                    MatGetSize(V, &size_V1, &size_V2);
+                    std::cout << "matrix size V = " << size_V1 << " x " << size_V2 << std::endl;
+                    std::cout << "vec P size = " << size_P << std::endl;
+                    std::cout << "vec L size = " << size_L << std::endl;
+
+    KSPSolve(solver,P,L);
+    std::cout << " 8 " << std::endl;
+
+    KSPDestroy(&solver);
+    MatDestroy(&VT);
+
+    return L;
+
+}
+/*--------------------------------------------------------------------------*/
 extern Mat Inverse_Matrix(const Mat &V)
 {
     // Calculate inverse Vandermonde Matrix
@@ -1537,6 +1606,7 @@ extern Mat Inverse_Matrix(const Mat &V)
     MatDuplicate(V,MAT_COPY_VALUES,&A);
     MatDuplicate(V,MAT_DO_NOT_COPY_VALUES,&X);
     MatDuplicate(V,MAT_DO_NOT_COPY_VALUES,&B);
+    MatConvert(A, MATSEQDENSE, MAT_INPLACE_MATRIX, &A);
     MatConvert(B, MATSEQDENSE, MAT_INPLACE_MATRIX, &B);
     MatConvert(X, MATSEQDENSE, MAT_INPLACE_MATRIX, &X);
 
@@ -1547,8 +1617,10 @@ extern Mat Inverse_Matrix(const Mat &V)
     MatFactorInfo info;
     MatFactorInfoInitialize(&info);
     info.fill=1.0;
+    info.dtcol=1.0;
     MatLUFactor(A, row, col, &info);
     MatMatSolve(A, B, X);
+    std::cout << "X = " << std::endl;
     //MatView(X, PETSC_VIEWER_STDOUT_SELF);
     // X is the inverse
     MatDestroy(&A);
@@ -1592,3 +1664,42 @@ extern Mat load_InverseVandermondeMatrix(const unsigned int N)
     return VInv;
 }
 /*--------------------------------------------------------------------------*/
+extern Mat MassMatrix2D(const unsigned int &N)
+{
+    Mat Product;
+    Mat VInv = load_InverseVandermondeMatrix(N);
+    MatTransposeMatMult(VInv, VInv, MAT_INITIAL_MATRIX, 1.0, &Product);
+
+    MatDestroy(&VInv);
+    return Product;
+}
+/*--------------------------------------------------------------------------*/
+extern Mat MassMatrix2D_Cubature(const unsigned int &N, const Mat &cubV, const Vec &cubW, const unsigned int &Ncub)
+{
+    Mat Product, Product2;
+
+    Mat W;
+    //MatCreateSeqAIJ(PETSC_COMM_SELF, Ncub, Ncub,1, NULL,&W);
+    MatCreateSeqDense(PETSC_COMM_SELF, Ncub, Ncub, NULL,&W);
+    MatDiagonalSet(W,cubW,INSERT_VALUES );
+
+    //std::cout << "W = " << std::endl;
+    //MatView(W, PETSC_VIEWER_STDOUT_SELF);
+    //MatTransposeMatMult(Product, W, MAT_INITIAL_MATRIX, 1.0, &Product2);
+    //std::cout << "Product2 = " << std::endl;
+    //MatView(Product2, PETSC_VIEWER_STDOUT_SELF);
+    //Mat Product3;
+    //MatMatMult(Product2, Product, MAT_INITIAL_MATRIX, 1.0, &Product3);
+    //std::cout << "Product3 = " << std::endl;
+    //MatView(Product3, PETSC_VIEWER_STDOUT_SELF);
+
+
+    MatTransposeMatMult(cubV, W, MAT_INITIAL_MATRIX, 1.0, &Product);
+    MatMatMult(Product, cubV, MAT_INITIAL_MATRIX, 1.0, &Product2);
+
+    MatDestroy(&Product);
+    //MatDestroy(&Product2);
+    //MatDestroy(&VInv);
+    MatDestroy(&W);
+    return Product2;
+}

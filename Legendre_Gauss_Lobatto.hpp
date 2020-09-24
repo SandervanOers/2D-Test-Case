@@ -85,4 +85,10 @@ extern Mat load_VandermondeMatrix(const unsigned int N);
 /*--------------------------------------------------------------------------*/
 extern Mat load_InverseVandermondeMatrix(const unsigned int N);
 /*--------------------------------------------------------------------------*/
+extern Mat MassMatrix2D(const unsigned int &N);
+/*--------------------------------------------------------------------------*/
+extern Mat MassMatrix2D_Cubature(const unsigned int &N, const Mat &cubV, const Vec &cubW, const unsigned int &Ncub);
+/*--------------------------------------------------------------------------*/
+extern Vec LagrangePolynomial2D(const Mat &V, const Vec &P, const unsigned int &Np);
+/*--------------------------------------------------------------------------*/
 #endif
