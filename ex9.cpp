@@ -304,8 +304,6 @@ int main(int argc,char **args)
             Vec cubR, cubS, cubW;
             unsigned int Ncub;
             Cubature2D(Order_Gaussian_Quadrature, cubR, cubS, cubW, Ncub);
-            VecDestroy(&cubR);
-            VecDestroy(&cubS);
 
             Mat L = load_LagrangePolynomial_Cubature(Order_Polynomials, Order_Gaussian_Quadrature); // Watch Transpose // GetRow faster than GetColumn in Petsc
             std::cout << "1 " << std::endl;
@@ -319,6 +317,61 @@ int main(int argc,char **args)
 
             std::cout << "dLdr = " << std::endl;
             MatView(dLdr, viewer);
+
+                    //cubR, cubS => Physical x & y coordinates
+                    //double physical_x = (*e).get_xCoordinateLeft()+0.5*(1.0+qp[q])*((*e).get_xCoordinateRight()-(*e).get_xCoordinateLeft());
+                    //double rho0 = rho_0_compressible(physical_x, N2);
+
+            PetscScalar *r_a, *s_a;
+            VecGetArray(cubR, &r_a);
+            VecGetArray(cubS, &s_a);
+            std::cout << "3.5" << std::endl;
+            double x_v1 = List_Of_Vertices[(*e).getVertex_V1()-1].getxCoordinate();
+            double y_v1 = List_Of_Vertices[(*e).getVertex_V1()-1].getyCoordinate();
+            double x_v2 = List_Of_Vertices[(*e).getVertex_V2()-1].getxCoordinate();
+            double y_v2 = List_Of_Vertices[(*e).getVertex_V2()-1].getyCoordinate();
+            double x_v3 = List_Of_Vertices[(*e).getVertex_V3()-1].getxCoordinate();
+            double y_v3 = List_Of_Vertices[(*e).getVertex_V3()-1].getyCoordinate();
+            std::cout << "3.6" << std::endl;
+
+            std::vector<double> X, Y;
+            for(unsigned int k = 0; k < Ncub; k++)
+            {
+                double x = 0.5*(-(r_a[k]+s_a[k])*x_v1+(1.0+r_a[k])*x_v2+(1.0+s_a[k])*x_v3);
+                double y = 0.5*(-(r_a[k]+s_a[k])*y_v1+(1.0+r_a[k])*y_v2+(1.0+s_a[k])*y_v3);
+                std::cout << k << " " << x << " " << y << " " << rho_0_2D_system1(y, 1.0) << std::endl;
+                X.push_back(x);
+                Y.push_back(y);
+            }
+            std::vector<double> Rho0 = rho_0_2D_system1(Y, 1.0);
+            std::cout << "Y El = ";
+            for (const double& i : Y)
+            {
+                std::cout << i << " " ;
+            }
+            std::cout << std::endl;
+            std::cout << "Rho0 El = ";
+            for (const double& i : Rho0)
+            {
+                std::cout << i << " " ;
+            }
+            std::cout << std::endl;
+            VecRestoreArray(cubR, &r_a);
+            VecRestoreArray(cubS, &s_a);
+            std::cout << "3.7" << std::endl;
+            VecDestroy(&cubR);
+            VecDestroy(&cubS);
+
+
+
+
+
+
+
+
+
+
+
 
 
             Mat W;
@@ -385,7 +438,7 @@ int main(int argc,char **args)
 
             Mat Dr, Ds;
             //GradVandermonde2D(N_Petsc, R, S, Dr, Ds);
-            DMatrices2D(N_Petsc, R, S, V2DInv, Dr, Ds);
+            DMatrices2D(N_Petsc, R, S, V2D, Dr, Ds);
 
             std::cout << "Dr = " << std::endl;
             MatView(Dr, viewer);
@@ -399,31 +452,21 @@ int main(int argc,char **args)
             Mat MM = MassMatrix2D(N_Petsc);
             std::cout << "MM = " << std::endl;
             MatView(MM, viewer);
-            Mat MMInv = Inverse_Matrix(MM);
-            std::cout << "MMInv = " << std::endl;
-            MatView(MMInv, viewer);
 
             Mat Sr, Ss;
-            MatMatMult(MMInv,Dr,MAT_INITIAL_MATRIX,1.0, &Sr);
+            MatMatMult(MM,Dr,MAT_INITIAL_MATRIX,1.0, &Sr);
 
             std::cout << "Sr = " << std::endl;
             MatView(Sr, viewer);
 
 
-            MatAXPY(MM,-1.0, cubDr, SAME_NONZERO_PATTERN);
+            MatAXPY(Sr,-1.0, cubDr, SAME_NONZERO_PATTERN);
             std::cout << "Diff = " << std::endl;
-            MatView(MM, viewer);
+            MatView(Sr  , viewer);
              PetscReal nrm;
-              MatNorm(MM,NORM_FROBENIUS,&nrm);
+
+              MatNorm(Sr,NORM_FROBENIUS,&nrm);
             std::cout << "2 Norm Diff = " << nrm << std::endl;
-
-            MatAXPY(Dr,-1.0, cubDr, SAME_NONZERO_PATTERN);
-            std::cout << "Diff Dr = " << std::endl;
-            MatView(Dr, viewer);
-
-             //PetscReal nrm;
-              MatNorm(Dr,NORM_FROBENIUS,&nrm);
-            std::cout << "2 Norm Diff Dr = " << nrm << std::endl;
 
 
             MatDestroy(&V2DInv);
@@ -437,6 +480,10 @@ int main(int argc,char **args)
             ///VecDestroy(&Y);
             ///VecDestroy(&R);
             ///VecDestroy(&S);
+
+            MatDestroy(&MM);
+            MatDestroy(&Sr);
+            MatDestroy(&Ss);
 
 
 

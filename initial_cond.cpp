@@ -229,6 +229,16 @@ extern double rho_0_2D_system1(const double &z, const double &beta)
     return exp(-beta*z);
 }
 /*--------------------------------------------------------------------------*/
+extern std::vector<double> rho_0_2D_system1(const std::vector<double> &z, const double &beta)
+{
+    std::vector<double> returnvector;
+    for (const double& i : z)
+    {
+        returnvector.push_back(exp(-beta*(i)));
+    }
+    return returnvector;
+}
+/*--------------------------------------------------------------------------*/
 extern double rho_0_deriv_2D_system1(const double &z, const double &beta)
 {
     return -beta*exp(-beta*z);

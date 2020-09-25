@@ -1478,7 +1478,14 @@ extern void DMatrices2D(const unsigned int &N, const Vec &R, const Vec &S, const
 
     Mat Vr, Vs;
     GradVandermonde2D(N, R, S, Vr, Vs);
+    MatConvert(Vr, MATSEQDENSE, MAT_INPLACE_MATRIX, &Vr);
+    MatConvert(Vs, MATSEQDENSE, MAT_INPLACE_MATRIX, &Vs);
 
+    std::cout << "Vr = " << std::endl;
+    MatView(Vr, PETSC_VIEWER_STDOUT_SELF);
+
+    Mat X = Inverse_Matrix(V);
+    /*
     // Calculate inverse Vandermonde Matrix
     Mat A, B, X;
     MatDuplicate(V,MAT_COPY_VALUES,&A);
@@ -1499,7 +1506,13 @@ extern void DMatrices2D(const unsigned int &N, const Vec &R, const Vec &S, const
 
     MatLUFactor(A, row, col, &info);
     MatMatSolve(A, B, X);
-    //MatView(X, PETSC_VIEWER_STDOUT_SELF);
+    ISDestroy(&row);
+    ISDestroy(&col);
+    MatDestroy(&A);
+    MatDestroy(&B);
+    */
+    std::cout << "X = " << std::endl;
+    MatView(X, PETSC_VIEWER_STDOUT_SELF);
     // X is the inverse
 
     //Dr = Vr *inv(V)
@@ -1507,11 +1520,7 @@ extern void DMatrices2D(const unsigned int &N, const Vec &R, const Vec &S, const
     MatMatMult(Vs, X, MAT_INITIAL_MATRIX, 1, &Ds);
 
     MatDestroy(&Vr);
-    MatDestroy(&A);
-    MatDestroy(&B);
     MatDestroy(&X);
-    ISDestroy(&row);
-    ISDestroy(&col);
 
     MatDestroy(&Vr);
     MatDestroy(&Vs);
