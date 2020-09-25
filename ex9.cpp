@@ -58,7 +58,10 @@ int main(int argc,char **args)
 
     /*--------------------------------------------------------------------------*/
     /* Compute and Store Nodes and Vandermonde Matrices                         */
-     //store_Nodes_Reference_Triangle();
+    //store_Nodes_Reference_Triangle();
+    /* Compute and Store Lagrange Polynomials on Cubature Nodes                 */
+    //store_LagrangePolynomial_Cubature();
+    //store_DerivativeLagrangePolynomial_Cubature();
     /*--------------------------------------------------------------------------*/
 
 
@@ -144,35 +147,7 @@ int main(int argc,char **args)
     }
     */
 
-    // Compute the nodes for a equilateral element
-    Vec X, Y;
-    Nodes2D(N_Petsc, X, Y);
-    VecView(X, viewer);
-    VecView(Y, viewer);
-    // Convert nodes to a reference element
-    Vec R, S;
-    XYtoRS(X, Y, R, S);
-    VecView(R, viewer);
-    VecView(S, viewer);
 
-    Mat V2D;
-    V2D = Vandermonde2D(N_Petsc, R, S);
-    std::cout << "V2D = " << std::endl;
-    MatView(V2D, viewer);
-
-    Mat Dr, Ds;
-    GradVandermonde2D(N_Petsc, R, S, Dr, Ds);
-
-    std::cout << "Dr = " << std::endl;
-    MatView(Dr, viewer);
-
-    MatDestroy(&V2D);
-    MatDestroy(&Dr);
-    MatDestroy(&Ds);
-    VecDestroy(&X);
-    VecDestroy(&Y);
-    VecDestroy(&R);
-    VecDestroy(&S);
 
 
     /*--------------------------------------------------------------------------*/
@@ -314,6 +289,7 @@ int main(int argc,char **args)
             in[n] = n+pos;
         }
 
+
         //if (Order_Polynomials != Order_Polynomials_old)
         //{
             // Compute New Quadrature Points and Weights
@@ -328,9 +304,165 @@ int main(int argc,char **args)
             Vec cubR, cubS, cubW;
             unsigned int Ncub;
             Cubature2D(Order_Gaussian_Quadrature, cubR, cubS, cubW, Ncub);
-            Vec cubA, cubB;
-            RStoAB(cubR, cubS, cubA, cubB);
+            VecDestroy(&cubR);
+            VecDestroy(&cubS);
 
+            Mat L = load_LagrangePolynomial_Cubature(Order_Polynomials, Order_Gaussian_Quadrature); // Watch Transpose // GetRow faster than GetColumn in Petsc
+            std::cout << "1 " << std::endl;
+            Mat dLdr = load_DerivativeLagrangePolynomial_Cubature(Order_Polynomials, Order_Gaussian_Quadrature, 1);
+            std::cout << "2 " << std::endl;
+            Mat dLds = load_DerivativeLagrangePolynomial_Cubature(Order_Polynomials, Order_Gaussian_Quadrature, 0);
+            std::cout << "3 " << std::endl;
+
+            std::cout << "L = " << std::endl;
+            MatView(L, viewer);
+
+            std::cout << "dLdr = " << std::endl;
+            MatView(dLdr, viewer);
+
+
+            Mat W;
+            MatCreate(PETSC_COMM_WORLD,&W);
+            MatSetType(W,MATSEQAIJ);
+            MatSetSizes(W, Np, Np, PETSC_DECIDE, PETSC_DECIDE);
+            MatSeqAIJSetPreallocation(W, Np, NULL);
+
+            std::cout << "4 " << std::endl;
+            PetscScalar *cubW_a;
+            VecGetArray(cubW, &cubW_a);
+            for (unsigned int k = 0; k < Np; k++)
+            {
+                PetscInt    nck; // nck == ncub
+                const PetscInt    *ak;
+                const PetscScalar *Lk;
+                MatGetRow(L, k, &nck, &ak, &Lk);
+                for (unsigned int l = 0; l < Np; l++)
+                {
+                    PetscInt    ncl;
+                    const PetscInt    *al;
+                    const PetscScalar *Ll;
+                    MatGetRow(dLdr, l, &ncl, &al, &Ll);
+                    //MatGetRow(L, l, &ncl, &al, &Ll);
+                    double value = 0;
+                    for (unsigned int i = 0; i < nck; i++)
+                    {
+                        value += cubW_a[i]*Lk[i]*Ll[i];
+                    }
+                    MatSetValue(W, k, l, value, INSERT_VALUES);
+                    MatRestoreRow(dLdr, l, &ncl, &al, &Ll);
+                    //MatRestoreRow(L, l, &ncl, &al, &Ll);
+
+                }
+                MatRestoreRow(L, k, &nck, &ak, &Lk);
+            }
+            VecRestoreArray(cubW, &cubW_a);
+            std::cout << "5 " << std::endl;
+            MatAssemblyBegin(W, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(W, MAT_FINAL_ASSEMBLY);
+
+            std::cout << "W = " << std::endl;
+            MatView(W, viewer);
+
+            // Compute the nodes for a equilateral element
+            ///Vec X, Y;
+            ///Nodes2D(N_Petsc, X, Y);
+            //VecView(X, viewer);
+            //VecView(Y, viewer);
+            // Convert nodes to a reference element
+            ///Vec R, S;
+            ///XYtoRS(X, Y, R, S);
+            //VecView(R, viewer);
+            //VecView(S, viewer);
+
+            Mat V2D;
+            V2D = Vandermonde2D(N_Petsc, R, S);
+
+            Mat V2DInv = load_InverseVandermondeMatrix(N_Petsc);
+            std::cout << "V2D = " << std::endl;
+            MatView(V2D, viewer);
+            std::cout << "V2D Inv= " << std::endl;
+            MatView(V2DInv, viewer);
+
+            Mat Dr, Ds;
+            //GradVandermonde2D(N_Petsc, R, S, Dr, Ds);
+            DMatrices2D(N_Petsc, R, S, V2DInv, Dr, Ds);
+
+            std::cout << "Dr = " << std::endl;
+            MatView(Dr, viewer);
+
+            Mat Intermediate, cubDr;
+            MatTransposeMatMult(V2DInv, W, MAT_INITIAL_MATRIX, 1.0, &Intermediate);
+            MatMatMult(Intermediate,V2DInv,MAT_INITIAL_MATRIX,1.0, &cubDr);
+            std::cout << "cubDr = " << std::endl;
+            MatView(cubDr, viewer);
+
+            Mat MM = MassMatrix2D(N_Petsc);
+            std::cout << "MM = " << std::endl;
+            MatView(MM, viewer);
+            Mat MMInv = Inverse_Matrix(MM);
+            std::cout << "MMInv = " << std::endl;
+            MatView(MMInv, viewer);
+
+            Mat Sr, Ss;
+            MatMatMult(MMInv,Dr,MAT_INITIAL_MATRIX,1.0, &Sr);
+
+            std::cout << "Sr = " << std::endl;
+            MatView(Sr, viewer);
+
+
+            MatAXPY(MM,-1.0, cubDr, SAME_NONZERO_PATTERN);
+            std::cout << "Diff = " << std::endl;
+            MatView(MM, viewer);
+             PetscReal nrm;
+              MatNorm(MM,NORM_FROBENIUS,&nrm);
+            std::cout << "2 Norm Diff = " << nrm << std::endl;
+
+            MatAXPY(Dr,-1.0, cubDr, SAME_NONZERO_PATTERN);
+            std::cout << "Diff Dr = " << std::endl;
+            MatView(Dr, viewer);
+
+             //PetscReal nrm;
+              MatNorm(Dr,NORM_FROBENIUS,&nrm);
+            std::cout << "2 Norm Diff Dr = " << nrm << std::endl;
+
+
+            MatDestroy(&V2DInv);
+            MatDestroy(&cubDr);
+            MatDestroy(&Intermediate);
+
+            MatDestroy(&V2D);
+            MatDestroy(&Dr);
+            MatDestroy(&Ds);
+            ///VecDestroy(&X);
+            ///VecDestroy(&Y);
+            ///VecDestroy(&R);
+            ///VecDestroy(&S);
+
+
+
+
+
+
+
+
+
+
+
+            MatDestroy(&W);
+            MatDestroy(&L);
+            MatDestroy(&dLdr);
+            MatDestroy(&dLds);
+
+
+
+
+
+
+
+
+
+
+            /*
             Mat cubV = InterpMatrix2D(N_Petsc, cubR, cubS);
 
             Mat MM =  MassMatrix2D(N_Petsc);
@@ -353,75 +485,16 @@ int main(int argc,char **args)
 
 
 
-        //}
-        //else
-        //{
-            // Use old Quadrature Points and Weights
-       // }
-            PetscScalar *cubW_a, *cubR_a, *cubS_a;
-            VecGetArray(cubW, &cubW_a);
-            VecGetArray(cubR, &cubR_a);
-            VecGetArray(cubS, &cubS_a);
-
-        for (unsigned int i = 0; i <= Order_Polynomials; i++)
-        {
-            for (unsigned int j = 0; j <= Order_Polynomials; j++)
-            {
-                double value_m = 0.0;
-                //for (unsigned int q = 0; q <= Ncub; q++)
-                {
-                    //double Li = LagrangePolynomial(ri, qp[q], i);
-                    //double Lj = LagrangePolynomial(ri, qp[q], j);
-
-                    //value_m += w[q]*Li*Lj*DeltaX/2.0;
-
-                    Vec P;
-                    P = Simplex2DP(cubA, cubB, i, j);
-
-                    PetscInt size_P;
-                    VecGetSize(P, &size_P);
-                    std::cout << "Size P Vec = m = " << size_P << std::endl;
-
-                    Vec L =  LagrangePolynomial2D(cubV, P, Np);
-
-                    std::cout << "P = " << std::endl;
-                    VecView(P, viewer);
-                    std::cout << "L = " << std::endl;
-                    VecView(L, viewer);
-
-            //PetscScalar *p_a;
-            //VecGetArray(P, &p_a);
-            //ir[0]=sk;
-
-            //MatSetValues(V, size_r, ix, 1, ir, p_a, INSERT_VALUES);
-            //VecRestoreArray(P, &p_a);
-
-                    VecDestroy(&P);
-                    VecDestroy(&L);
-                }
-
-                MatSetValue(M1, pos+i, pos+j, value_m, ADD_VALUES);
-            }
-
-
-        }
-            VecRestoreArray(cubW, &cubW_a);
-            VecRestoreArray(cubR, &cubR_a);
-            VecRestoreArray(cubS, &cubS_a);
-
-            VecDestroy(&cubR);
-            VecDestroy(&cubS);
+*/
             VecDestroy(&cubW);
 
             VecDestroy(&R);
             VecDestroy(&S);
-            VecDestroy(&cubA);
-            VecDestroy(&cubB);
 
 
-            MatDestroy(&cubV);
-            MatDestroy(&MM);
-            MatDestroy(&MMcub);
+           // //MatDestroy(&cubV);
+            //MatDestroy(&MM);
+            //MatDestroy(&MMcub);
    /*
         Vec Weights;
         Vec QuadraturePoints;

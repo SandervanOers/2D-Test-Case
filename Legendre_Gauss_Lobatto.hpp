@@ -10,6 +10,7 @@
 #include <vector>
 #include <chrono>
 #include "Elements.hpp"
+#include "Cubature2D.hpp"
 /*--------------------------------------------------------------------------*/
 extern Vec JacobiGL(const double &alpha, const double &beta, const unsigned int &N);
 /*--------------------------------------------------------------------------*/
@@ -89,6 +90,14 @@ extern Mat MassMatrix2D(const unsigned int &N);
 /*--------------------------------------------------------------------------*/
 extern Mat MassMatrix2D_Cubature(const unsigned int &N, const Mat &cubV, const Vec &cubW, const unsigned int &Ncub);
 /*--------------------------------------------------------------------------*/
-extern Vec LagrangePolynomial2D(const Mat &V, const Vec &P, const unsigned int &Np);
+//extern Vec LagrangePolynomial2D(const Mat &V, const Vec &P, const unsigned int &Np);
+/*--------------------------------------------------------------------------*/
+extern void store_LagrangePolynomial_Cubature();
+/*--------------------------------------------------------------------------*/
+extern void store_DerivativeLagrangePolynomial_Cubature();
+/*--------------------------------------------------------------------------*/
+extern Mat load_LagrangePolynomial_Cubature(const unsigned int &Order_Polynomials, const unsigned int &Cubature_Order);
+/*--------------------------------------------------------------------------*/
+extern Mat load_DerivativeLagrangePolynomial_Cubature(const unsigned int &Order_Polynomials, const unsigned int &Cubature_Order, const bool &deriv);
 /*--------------------------------------------------------------------------*/
 #endif

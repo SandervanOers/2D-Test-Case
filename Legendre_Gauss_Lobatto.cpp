@@ -1529,7 +1529,6 @@ extern Mat InterpMatrix2D(const unsigned int &N, const Vec &R, const Vec &S)
     // Need Element inverse Vandermonde matrix
     Mat VInv = load_InverseVandermondeMatrix(N);
     MatConvert(VInv, MATSEQDENSE, MAT_INPLACE_MATRIX, &VInv);
-    //(*IM) = Vout * this->invV;
     Mat Interp;
     MatMatMult(V2Dc, VInv,  MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Interp);
 
@@ -1538,7 +1537,7 @@ extern Mat InterpMatrix2D(const unsigned int &N, const Vec &R, const Vec &S)
     return Interp;
 }
 /*--------------------------------------------------------------------------*/
-extern Vec LagrangePolynomial2D(const Mat &V, const Vec &P, const unsigned int &Np)
+/* extern Vec LagrangePolynomial2D(const Mat &V, const Vec &P, const unsigned int &Np)
 {
     Vec L;
     VecCreateSeq(PETSC_COMM_SELF, Np, &L);
@@ -1597,7 +1596,7 @@ extern Vec LagrangePolynomial2D(const Mat &V, const Vec &P, const unsigned int &
 
     return L;
 
-}
+}*/
 /*--------------------------------------------------------------------------*/
 extern Mat Inverse_Matrix(const Mat &V)
 {
@@ -1620,7 +1619,7 @@ extern Mat Inverse_Matrix(const Mat &V)
     info.dtcol=1.0;
     MatLUFactor(A, row, col, &info);
     MatMatSolve(A, B, X);
-    std::cout << "X = " << std::endl;
+    //std::cout << "X = " << std::endl;
     //MatView(X, PETSC_VIEWER_STDOUT_SELF);
     // X is the inverse
     MatDestroy(&A);
@@ -1703,3 +1702,228 @@ extern Mat MassMatrix2D_Cubature(const unsigned int &N, const Mat &cubV, const V
     MatDestroy(&W);
     return Product2;
 }
+/*--------------------------------------------------------------------------*/
+extern void store_LagrangePolynomial_Cubature()
+{
+    for (unsigned int cubatureOrder = 1; cubatureOrder <= 28; cubatureOrder++)
+    {
+        Vec cubR, cubS, cubW;
+        unsigned int Ncub;
+        Cubature2D(cubatureOrder, cubR, cubS, cubW, Ncub);
+        Vec cubA, cubB;
+        RStoAB(cubR, cubS, cubA, cubB);
+
+        PetscInt cubin[Ncub];
+        for (unsigned int n=0;n<Ncub; n++)
+        {
+            cubin[n] = n;
+        }
+
+        for (unsigned int Order_Polynomials = 0; Order_Polynomials <= 20; Order_Polynomials++)
+        {
+            auto t1 = std::chrono::high_resolution_clock::now();
+            PetscInt sk[1]={0};
+            unsigned int Np = (Order_Polynomials+1)*(Order_Polynomials+2)/2;
+
+            Mat L;
+            MatCreate(PETSC_COMM_WORLD,&L);
+            MatSetType(L,MATSEQAIJ);
+            MatSetSizes(L, Ncub, Np, PETSC_DECIDE, PETSC_DECIDE);
+            MatSeqAIJSetPreallocation(L, Np, NULL);
+
+            for (unsigned int i = 0; i <= Order_Polynomials; i++)
+            {
+                for (unsigned int j = 0; j <= Order_Polynomials-i; j++)
+                {
+                    Vec P;
+                    P = Simplex2DP(cubA, cubB, i, j);
+                    PetscScalar *P_a;
+                    VecGetArray(P, &P_a);
+                    MatSetValues(L, Ncub, cubin, 1, sk, P_a, INSERT_VALUES);
+                    VecRestoreArray(P, &P_a);
+                    VecDestroy(&P);
+                    sk[0] += 1;
+                }
+            }
+            MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY);
+
+            Mat LTranspose;
+            MatTranspose(L, MAT_INITIAL_MATRIX, &LTranspose);
+
+            std::string LocationName = "CubatureLagrange/N";
+            LocationName.append(std::to_string(Order_Polynomials));
+            LocationName.append("CO");
+            LocationName.append(std::to_string(cubatureOrder));
+            LocationName.append(".dat");
+            PetscViewer    viewer;
+            PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_WRITE,&viewer);
+            MatView(LTranspose,viewer);
+            PetscViewerDestroy(&viewer);
+
+
+            auto t2 = std::chrono::high_resolution_clock::now();
+            std::cout << "Cubature Order = " << cubatureOrder << ", Polynomial Order = " << Order_Polynomials << " Execution took "
+                  << std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()
+                  << " milliseconds\n";
+            MatDestroy(&L);
+            MatDestroy(&LTranspose);
+        }
+
+            VecDestroy(&cubR);
+            VecDestroy(&cubS);
+            VecDestroy(&cubW);
+            VecDestroy(&cubA);
+            VecDestroy(&cubB);
+    }
+}
+/*--------------------------------------------------------------------------*/
+extern void store_DerivativeLagrangePolynomial_Cubature()
+{
+    for (unsigned int cubatureOrder = 1; cubatureOrder <= 28; cubatureOrder++)
+    {
+        Vec cubR, cubS, cubW;
+        unsigned int Ncub;
+        Cubature2D(cubatureOrder, cubR, cubS, cubW, Ncub);
+        Vec cubA, cubB;
+        RStoAB(cubR, cubS, cubA, cubB);
+        VecDestroy(&cubR);
+        VecDestroy(&cubS);
+
+        PetscInt cubin[Ncub];
+        for (unsigned int n=0;n<Ncub; n++)
+        {
+            cubin[n] = n;
+        }
+
+        for (unsigned int Order_Polynomials = 0; Order_Polynomials <= 20; Order_Polynomials++)
+        {
+            auto t1 = std::chrono::high_resolution_clock::now();
+            PetscInt sk[1]={0};
+            unsigned int Np = (Order_Polynomials+1)*(Order_Polynomials+2)/2;
+
+            Mat dLdr;
+            MatCreate(PETSC_COMM_WORLD,&dLdr);
+            MatSetType(dLdr,MATSEQAIJ);
+            MatSetSizes(dLdr, Ncub, Np, PETSC_DECIDE, PETSC_DECIDE);
+            MatSeqAIJSetPreallocation(dLdr, Np, NULL);
+            Mat dLds;
+            MatCreate(PETSC_COMM_WORLD,&dLds);
+            MatSetType(dLds,MATSEQAIJ);
+            MatSetSizes(dLds, Ncub, Np, PETSC_DECIDE, PETSC_DECIDE);
+            MatSeqAIJSetPreallocation(dLds, Np, NULL);
+            for (unsigned int i = 0; i <= Order_Polynomials; i++)
+            {
+                for (unsigned int j = 0; j <= Order_Polynomials-i; j++)
+                {
+                    Vec dPdr, dPds;
+                    GradSimplex2D(cubA, cubB, i, j, dPdr, dPds);
+
+                    PetscScalar *dPdr_a;
+                    VecGetArray(dPdr, &dPdr_a);
+                    MatSetValues(dLdr, Ncub, cubin, 1, sk, dPdr_a, INSERT_VALUES);
+                    VecRestoreArray(dPdr, &dPdr_a);
+                    VecDestroy(&dPdr);
+
+                    PetscScalar *dPds_a;
+                    VecGetArray(dPds, &dPds_a);
+                    MatSetValues(dLds, Ncub, cubin, 1, sk, dPds_a, INSERT_VALUES);
+                    VecRestoreArray(dPds, &dPds_a);
+                    VecDestroy(&dPds);
+
+                    sk[0] += 1;
+                }
+            }
+            MatAssemblyBegin(dLdr, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(dLdr, MAT_FINAL_ASSEMBLY);
+            MatAssemblyBegin(dLds, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(dLds, MAT_FINAL_ASSEMBLY);
+
+            Mat dLdrTranspose;
+            MatTranspose(dLdr, MAT_INITIAL_MATRIX, &dLdrTranspose);
+            Mat dLdsTranspose;
+            MatTranspose(dLds, MAT_INITIAL_MATRIX, &dLdsTranspose);
+
+            {
+            std::string LocationName = "CubatureLagrangeDeriv/N";
+            LocationName.append(std::to_string(Order_Polynomials));
+            LocationName.append("CO");
+            LocationName.append(std::to_string(cubatureOrder));
+            LocationName.append("dr.dat");
+            PetscViewer    viewer;
+            PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_WRITE,&viewer);
+            MatView(dLdrTranspose,viewer);
+            PetscViewerDestroy(&viewer);
+            }
+            {
+            std::string LocationName = "CubatureLagrangeDeriv/N";
+            LocationName.append(std::to_string(Order_Polynomials));
+            LocationName.append("CO");
+            LocationName.append(std::to_string(cubatureOrder));
+            LocationName.append("ds.dat");
+            PetscViewer    viewer;
+            PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_WRITE,&viewer);
+            MatView(dLdsTranspose,viewer);
+            PetscViewerDestroy(&viewer);
+            }
+
+            auto t2 = std::chrono::high_resolution_clock::now();
+            std::cout << "Cubature Order = " << cubatureOrder << ", Polynomial Order = " << Order_Polynomials << " Execution took "
+                  << std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()
+                  << " milliseconds\n";
+
+            MatDestroy(&dLdr);
+            MatDestroy(&dLds);
+            MatDestroy(&dLdrTranspose);
+            MatDestroy(&dLdsTranspose);
+        }
+            VecDestroy(&cubW);
+            VecDestroy(&cubA);
+            VecDestroy(&cubB);
+    }
+}
+/*--------------------------------------------------------------------------*/
+extern Mat load_LagrangePolynomial_Cubature(const unsigned int &Order_Polynomials, const unsigned int &Cubature_Order)
+{
+    Mat L;
+    // Read the nodes for a Reference Element
+    std::string LocationName = "CubatureLagrange/N";
+    LocationName.append(std::to_string(Order_Polynomials));
+    LocationName.append("CO");
+    LocationName.append(std::to_string(Cubature_Order));
+    LocationName.append(".dat");
+    PetscViewer    viewer;
+    PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_READ,&viewer);
+    MatCreate(PETSC_COMM_WORLD,&L);
+    MatLoad(L,viewer);
+    PetscViewerDestroy(&viewer);
+    return L;
+}
+/*--------------------------------------------------------------------------*/
+extern Mat load_DerivativeLagrangePolynomial_Cubature(const unsigned int &Order_Polynomials, const unsigned int &Cubature_Order, const bool &deriv)
+{
+    Mat dL;
+    MatCreate(PETSC_COMM_WORLD,&dL);
+        std::string LocationName = "CubatureLagrangeDeriv/N";
+        LocationName.append(std::to_string(Order_Polynomials));
+        LocationName.append("CO");
+        LocationName.append(std::to_string(Cubature_Order));
+    if (deriv == 1) // dr
+    {
+        LocationName.append("dr.dat");
+        PetscViewer    viewer;
+        PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_READ,&viewer);
+        MatLoad(dL,viewer);
+        PetscViewerDestroy(&viewer);
+    }
+    else  // ds
+    {
+        LocationName.append("ds.dat");
+        PetscViewer    viewer;
+        PetscViewerBinaryOpen(PETSC_COMM_WORLD,LocationName.c_str(),FILE_MODE_READ,&viewer);
+        MatLoad(dL,viewer);
+        PetscViewerDestroy(&viewer);
+    }
+    return dL;
+}
+/*--------------------------------------------------------------------------*/
