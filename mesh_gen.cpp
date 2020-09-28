@@ -58,37 +58,37 @@ void Compute_Vertex_Coordinates_Uniform_Rectangle_2D(const double &xmin, const d
         //std::cout << "S = " << S[0] << " " << S[1] << " " << S[2] << " " << S[3] << std::endl;
 
         // top boundaries
-        if (List_Of_Vertices[S[2]-1].getyCoordinate() == ymax)
+        if (List_Of_Vertices[S[2]-1].getyCoordinate() == ymax) // Type == 1
         {
             // External
-            Boundaries2D Boundary5(B2[0], 0, S[3], S[2], ID_Elements+1, -1);
+            Boundaries2D Boundary5(B2[0], 0, S[3], S[2], ID_Elements+1, -1, 1);
             List_Of_Boundaries.push_back(Boundary5);
         }
         else
         {
             // Internal
-            Boundaries2D Boundary5(B2[0], 1, S[3], S[2], ID_Elements+1, ID_Elements+2*(Nx-1));
+            Boundaries2D Boundary5(B2[0], 1, S[3], S[2], ID_Elements+1, ID_Elements+2*(Nx-1), 1);
             List_Of_Boundaries.push_back(Boundary5);
         }
 
         // right boundaries
-        if (List_Of_Vertices[S[3]-1].getxCoordinate() == xmax)
+        if (List_Of_Vertices[S[3]-1].getxCoordinate() == xmax) // Type == 3
         {
             // External
-            Boundaries2D Boundary5(B2[2], 0, S[1], S[3], ID_Elements+1, -1);
+            Boundaries2D Boundary5(B2[2], 0, S[1], S[3], ID_Elements+1, -1, 3);
             List_Of_Boundaries.push_back(Boundary5);
         }
         else
         {
             // Internal
-            Boundaries2D Boundary5(B2[2], 1, S[1], S[3], ID_Elements+1, ID_Elements+2);
+            Boundaries2D Boundary5(B2[2], 1, S[1], S[3], ID_Elements+1, ID_Elements+2, 3);
             List_Of_Boundaries.push_back(Boundary5);
         }
         // bottom boundaries
         if (List_Of_Vertices[S[1]-1].getyCoordinate() == ymin)
         {
             // External
-            Boundaries2D Boundary5(B1[0], 0, S[0], S[1], ID_Elements, -1);
+            Boundaries2D Boundary5(B1[0], 0, S[0], S[1], ID_Elements, -1, 1); // Type == 1
             List_Of_Boundaries.push_back(Boundary5);
         }
         else
@@ -100,14 +100,14 @@ void Compute_Vertex_Coordinates_Uniform_Rectangle_2D(const double &xmin, const d
         // left boundaries
         if (List_Of_Vertices[S[0]-1].getxCoordinate() == xmin)
         {
-            Boundaries2D Boundary5(B1[2], 0, S[2], S[0], ID_Elements, -1);
+            Boundaries2D Boundary5(B1[2], 0, S[2], S[0], ID_Elements, -1, 3); // Type == 3
             List_Of_Boundaries.push_back(Boundary5);
         }
 
         // Internal Boundaries
         // diagonal boundaries
         {
-            Boundaries2D Boundary5(B1[1], 1, S[1], S[2], ID_Elements, ID_Elements+1);
+            Boundaries2D Boundary5(B1[1], 1, S[1], S[2], ID_Elements, ID_Elements+1, 2); // Type == 2
             List_Of_Boundaries.push_back(Boundary5);
         }
 
@@ -116,9 +116,15 @@ void Compute_Vertex_Coordinates_Uniform_Rectangle_2D(const double &xmin, const d
 
 
         Elements2D T1(ID_Elements, B1[0], B1[1], B1[2], S[0], S[1], S[2], 3);
+        //List_Of_Boundaries[B1[0]-1].setType(1);
+        //List_Of_Boundaries[B1[1]-1].setType(2);
+        //List_Of_Boundaries[B1[2]-1].setType(3);
         ID_Elements++;
         List_Of_Elements.push_back(T1);
         Elements2D T2(ID_Elements, B2[0], B2[1], B2[2], S[3], S[2], S[1], 3);
+        //List_Of_Boundaries[B2[0]-1].setType(1);
+        //List_Of_Boundaries[B2[1]-1].setType(2);
+        //List_Of_Boundaries[B2[2]-1].setType(3);
         ID_Elements++;
         List_Of_Elements.push_back(T2);
 
@@ -308,6 +314,40 @@ void Calculate_Jacobian(std::vector<Elements2D> &List_Of_Elements2D, const std::
 
         double Jacobian = dxdr*dyds-dxds*dydr;
         (*i).setJacobian(Jacobian);
+
+        double drdx = dyds/Jacobian;
+        double drdy = -dxds/Jacobian;
+        double dsdx = -dydr/Jacobian;
+        double dsdy = dxdr/Jacobian;
+        (*i).set_rx(drdx);
+        (*i).set_ry(drdy);
+        (*i).set_sx(dsdx);
+        (*i).set_sy(dsdy);
+    }
+}
+/*--------------------------------------------------------------------------*/
+void Calculate_Jacobian_boundaries(std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
+{
+    for(auto i = List_Of_Boundaries2D.begin(); i < List_Of_Boundaries2D.end(); i++)
+    {
+        double x1 = List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate();
+        double y1 = List_Of_Vertices[(*i).getVertex_V1()-1].getyCoordinate();
+        double x2 = List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate();
+        double y2 = List_Of_Vertices[(*i).getVertex_V2()-1].getyCoordinate();
+
+        double dx = (x2-x1);
+        double dy = (y2-y1);
+        double Length = sqrt(dx*dx+dy*dy);
+
+        unsigned int Type = (*i).getType();
+        double ReferenceLength = 2.0;
+        if (Type == 2)
+        {
+            ReferenceLength = 2.0*sqrt(2.0);
+        }
+
+        double Jacobian = Length/ReferenceLength;
+        (*i).setJacobian(Jacobian);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -319,14 +359,14 @@ void set_Order_Polynomials_Uniform(std::vector<Elements2D> &List_Of_Elements2D, 
     }
 }
 /*--------------------------------------------------------------------------*/
-extern unsigned int get_Number_Of_Nodes(const std::vector<Elements2D> &List_Of_Elements2D)
+extern unsigned int get_Number_Of_Nodes(std::vector<Elements2D> &List_Of_Elements2D)
 {
     unsigned int Number_Of_Nodes = 0;
     for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
     {
+        (*i).set_pos(Number_Of_Nodes);
         Number_Of_Nodes += (*i).get_Number_Of_Nodes();
     }
     return Number_Of_Nodes;
 }
 /*--------------------------------------------------------------------------*/
-

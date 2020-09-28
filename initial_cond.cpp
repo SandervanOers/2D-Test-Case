@@ -196,32 +196,28 @@ extern double Exact_Solution_p_system1dcom(const double &x, const double &t, con
 /*--------------------------------------------------------------------------*/
 extern double calculate_sigma_2D_system1(const double &beta, const unsigned int &kx, const unsigned int &kz)
 {
-    double N2 = beta-1.0;
-    return 1;
+    return sqrt(beta*beta/16.0/PETSC_PI/PETSC_PI+kx*kx+kz*kz);
 }
 /*--------------------------------------------------------------------------*/
 extern double Exact_Solution_mx_2D_system1(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
 {
-    double N2 = beta-1.0;
-    return 2;
+    return exp(-0.5*beta*z)*kx/(pow(sigma,2.0)-pow(kx,2.0))*(beta/4.0/PETSC_PI*sin(2.0*PETSC_PI*kz*z)+kz*cos(2.0*PETSC_PI*kz*z))*sin(2.0*PETSC_PI*kx*x)*sin(2*PETSC_PI*sigma*t);
 }
 /*--------------------------------------------------------------------------*/
 extern double Exact_Solution_mz_2D_system1(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
 {
-    double N2 = beta-1.0;
-    return 3;
+    return exp(-0.5*beta*z)*sin(2.0*PETSC_PI*kz*z)*cos(2.0*PETSC_PI*kx*x)*sin(2*PETSC_PI*sigma*t);
 }
 /*--------------------------------------------------------------------------*/
 extern double Exact_Solution_r_2D_system1(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
 {
-    double N2 = beta-1.0;
-    return 4;
+    return 0;
 }
 /*--------------------------------------------------------------------------*/
 extern double Exact_Solution_p_2D_system1(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
 {
     double N2 = beta-1.0;
-    return 5;
+    return exp(-0.5*beta*z)*sigma/(pow(sigma,2.0)-pow(kx,2.0))*(beta/4.0/PETSC_PI*sin(2.0*PETSC_PI*kz*z)+kz*cos(2.0*PETSC_PI*kz*z))*cos(2.0*PETSC_PI*kx*x)*cos(2*PETSC_PI*sigma*t);
 }
 /*--------------------------------------------------------------------------*/
 extern double rho_0_2D_system1(const double &z, const double &beta)
@@ -244,10 +240,28 @@ extern double rho_0_deriv_2D_system1(const double &z, const double &beta)
     return -beta*exp(-beta*z);
 }
 /*--------------------------------------------------------------------------*/
-extern double N_2_2D_system1(const double &z, const double &beta)
+extern std::vector<double> rho_0_deriv_2D_system1(const std::vector<double> &z, const double &beta)
 {
-    double N2 = beta-1.0;
-    return N2;
+    std::vector<double> returnvector;
+    for (const double& i : z)
+    {
+        returnvector.push_back(-beta*exp(-beta*(i)));
+    }
+    return returnvector;
 }
 /*--------------------------------------------------------------------------*/
-
+extern double N_2_2D_system1(const double &z, const double &beta)
+{
+    return beta-1.0;
+}
+/*--------------------------------------------------------------------------*/
+extern std::vector<double> N_2_2D_system1(const std::vector<double> &z, const double &beta)
+{
+    std::vector<double> returnvector;
+    for (const double& i : z)
+    {
+        returnvector.push_back(beta-1.0);
+    }
+    return returnvector;
+}
+/*--------------------------------------------------------------------------*/

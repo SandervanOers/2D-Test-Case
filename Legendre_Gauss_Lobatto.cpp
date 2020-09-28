@@ -1053,7 +1053,7 @@ Vec Simplex2DP(const Vec &A, const Vec &B, const unsigned int &i, const unsigned
     return P;
 }
 /*--------------------------------------------------------------------------*/
-void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices, unsigned int N)
+void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices, unsigned int N)
 {
     // Compute the nodes for a equilateral element
     Vec X, Y;
@@ -1085,6 +1085,30 @@ void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, c
 
             (*i).set_node_coordinates_x(x);
             (*i).set_node_coordinates_y(y);
+
+            // Boundary Elements
+            if (abs(s_a[k]+1.0) < NODETOL)
+            {
+                // face 1
+                unsigned int ID_B1 = (*i).getBoundary_B1()-1;
+                List_Of_Boundaries2D[ID_B1].set_node_coordinates_x(x);
+                List_Of_Boundaries2D[ID_B1].set_node_coordinates_y(y);
+            }
+            if (abs(r_a[k]+1.0) < NODETOL)
+            {
+                // face 3
+                unsigned int ID_B3 = (*i).getBoundary_B3()-1;
+                List_Of_Boundaries2D[ID_B3].set_node_coordinates_x(x);
+                List_Of_Boundaries2D[ID_B3].set_node_coordinates_y(y);
+            }
+            if (abs(s_a[k]+r_a[k]) < NODETOL)
+            {
+                // face 2
+                unsigned int ID_B2 = (*i).getBoundary_B2()-1;
+                List_Of_Boundaries2D[ID_B2].set_node_coordinates_x(x);
+                List_Of_Boundaries2D[ID_B2].set_node_coordinates_y(y);
+            }
+
         }
     }
     VecRestoreArray(R, &r_a);
@@ -1096,7 +1120,7 @@ void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, c
     VecDestroy(&Y);
 }
 /*--------------------------------------------------------------------------*/
-void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
+void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
 {
     unsigned int Nold = 1000;
     Vec X, Y, R, S;
@@ -1134,6 +1158,29 @@ void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D
 
             (*i).set_node_coordinates_x(x);
             (*i).set_node_coordinates_y(y);
+
+            // Boundary Elements
+            if (abs(s_a[k]+1.0) < NODETOL)
+            {
+                // face 1
+                unsigned int ID_B1 = (*i).getBoundary_B1()-1;
+                List_Of_Boundaries2D[ID_B1].set_node_coordinates_x(x);
+                List_Of_Boundaries2D[ID_B1].set_node_coordinates_y(y);
+            }
+            if (abs(r_a[k]+1.0) < NODETOL)
+            {
+                // face 3
+                unsigned int ID_B3 = (*i).getBoundary_B3()-1;
+                List_Of_Boundaries2D[ID_B3].set_node_coordinates_x(x);
+                List_Of_Boundaries2D[ID_B3].set_node_coordinates_y(y);
+            }
+            if (abs(s_a[k]+r_a[k]) < NODETOL)
+            {
+                // face 2
+                unsigned int ID_B2 = (*i).getBoundary_B2()-1;
+                List_Of_Boundaries2D[ID_B2].set_node_coordinates_x(x);
+                List_Of_Boundaries2D[ID_B2].set_node_coordinates_y(y);
+            }
         }
         VecRestoreArray(R, &r_a);
         VecRestoreArray(S, &s_a);
@@ -1146,7 +1193,7 @@ void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D
         VecDestroy(&Y);
 }
 /*--------------------------------------------------------------------------*/
-void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elements2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
+void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
 {
     // Efficient for a few elements
     // More elements => More expensive
@@ -1204,6 +1251,29 @@ void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elemen
 
             (*i).set_node_coordinates_x(x);
             (*i).set_node_coordinates_y(y);
+
+            // Boundary Elements
+            if (abs(s_a[k]+1.0) < NODETOL)
+            {
+                // face 1
+                unsigned int ID_B1 = (*i).getBoundary_B1()-1;
+                List_Of_Boundaries2D[ID_B1].set_node_coordinates_x(x);
+                List_Of_Boundaries2D[ID_B1].set_node_coordinates_y(y);
+            }
+            if (abs(r_a[k]+1.0) < NODETOL)
+            {
+                // face 3
+                unsigned int ID_B3 = (*i).getBoundary_B3()-1;
+                List_Of_Boundaries2D[ID_B3].set_node_coordinates_x(x);
+                List_Of_Boundaries2D[ID_B3].set_node_coordinates_y(y);
+            }
+            if (abs(s_a[k]+r_a[k]) < NODETOL)
+            {
+                // face 2
+                unsigned int ID_B2 = (*i).getBoundary_B2()-1;
+                List_Of_Boundaries2D[ID_B2].set_node_coordinates_x(x);
+                List_Of_Boundaries2D[ID_B2].set_node_coordinates_y(y);
+            }
         }
         VecRestoreArray(R, &r_a);
         VecRestoreArray(S, &s_a);
@@ -1682,6 +1752,16 @@ extern Mat MassMatrix2D(const unsigned int &N)
     return Product;
 }
 /*--------------------------------------------------------------------------*/
+extern Mat InverseMassMatrix2D(const unsigned int &N)
+{
+    Mat Product;
+    Mat V = load_VandermondeMatrix(N);
+    MatMatTransposeMult(V, V, MAT_INITIAL_MATRIX, 1.0, &Product);
+
+    MatDestroy(&V);
+    return Product;
+}
+/*--------------------------------------------------------------------------*/
 extern Mat MassMatrix2D_Cubature(const unsigned int &N, const Mat &cubV, const Vec &cubW, const unsigned int &Ncub)
 {
     Mat Product, Product2;
@@ -1934,5 +2014,14 @@ extern Mat load_DerivativeLagrangePolynomial_Cubature(const unsigned int &Order_
         PetscViewerDestroy(&viewer);
     }
     return dL;
+}
+/*--------------------------------------------------------------------------*/
+extern Mat VandermondeMultiply(const Mat &V2DInv, const Mat &Matrix)
+{
+    Mat Intermediate, Return;
+    MatTransposeMatMult(V2DInv, Matrix, MAT_INITIAL_MATRIX, 1.0, &Intermediate);
+    MatMatMult(Intermediate,V2DInv,MAT_INITIAL_MATRIX,1.0, &Return);
+    MatDestroy(&Intermediate);
+    return Return;
 }
 /*--------------------------------------------------------------------------*/

@@ -161,7 +161,26 @@ void Elements2D::setJacobian(double J)
 {
     Jacobian = J;
 }
-
+void Elements2D::set_rx(double rx_v)
+{
+    rx = rx_v;
+}
+void Elements2D::set_ry(double ry_v)
+{
+    ry = ry_v;
+}
+void Elements2D::set_sx(double sx_v)
+{
+    sx = sx_v;
+}
+void Elements2D::set_sy(double sy_v)
+{
+    sy = sy_v;
+}
+void Elements2D::set_pos(unsigned int POS)
+{
+    pos = POS;
+}
 /*void Elements2D::computeJacobian(const std::vector<VertexCoordinates2D> &List_Of_Vertices)
 {
     // ID_Vertex_V1
@@ -185,6 +204,26 @@ void Elements2D::setJacobian(double J)
 double Elements2D::getJacobian() const
 {
     return Jacobian;
+}
+double Elements2D::get_rx() const
+{
+    return rx;
+}
+double Elements2D::get_ry() const
+{
+    return ry;
+}
+double Elements2D::get_sx() const
+{
+    return sx;
+}
+double Elements2D::get_sy() const
+{
+    return sy;
+}
+unsigned int Elements2D::getPosition() const
+{
+    return pos;
 }
 void Elements2D::set_Order_Of_Polynomials(unsigned int N)
 {
@@ -220,8 +259,8 @@ Elements2D::~Elements2D()
 {
 }
 /*--------------------------------------------------------------------------*/
-Boundaries2D::Boundaries2D(unsigned int IDg, bool Internal, unsigned int ID_V1, unsigned int ID_V2, int ID_El_L, int ID_El_R):
-    ID(IDg), InternalBoundary(Internal), ID_Vertex_V1(ID_V1), ID_Vertex_V2(ID_V2), ID_Left_Element(ID_El_L), ID_Right_Element(ID_El_R) {}
+Boundaries2D::Boundaries2D(unsigned int IDg, bool Internal, unsigned int ID_V1, unsigned int ID_V2, int ID_El_L, int ID_El_R, int Typeg):
+    ID(IDg), InternalBoundary(Internal), ID_Vertex_V1(ID_V1), ID_Vertex_V2(ID_V2), ID_Left_Element(ID_El_L), ID_Right_Element(ID_El_R), Type(Typeg) {}
 unsigned int Boundaries2D::getID() const
 {
     return ID;
@@ -242,9 +281,49 @@ int Boundaries2D::getRightElementID()
 //{
 //    this->ID_Right_Element = E_R;
 //}
+void Boundaries2D::setJacobian(double J)
+{
+    Jacobian = J;
+}
+double Boundaries2D::getJacobian() const
+{
+    return Jacobian;
+}
+//void Boundaries2D::setType(double T)
+//{
+//    Type = T;
+//}
+unsigned int Boundaries2D::getType() const
+{
+    return Type;
+}
 bool Boundaries2D::isInternal()
 {
     return InternalBoundary;
+}
+void Boundaries2D::set_node_coordinates_x(double x)
+{
+    node_coordinates_x.push_back(x);
+}
+void Boundaries2D::set_node_coordinates_y(double y)
+{
+    node_coordinates_y.push_back(y);
+}
+std::vector<double> Boundaries2D::get_node_coordinates_x() const
+{
+    return node_coordinates_x;
+}
+std::vector<double> Boundaries2D::get_node_coordinates_y() const
+{
+    return node_coordinates_y;
+}
+unsigned int Boundaries2D::getVertex_V1() const
+{
+    return ID_Vertex_V1;
+}
+unsigned int Boundaries2D::getVertex_V2() const
+{
+    return ID_Vertex_V2;
 }
 Boundaries2D::~Boundaries2D()
 {

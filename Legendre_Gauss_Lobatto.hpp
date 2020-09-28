@@ -12,6 +12,8 @@
 #include "Elements.hpp"
 #include "Cubature2D.hpp"
 /*--------------------------------------------------------------------------*/
+#define NODETOL 1e-12
+/*--------------------------------------------------------------------------*/
 extern Vec JacobiGL(const double &alpha, const double &beta, const unsigned int &N);
 /*--------------------------------------------------------------------------*/
 extern Vec JacobiGL_withWeights(const double &alpha, const double &beta, const unsigned int &N, Vec &Weights);
@@ -62,11 +64,11 @@ void RStoAB(const Vec &R, const Vec &S, Vec &A, Vec &B);
 /*--------------------------------------------------------------------------*/
 Vec Simplex2DP(const Vec &A, const Vec &B, const unsigned int &i, const unsigned int &j);
 /*--------------------------------------------------------------------------*/
-void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices, unsigned int N);
+void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices, unsigned int N);
 /*--------------------------------------------------------------------------*/
-void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
+void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
 /*--------------------------------------------------------------------------*/
-void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elements2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
+void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
 /*--------------------------------------------------------------------------*/
 void store_Nodes_Reference_Triangle();
 /*--------------------------------------------------------------------------*/
@@ -88,6 +90,8 @@ extern Mat load_InverseVandermondeMatrix(const unsigned int N);
 /*--------------------------------------------------------------------------*/
 extern Mat MassMatrix2D(const unsigned int &N);
 /*--------------------------------------------------------------------------*/
+extern Mat InverseMassMatrix2D(const unsigned int &N);
+/*--------------------------------------------------------------------------*/
 extern Mat MassMatrix2D_Cubature(const unsigned int &N, const Mat &cubV, const Vec &cubW, const unsigned int &Ncub);
 /*--------------------------------------------------------------------------*/
 //extern Vec LagrangePolynomial2D(const Mat &V, const Vec &P, const unsigned int &Np);
@@ -99,5 +103,7 @@ extern void store_DerivativeLagrangePolynomial_Cubature();
 extern Mat load_LagrangePolynomial_Cubature(const unsigned int &Order_Polynomials, const unsigned int &Cubature_Order);
 /*--------------------------------------------------------------------------*/
 extern Mat load_DerivativeLagrangePolynomial_Cubature(const unsigned int &Order_Polynomials, const unsigned int &Cubature_Order, const bool &deriv);
+/*--------------------------------------------------------------------------*/
+extern Mat VandermondeMultiply(const Mat &V2DInv, const Mat &Matrix);
 /*--------------------------------------------------------------------------*/
 #endif

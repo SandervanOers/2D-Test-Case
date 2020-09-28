@@ -102,7 +102,11 @@ extern std::vector<double> rho_0_2D_system1(const std::vector<double> &z, const 
 /*--------------------------------------------------------------------------*/
 extern double rho_0_deriv_2D_system1(const double &z, const double &beta);
 /*--------------------------------------------------------------------------*/
+extern std::vector<double> rho_0_deriv_2D_system1(const std::vector<double> &z, const double &beta);
+/*--------------------------------------------------------------------------*/
 extern double N_2_2D_system1(const double &z, const double &beta);
+/*--------------------------------------------------------------------------*/
+extern std::vector<double> N_2_2D_system1(const std::vector<double> &z, const double &beta);
 /*--------------------------------------------------------------------------*/
 
 #endif
