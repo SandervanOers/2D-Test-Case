@@ -1086,13 +1086,17 @@ void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, s
             (*i).set_node_coordinates_x(x);
             (*i).set_node_coordinates_y(y);
 
-            // Boundary Elements
+            unsigned int type_node = 0;
+
+            // Boundary Nodes
             if (abs(s_a[k]+1.0) < NODETOL)
             {
                 // face 1
                 unsigned int ID_B1 = (*i).getBoundary_B1()-1;
                 List_Of_Boundaries2D[ID_B1].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B1].set_node_coordinates_y(y);
+                type_node = 1;
+                (*i).set_node_on_boundary_1(k);
             }
             if (abs(r_a[k]+1.0) < NODETOL)
             {
@@ -1100,6 +1104,8 @@ void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, s
                 unsigned int ID_B3 = (*i).getBoundary_B3()-1;
                 List_Of_Boundaries2D[ID_B3].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B3].set_node_coordinates_y(y);
+                type_node = 2;
+                (*i).set_node_on_boundary_2(k);
             }
             if (abs(s_a[k]+r_a[k]) < NODETOL)
             {
@@ -1107,7 +1113,10 @@ void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, s
                 unsigned int ID_B2 = (*i).getBoundary_B2()-1;
                 List_Of_Boundaries2D[ID_B2].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B2].set_node_coordinates_y(y);
+                type_node = 3;
+                (*i).set_node_on_boundary_3(k);
             }
+            (*i).set_node_on_boundary(type_node);
 
         }
     }
@@ -1158,6 +1167,7 @@ void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D
 
             (*i).set_node_coordinates_x(x);
             (*i).set_node_coordinates_y(y);
+            unsigned int type_node = 0;
 
             // Boundary Elements
             if (abs(s_a[k]+1.0) < NODETOL)
@@ -1166,6 +1176,8 @@ void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D
                 unsigned int ID_B1 = (*i).getBoundary_B1()-1;
                 List_Of_Boundaries2D[ID_B1].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B1].set_node_coordinates_y(y);
+                type_node = 1;
+                (*i).set_node_on_boundary_1(k);
             }
             if (abs(r_a[k]+1.0) < NODETOL)
             {
@@ -1173,6 +1185,8 @@ void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D
                 unsigned int ID_B3 = (*i).getBoundary_B3()-1;
                 List_Of_Boundaries2D[ID_B3].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B3].set_node_coordinates_y(y);
+                type_node = 2;
+                (*i).set_node_on_boundary_2(k);
             }
             if (abs(s_a[k]+r_a[k]) < NODETOL)
             {
@@ -1180,7 +1194,10 @@ void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D
                 unsigned int ID_B2 = (*i).getBoundary_B2()-1;
                 List_Of_Boundaries2D[ID_B2].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B2].set_node_coordinates_y(y);
+                type_node = 3;
+                (*i).set_node_on_boundary_3(k);
             }
+            (*i).set_node_on_boundary(type_node);
         }
         VecRestoreArray(R, &r_a);
         VecRestoreArray(S, &s_a);
@@ -1251,6 +1268,7 @@ void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elemen
 
             (*i).set_node_coordinates_x(x);
             (*i).set_node_coordinates_y(y);
+            unsigned int type_node = 0;
 
             // Boundary Elements
             if (abs(s_a[k]+1.0) < NODETOL)
@@ -1259,6 +1277,8 @@ void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elemen
                 unsigned int ID_B1 = (*i).getBoundary_B1()-1;
                 List_Of_Boundaries2D[ID_B1].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B1].set_node_coordinates_y(y);
+                type_node = 1;
+                (*i).set_node_on_boundary_1(k);
             }
             if (abs(r_a[k]+1.0) < NODETOL)
             {
@@ -1266,6 +1286,8 @@ void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elemen
                 unsigned int ID_B3 = (*i).getBoundary_B3()-1;
                 List_Of_Boundaries2D[ID_B3].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B3].set_node_coordinates_y(y);
+                type_node = 2;
+                (*i).set_node_on_boundary_2(k);
             }
             if (abs(s_a[k]+r_a[k]) < NODETOL)
             {
@@ -1273,7 +1295,10 @@ void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elemen
                 unsigned int ID_B2 = (*i).getBoundary_B2()-1;
                 List_Of_Boundaries2D[ID_B2].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B2].set_node_coordinates_y(y);
+                type_node = 3;
+                (*i).set_node_on_boundary_3(k);
             }
+            (*i).set_node_on_boundary(type_node);
         }
         VecRestoreArray(R, &r_a);
         VecRestoreArray(S, &s_a);

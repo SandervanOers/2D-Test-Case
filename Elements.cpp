@@ -246,6 +246,22 @@ void Elements2D::set_node_coordinates_y(double y)
 {
     node_coordinates_y.push_back(y);
 }
+void Elements2D::set_node_on_boundary(unsigned int type)
+{
+    node_on_boundary.push_back(type);
+}
+void Elements2D::set_node_on_boundary_1(unsigned type)
+{
+    node_on_boundary_1.push_back(type);
+}
+void Elements2D::set_node_on_boundary_2(unsigned int type)
+{
+    node_on_boundary_2.push_back(type);
+}
+void Elements2D::set_node_on_boundary_3(unsigned int type)
+{
+    node_on_boundary_3.push_back(type);
+}
 std::vector<double> Elements2D::get_node_coordinates_x() const
 {
     return node_coordinates_x;
@@ -254,7 +270,42 @@ std::vector<double> Elements2D::get_node_coordinates_y() const
 {
     return node_coordinates_y;
 }
-
+std::vector<unsigned int> Elements2D::get_node_on_boundary() const
+{
+    return node_on_boundary;
+}
+std::vector<unsigned int> Elements2D::get_node_on_boundary_1() const
+{
+    return node_on_boundary_1;
+}
+std::vector<unsigned int> Elements2D::get_node_on_boundary_2() const
+{
+    return node_on_boundary_2;
+}
+std::vector<unsigned int> Elements2D::get_node_on_boundary_3() const
+{
+    return node_on_boundary_3;
+}
+std::vector<unsigned int> Elements2D::get_nodes_on_boundary(unsigned int Type) const
+{
+    if (Type == 1)
+    {
+        return node_on_boundary_1;
+    }
+    else if (Type == 2)
+    {
+        return node_on_boundary_2;
+    }
+    else if (Type == 3)
+    {
+        return node_on_boundary_3;
+    }
+    else
+    {
+        std::cout << "Wrong Boundary Type" << std::endl;
+        return {0};
+    }
+}
 Elements2D::~Elements2D()
 {
 }
@@ -289,6 +340,22 @@ double Boundaries2D::getJacobian() const
 {
     return Jacobian;
 }
+void Boundaries2D::setNormalX(double normalx)
+{
+    nx = normalx;
+}
+void Boundaries2D::setNormalY(double normaly)
+{
+    ny = normaly;
+}
+double Boundaries2D::get_nx() const
+{
+    return nx;
+}
+double Boundaries2D::get_ny() const
+{
+    return ny;
+}
 //void Boundaries2D::setType(double T)
 //{
 //    Type = T;
@@ -309,7 +376,7 @@ void Boundaries2D::set_node_coordinates_y(double y)
 {
     node_coordinates_y.push_back(y);
 }
-std::vector<double> Boundaries2D::get_node_coordinates_x() const
+/*std::vector<double> Boundaries2D::get_node_coordinates_x() const
 {
     return node_coordinates_x;
 }
@@ -317,6 +384,7 @@ std::vector<double> Boundaries2D::get_node_coordinates_y() const
 {
     return node_coordinates_y;
 }
+*/
 unsigned int Boundaries2D::getVertex_V1() const
 {
     return ID_Vertex_V1;
@@ -324,6 +392,14 @@ unsigned int Boundaries2D::getVertex_V1() const
 unsigned int Boundaries2D::getVertex_V2() const
 {
     return ID_Vertex_V2;
+}
+void Boundaries2D::set_theta(double T)
+{
+    theta = T;
+}
+double Boundaries2D::get_theta() const
+{
+    return theta;
 }
 Boundaries2D::~Boundaries2D()
 {

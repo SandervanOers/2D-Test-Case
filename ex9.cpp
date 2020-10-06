@@ -73,11 +73,12 @@ int main(int argc,char **args)
 
 
     unsigned int Nel_x = 6;
-    unsigned int Nel_y = 2;
+    unsigned int Nel_y = 4;
     Compute_Vertex_Coordinates_Uniform_Rectangle_2D(0,1, 0,1, Nel_x, Nel_y, List_Of_Vertices, List_Of_Boundaries2D, List_Of_Elements2D);
     Calculate_Jacobian(List_Of_Elements2D, List_Of_Vertices);
     Calculate_Jacobian_boundaries(List_Of_Boundaries2D, List_Of_Vertices);
     set_Order_Polynomials_Uniform(List_Of_Elements2D, N_Petsc);
+    set_theta_Uniform(List_Of_Boundaries2D, theta);
 
     //set_Node_Coordinates_Uniform(List_Of_Elements2D, List_Of_Vertices, N_Petsc);
 
@@ -103,21 +104,22 @@ int main(int argc,char **args)
           << std::chrono::duration_cast<std::chrono::milliseconds>(tn4-tn3).count()
           << " milliseconds\n";
     */
+
     unsigned int N_Nodes = get_Number_Of_Nodes(List_Of_Elements2D);
     std::cout << "Total Number of Nodes = " << N_Nodes << std::endl;
     unsigned int N_Elements = List_Of_Elements2D.size();
     std::cout << "Total Number of Elements = " << N_Elements << std::endl;
+  /*
+    std::cout << "List of Vertices "  << std::endl;
+    std::cout << "ID : x y isInternal "  << std::endl;
+    for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
+        std::cout << (*i).getID() << ": " << (*i).getxCoordinate() << "  " << (*i).getyCoordinate() << " " << (*i).isInternal() << std::endl;
 
-    //std::cout << "List of Vertices "  << std::endl;
-    //std::cout << "ID : x y isInternal "  << std::endl;
-    //for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
-    //    std::cout << (*i).getID() << ": " << (*i).getxCoordinate() << "  " << (*i).getyCoordinate() << " " << (*i).isInternal() << std::endl;
 
-    /*
     std::cout << "List of Boundaries "  << std::endl;
-    std::cout << "ID : isInternal LeftElement RightElement"  << std::endl;
+    std::cout << "ID : isInternal : V1 V2: LeftElement RightElement"  << std::endl;
     for(auto i = List_Of_Boundaries2D.begin(); i < List_Of_Boundaries2D.end(); i++)
-        std::cout << (*i).getID() << ": " << (*i).isInternal()  << " " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << std::endl;
+        std::cout << (*i).getID() << ": " << (*i).isInternal() << " : " << (*i).getVertex_V1() << "  " << (*i).getVertex_V2() << " : " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << std::endl;
 
 
 
@@ -127,7 +129,8 @@ int main(int argc,char **args)
     {
         std::cout << (*i).getID() << ": " << (*i).getVertex_V1() << "  " << (*i).getVertex_V2() << " " << (*i).getVertex_V3() << ": " << (*i).getBoundary_B1() << " " <<  (*i).getBoundary_B2() << " " << (*i).getBoundary_B3() << " " << (*i).getJacobian() << " " << (*i).get_Order_Of_Polynomials()<< std::endl;
     }
-
+    */
+/*
 
 
 
@@ -174,58 +177,7 @@ int main(int argc,char **args)
 
     /// Check for CFL condition (when explicit)
 
-    // Initial Condition
-    Vec Initial_Condition, VecU, VecW, VecR, VecP;
-    // Size = sum_i Np_i, i = 1 .. Nel
-    VecCreateSeq(PETSC_COMM_WORLD, 4*N_Nodes,&Initial_Condition);
-    VecCreateSeq(PETSC_COMM_WORLD, N_Nodes, &VecU);
-    VecCreateSeq(PETSC_COMM_WORLD, N_Nodes, &VecW);
-    VecCreateSeq(PETSC_COMM_WORLD, N_Nodes, &VecR);
-    VecCreateSeq(PETSC_COMM_WORLD, N_Nodes, &VecP);
 
-    for (auto k = List_Of_Elements2D.begin(); k < List_Of_Elements2D.end(); k++)
-    {
-
-        //unsigned int ID = (*k).getID()-1;
-        unsigned int Np = (*k).get_Number_Of_Nodes();
-        unsigned int pos = (*k).getPosition();
-        std::vector<double> xCoor, zCoor;
-        xCoor = (*k).get_node_coordinates_x();
-        zCoor = (*k).get_node_coordinates_y();
-        int i = 0;
-        double t = 0;
-        for (unsigned int n = 0; n < Np; n++)
-        {
-            i = n;
-            std::cout << "i = " << i << ", pos = " << pos << ", xCoor[n] = " << xCoor[n] << ", zCoor[n] = " << zCoor[n] << std::endl;
-            double value = Exact_Solution_mx_2D_system1(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode);
-            VecSetValue(VecU, pos + i, value, INSERT_VALUES);
-            VecSetValue(Initial_Condition, pos + i, value, INSERT_VALUES);
-
-            value = Exact_Solution_mz_2D_system1(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode);
-            VecSetValue(VecW, pos + i, value, INSERT_VALUES);
-            VecSetValue(Initial_Condition, N_Nodes+ pos + i, value, INSERT_VALUES);
-
-            value = Exact_Solution_r_2D_system1(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode);
-            VecSetValue(VecR, pos + i, value, INSERT_VALUES);
-            VecSetValue(Initial_Condition, 2*N_Nodes+ pos + i, value, INSERT_VALUES);
-
-            value = Exact_Solution_p_2D_system1(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode);
-            VecSetValue(VecP, pos + i, value, INSERT_VALUES);
-            VecSetValue(Initial_Condition, 3*N_Nodes+ pos + i, value, INSERT_VALUES);
-        }
-
-    }
-    VecAssemblyBegin(Initial_Condition);
-    VecAssemblyEnd(Initial_Condition);
-    VecAssemblyBegin(VecU);
-    VecAssemblyEnd(VecU);
-    VecAssemblyBegin(VecW);
-    VecAssemblyEnd(VecW);
-    VecAssemblyBegin(VecR);
-    VecAssemblyEnd(VecR);
-    VecAssemblyBegin(VecP);
-    VecAssemblyEnd(VecP);
 
     /*
     //  Local Matrices
@@ -498,23 +450,23 @@ int main(int argc,char **args)
             //std::cout << "V2DInv = " << std::endl;
             //MatView(V2DInv, viewer);
 
-            std::cout << "W = " << std::endl;
-            MatView(W, viewer);
-            std::cout << "W_L = " << std::endl;
-            MatView(W_L, viewer);
-            std::cout << "V2DInv = " << std::endl;
-            MatView(V2DInv, viewer);
+            //std::cout << "W = " << std::endl;
+            //MatView(W, viewer);
+            //std::cout << "W_L = " << std::endl;
+            //MatView(W_L, viewer);
+            //std::cout << "V2DInv = " << std::endl;
+            //MatView(V2DInv, viewer);
             Mat V2DInvT;
             MatTranspose(V2DInv,MAT_INITIAL_MATRIX,&V2DInvT);
-            std::cout << "V2DInv^T = " << std::endl;
-            MatView(V2DInvT, viewer);
+            //std::cout << "V2DInv^T = " << std::endl;
+            //MatView(V2DInvT, viewer);
 
             MatDestroy(&W_L);
             MatDestroy(&V2DInvT);
 
             Mat invM_el = InverseMassMatrix2D(N_Petsc);
-            std::cout << "invM_el = " << std::endl;
-            MatView(invM_el, viewer);
+            //std::cout << "invM_el = " << std::endl;
+            //MatView(invM_el, viewer);
 
             //PetscInt nc;
             //const PetscInt    *aj;
@@ -765,31 +717,11 @@ int main(int argc,char **args)
         MatDestroy(&M2_el_L);
         MatDestroy(&NDerivMat_el_L);
     }
-    MatAssemblyBegin(Ex, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(Ex, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(Ey, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(Ey, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(M1, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(M1, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(invM, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(invM, MAT_FINAL_ASSEMBLY);
-    std::cout << "invM = " << std::endl;
-    MatView(invM, viewer);
-    std::cout << "M1 = " << std::endl;
-    MatView(M1, viewer);
-    std::cout << "Ex = " << std::endl;
-    MatView(Ex, viewer);
-    std::cout << "Ey = " << std::endl;
-    MatView(Ey, viewer);
-    Mat IntermediateMat;
-    MatMatMult(M1, Ey, MAT_INITIAL_MATRIX, PETSC_DEFAULT , &IntermediateMat);
-    std::cout << "M1*Ey = " << std::endl;
-    MatView(IntermediateMat, viewer);
-    MatDestroy(&IntermediateMat);
-    MatDestroy(&Ex);
-    MatDestroy(&Ey);
-    MatDestroy(&M1);
-    MatDestroy(&invM);
+
     /*
     MatAssemblyBegin(M2, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(M2, MAT_FINAL_ASSEMBLY);
@@ -807,11 +739,26 @@ int main(int argc,char **args)
     {
         if ((*f).isInternal())
         {
-            std::cout << (*f).getID() << " is Internal" << std::endl;
+            //std::cout << (*f).getID() << " is Internal" << std::endl;
 
             double Jacobian = (*f).getJacobian();
+            unsigned int Type_Boundary = (*f).getType();
+            double theta = (*f).get_theta();
+            double nx = (*f).get_nx();
+            double ny = (*f).get_ny();
+
             int left = (*f).getLeftElementID()-1;
             int right = (*f).getRightElementID()-1;
+
+            std::vector<unsigned int> Node_Numbers_On_Boundary_Left = List_Of_Elements2D[left].get_nodes_on_boundary(Type_Boundary);
+            std::vector<unsigned int> Node_Numbers_On_Boundary_Right = List_Of_Elements2D[right].get_nodes_on_boundary(Type_Boundary);
+
+            //std::cout << "Node Number on Boundary of Left Element" << std::endl;
+            //for (auto i = Node_Numbers_On_Boundary_Left.begin(); i < Node_Numbers_On_Boundary_Left.end(); i++)
+            //{
+            //    std::cout << (*i) << " " ;
+            //}
+            //std::cout << std::endl;
 
             unsigned int Np_left = List_Of_Elements2D[left].get_Number_Of_Nodes(); // Assumes Ordering
             unsigned int Np_right = List_Of_Elements2D[right].get_Number_Of_Nodes(); // Assumes Ordering
@@ -839,10 +786,11 @@ int main(int argc,char **args)
             double x_v2 = List_Of_Vertices[Vertex_ID_2].getxCoordinate();
             double y_v2 = List_Of_Vertices[Vertex_ID_2].getyCoordinate();
 
-            PetscScalar *r_a;
+            PetscScalar *w_a, *r_a;
             VecGetArray(QuadraturePoints, &r_a);
+            VecGetArray(Weights, &w_a);
             std::vector<double> X, Y;
-            for(unsigned int k = 0; k <= Order_Gaussian_Quadrature; k++)
+            for(unsigned int k = 0; k <= Order_Gaussian_Quadrature; k++) // left and right different quadrature order?
             {
                 double x = x_v1 + (x_v2-x_v1)*(1.0+r_a[k])/2.0;
                 double y = y_v1 + (y_v2-y_v1)*(1.0+r_a[k])/2.0;
@@ -854,10 +802,16 @@ int main(int argc,char **args)
             std::vector<double> Rho0_L = rho_0_2D_system1(Y, rho_0_Deriv);
             std::vector<double> Rho0_R = rho_0_2D_system1(Y, rho_0_Deriv);
 
-
-            VecRestoreArray(QuadraturePoints, &r_a);
+            Vec ri_left, ri_right;
+            ri_left = JacobiGL(0, 0, Order_Polynomials_left);
+            ri_right = JacobiGL(0, 0, Order_Polynomials_right);
 
             // GLL
+            Mat GLL;
+            MatCreate(PETSC_COMM_WORLD,&GLL);
+            MatSetType(GLL,MATSEQAIJ);
+            MatSetSizes(GLL, Np_left, Np_left, PETSC_DECIDE, PETSC_DECIDE);
+            MatSeqAIJSetPreallocation(GLL, Order_Polynomials_left+1, NULL);
             for (unsigned int i = 0; i <= Order_Polynomials_left; i++) // Should be N_Left + 1, etc.
             {
                 for (unsigned int j = 0; j <= Order_Polynomials_left; j++)
@@ -866,13 +820,29 @@ int main(int argc,char **args)
                     double value_e = 0.0;
                     for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++) //Order_Gaussian_Quadrature_L
                     {
-                        value_e += 1;
+                        double Li = LagrangePolynomial(ri_left, r_a[q], i);
+                        double Lj = LagrangePolynomial(ri_left, r_a[q], j);
+                        value_e += (1.0-theta)*w_a[q]*Rho0_L[q]*Li*Lj*Jacobian;
+                        MatSetValue(GLL, Node_Numbers_On_Boundary_Left[i], Node_Numbers_On_Boundary_Left[j], value_e, ADD_VALUES);
+                        //MatSetValue(Ex,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
+                        //MatSetValue(ExT, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
+                        //MatSetValue(Ey,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
+                        //MatSetValue(EyT, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
                     }
                 }
             }
+            MatAssemblyBegin(GLL, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(GLL, MAT_FINAL_ASSEMBLY);
+            MatView(GLL, viewer);
+            MatDestroy(&GLL);
             //MatSetValue(E, posL+i, posL+j, factor*rho0*(1-theta), ADD_VALUES);
             //MatSetValue(ET, posL+j, posL+i, factor*-rho0*(1-theta), ADD_VALUES);
             // GLR
+            Mat GLR;
+            MatCreate(PETSC_COMM_WORLD,&GLR);
+            MatSetType(GLR,MATSEQAIJ);
+            MatSetSizes(GLR, Np_left, Np_right, PETSC_DECIDE, PETSC_DECIDE);
+            MatSeqAIJSetPreallocation(GLR, Order_Polynomials_left+1, NULL);
             for (unsigned int i = 0; i <= Order_Polynomials_left; i++)
             {
                 for (unsigned int j = 0; j <= Order_Polynomials_right; j++)
@@ -881,13 +851,28 @@ int main(int argc,char **args)
                     double value_e = 0.0;
                     for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
                     {
-                        value_e += 1;
+                        double Li = LagrangePolynomial(ri_left, r_a[q], i);
+                        double Lj = LagrangePolynomial(ri_right, r_a[q], j);
+                        value_e += -(1.0-theta)*w_a[q]*Rho0_R[q]*Li*Lj*Jacobian;
+                        MatSetValue(GLR, Node_Numbers_On_Boundary_Left[i], Node_Numbers_On_Boundary_Right[j], value_e, ADD_VALUES);
+                        //MatSetValue(Ex,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
+                        //MatSetValue(ExT, posR+Node_Numbers_On_Boundary_Right[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
+                        //MatSetValue(Ey,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
+                        //MatSetValue(EyT, posR+Node_Numbers_On_Boundary_Right[j],  posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
                     }
                 }
             }
+            MatAssemblyBegin(GLR, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(GLR, MAT_FINAL_ASSEMBLY);
             //MatSetValue(E, posL+i, posR+0, factor*-rho0*(1-theta), ADD_VALUES);
             //MatSetValue(ET, posR+0, posL+i, factor*rho0*(1-theta), ADD_VALUES);
+            MatDestroy(&GLR);
             // GRL
+            Mat GRL;
+            MatCreate(PETSC_COMM_WORLD,&GRL);
+            MatSetType(GRL,MATSEQAIJ);
+            MatSetSizes(GRL, Np_right, Np_left, PETSC_DECIDE, PETSC_DECIDE);
+            MatSeqAIJSetPreallocation(GRL, Order_Polynomials_right+1, NULL);
             for (unsigned int i = 0; i <= Order_Polynomials_right; i++)
             {
                 for (unsigned int j = 0; j <= Order_Polynomials_left; j++)
@@ -896,13 +881,28 @@ int main(int argc,char **args)
                     double value_e = 0.0;
                     for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
                     {
-                        value_e += 1;
+                        double Li = LagrangePolynomial(ri_right, r_a[q], i);
+                        double Lj = LagrangePolynomial(ri_left, r_a[q], j);
+                        value_e += theta*w_a[q]*Rho0_L[q]*Li*Lj*Jacobian;
+                        MatSetValue(GRL, Node_Numbers_On_Boundary_Right[i], Node_Numbers_On_Boundary_Left[j], value_e, ADD_VALUES);
+                        //MatSetValue(Ex,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
+                        //MatSetValue(ExT, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
+                        //MatSetValue(Ey,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
+                        //MatSetValue(EyT, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
                     }
                 }
             }
+            MatAssemblyBegin(GRL, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(GRL, MAT_FINAL_ASSEMBLY);
             //MatSetValue(E, posR+0, posL+j, factor*rho0*theta, ADD_VALUES);
             //MatSetValue(ET, posL+j, posR+0, factor*-rho0*theta, ADD_VALUES);
+            MatDestroy(&GRL);
             // GRR
+            Mat GRR;
+            MatCreate(PETSC_COMM_WORLD,&GRR);
+            MatSetType(GRR,MATSEQAIJ);
+            MatSetSizes(GRR, Np_right, Np_right, PETSC_DECIDE, PETSC_DECIDE);
+            MatSeqAIJSetPreallocation(GRR, Order_Polynomials_right+1, NULL);
             for (unsigned int i = 0; i <= Order_Polynomials_right; i++)
             {
                 for (unsigned int j = 0; j <= Order_Polynomials_right; j++)
@@ -911,15 +911,48 @@ int main(int argc,char **args)
                     double value_e = 0.0;
                     for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++) //Order_Gaussian_Quadrature_R
                     {
-                        value_e += 1;
+                        double Li = LagrangePolynomial(ri_right, r_a[q], i);
+                        double Lj = LagrangePolynomial(ri_right, r_a[q], j);
+                        value_e += -theta*w_a[q]*Rho0_R[q]*Li*Lj*Jacobian;
+                        MatSetValue(GRR, Node_Numbers_On_Boundary_Right[i], Node_Numbers_On_Boundary_Right[j], value_e, ADD_VALUES);
+                        //MatSetValue(Ex,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
+                        //MatSetValue(ExT, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
+                        //MatSetValue(Ey,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
+                        //MatSetValue(EyT, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
                     }
                 }
             }
+            MatAssemblyBegin(GRR, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(GRR, MAT_FINAL_ASSEMBLY);
             //MatSetValue(E, posR+0, posR+0, factor*-rho0*theta, ADD_VALUES);
             //MatSetValue(ET, posR+0, posR+0, factor*rho0*theta, ADD_VALUES);
+            MatDestroy(&GRR);
 
+            VecRestoreArray(QuadraturePoints, &r_a);
+            VecRestoreArray(Weights, &w_a);
             VecDestroy(&QuadraturePoints);
             VecDestroy(&Weights);
+            VecDestroy(&ri_right);
+            VecDestroy(&ri_left);
+
+
+            /////////////////////////////////////////////
+            // Combine Ex and Ey to E
+            /////////////////////////////////////////////
+            // Normals from nodal book
+            /////////////////////////////////////////////
+            // Put values into E matrices directly
+            /////////////////////////////////////////////
+            // Move Assembly E matrices Below
+            /////////////////////////////////////////////
+
+
+
+            /////////////////////////////////////////////
+            // vec n = (nx, ny) -> still split into Ex, Ey?
+            // if nx = 0 -> where in E do the boundary terms show up -> in Ey.
+            // if nx, ny /= 0, then in both Ex and Ey
+            /////////////////////////////////////////////
 /*
 
             double physical_x = (*f).getxCoordinate();
@@ -1021,16 +1054,94 @@ int main(int argc,char **args)
         }
         else
         {
-            std::cout << (*f).getID() << " is External" << std::endl;
+            //std::cout << (*f).getID() << " is External" << std::endl;
         }
     }
-    std::cout << "List of Boundaries "  << std::endl;
-    std::cout << "ID : isInternal LeftElement RightElement"  << std::endl;
-    for(auto i = List_Of_Boundaries2D.begin(); i < List_Of_Boundaries2D.end(); i++)
-        std::cout << (*i).getID() << ": " << (*i).isInternal()  << " " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << std::endl;
+    MatAssemblyBegin(Ex, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(Ex, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(Ey, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(Ey, MAT_FINAL_ASSEMBLY);
+
+    //std::cout << "List of Boundaries "  << std::endl;
+    //std::cout << "ID : isInternal LeftElement RightElement"  << std::endl;
+    //for(auto i = List_Of_Boundaries2D.begin(); i < List_Of_Boundaries2D.end(); i++)
+    //    std::cout << (*i).getID() << ": " << (*i).isInternal()  << " " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << std::endl;
 
 
     std::cout << "Start Global Matrices Construction" << std::endl;
+
+
+    MatDestroy(&Ex);
+    MatDestroy(&Ey);
+    MatDestroy(&M1);
+    MatDestroy(&invM);
+    std::cout << "Store Global Matrices" << std::endl;
+
+
+    std::cout << "Computing Initial Condition " << std::endl;
+    // Initial Condition
+    Vec Initial_Condition, VecU, VecW, VecR, VecP;
+    // Size = sum_i Np_i, i = 1 .. Nel
+    VecCreateSeq(PETSC_COMM_WORLD, 4*N_Nodes,&Initial_Condition);
+    VecCreateSeq(PETSC_COMM_WORLD, N_Nodes, &VecU);
+    VecCreateSeq(PETSC_COMM_WORLD, N_Nodes, &VecW);
+    VecCreateSeq(PETSC_COMM_WORLD, N_Nodes, &VecR);
+    VecCreateSeq(PETSC_COMM_WORLD, N_Nodes, &VecP);
+
+    for (auto k = List_Of_Elements2D.begin(); k < List_Of_Elements2D.end(); k++)
+    {
+
+        //unsigned int ID = (*k).getID()-1;
+        unsigned int Np = (*k).get_Number_Of_Nodes();
+        unsigned int pos = (*k).getPosition();
+        std::vector<double> xCoor, zCoor;
+        xCoor = (*k).get_node_coordinates_x();
+        zCoor = (*k).get_node_coordinates_y();
+        int i = 0;
+        double t = 0;
+        for (unsigned int n = 0; n < Np; n++)
+        {
+            i = n;
+            //std::cout << "i = " << i << ", pos = " << pos << ", xCoor[n] = " << xCoor[n] << ", zCoor[n] = " << zCoor[n] << std::endl;
+            double value = Exact_Solution_mx_2D_system1(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode);
+            VecSetValue(VecU, pos + i, value, INSERT_VALUES);
+            VecSetValue(Initial_Condition, pos + i, value, INSERT_VALUES);
+
+            value = Exact_Solution_mz_2D_system1(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode);
+            VecSetValue(VecW, pos + i, value, INSERT_VALUES);
+            VecSetValue(Initial_Condition, N_Nodes+ pos + i, value, INSERT_VALUES);
+
+            value = Exact_Solution_r_2D_system1(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode);
+            VecSetValue(VecR, pos + i, value, INSERT_VALUES);
+            VecSetValue(Initial_Condition, 2*N_Nodes+ pos + i, value, INSERT_VALUES);
+
+            value = Exact_Solution_p_2D_system1(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode);
+            VecSetValue(VecP, pos + i, value, INSERT_VALUES);
+            VecSetValue(Initial_Condition, 3*N_Nodes+ pos + i, value, INSERT_VALUES);
+        }
+
+    }
+    VecAssemblyBegin(Initial_Condition);
+    VecAssemblyEnd(Initial_Condition);
+    VecAssemblyBegin(VecU);
+    VecAssemblyEnd(VecU);
+    VecAssemblyBegin(VecW);
+    VecAssemblyEnd(VecW);
+    VecAssemblyBegin(VecR);
+    VecAssemblyEnd(VecR);
+    VecAssemblyBegin(VecP);
+    VecAssemblyEnd(VecP);
+
+    std::cout << "Start Simulations " << std::endl;
+
+
+
+
+
+
+
+
+
 
     VecDestroy(&VecU);
     VecDestroy(&VecW);

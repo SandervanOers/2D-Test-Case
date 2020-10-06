@@ -61,13 +61,13 @@ void Compute_Vertex_Coordinates_Uniform_Rectangle_2D(const double &xmin, const d
         if (List_Of_Vertices[S[2]-1].getyCoordinate() == ymax) // Type == 1
         {
             // External
-            Boundaries2D Boundary5(B2[0], 0, S[3], S[2], ID_Elements+1, -1, 1);
+            Boundaries2D Boundary5(B2[0], 0, S[2], S[3], -1, ID_Elements+1, 1); // Changed
             List_Of_Boundaries.push_back(Boundary5);
         }
         else
         {
             // Internal
-            Boundaries2D Boundary5(B2[0], 1, S[3], S[2], ID_Elements+1, ID_Elements+2*(Nx-1), 1);
+            Boundaries2D Boundary5(B2[0], 1, S[2], S[3], ID_Elements+2*(Nx-1), ID_Elements+1, 1); // Changed
             List_Of_Boundaries.push_back(Boundary5);
         }
 
@@ -75,13 +75,13 @@ void Compute_Vertex_Coordinates_Uniform_Rectangle_2D(const double &xmin, const d
         if (List_Of_Vertices[S[3]-1].getxCoordinate() == xmax) // Type == 3
         {
             // External
-            Boundaries2D Boundary5(B2[2], 0, S[1], S[3], ID_Elements+1, -1, 3);
+            Boundaries2D Boundary5(B2[2], 0, S[3], S[1], -1, ID_Elements+1, 3); // Changed
             List_Of_Boundaries.push_back(Boundary5);
         }
         else
         {
             // Internal
-            Boundaries2D Boundary5(B2[2], 1, S[1], S[3], ID_Elements+1, ID_Elements+2, 3);
+            Boundaries2D Boundary5(B2[2], 1, S[3], S[1], ID_Elements+2, ID_Elements+1, 3); // Changed
             List_Of_Boundaries.push_back(Boundary5);
         }
         // bottom boundaries
@@ -100,6 +100,7 @@ void Compute_Vertex_Coordinates_Uniform_Rectangle_2D(const double &xmin, const d
         // left boundaries
         if (List_Of_Vertices[S[0]-1].getxCoordinate() == xmin)
         {
+            // External
             Boundaries2D Boundary5(B1[2], 0, S[2], S[0], ID_Elements, -1, 3); // Type == 3
             List_Of_Boundaries.push_back(Boundary5);
         }
@@ -348,6 +349,10 @@ void Calculate_Jacobian_boundaries(std::vector<Boundaries2D> &List_Of_Boundaries
 
         double Jacobian = Length/ReferenceLength;
         (*i).setJacobian(Jacobian);
+        std::cout << (*i).getID() << " " << Type << " (" << (dy)/Length << ", " << -(dx)/Length << ")" << std::endl;
+        (*i).setNormalX(dy/Length);
+        (*i).setNormalY(-dx/Length);
+
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -368,5 +373,13 @@ extern unsigned int get_Number_Of_Nodes(std::vector<Elements2D> &List_Of_Element
         Number_Of_Nodes += (*i).get_Number_Of_Nodes();
     }
     return Number_Of_Nodes;
+}
+/*--------------------------------------------------------------------------*/
+void set_theta_Uniform(std::vector<Boundaries2D> &List_Of_Boundaries2D, const double &theta)
+{
+    for(auto f = List_Of_Boundaries2D.begin(); f < List_Of_Boundaries2D.end(); f++)
+    {
+        (*f).set_theta(theta); //(rand() % 3) + 1
+    }
 }
 /*--------------------------------------------------------------------------*/

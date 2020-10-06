@@ -102,6 +102,10 @@ class Elements2D
 
     std::vector<double> node_coordinates_x;
     std::vector<double> node_coordinates_y;
+    std::vector<unsigned int> node_on_boundary;     // for all nodes: on which boundary
+    std::vector<unsigned int> node_on_boundary_1;   // node numbers on boundary 1
+    std::vector<unsigned int> node_on_boundary_2;
+    std::vector<unsigned int> node_on_boundary_3;
 
     unsigned int Number_Of_Nodes;
     unsigned int pos;
@@ -142,8 +146,17 @@ class Elements2D
 
         void set_node_coordinates_x(double x);
         void set_node_coordinates_y(double y);
+        void set_node_on_boundary(unsigned int type);
+        void set_node_on_boundary_1(unsigned int type);
+        void set_node_on_boundary_2(unsigned int type);
+        void set_node_on_boundary_3(unsigned int type);
         std::vector<double> get_node_coordinates_x() const;
         std::vector<double> get_node_coordinates_y() const;
+        std::vector<unsigned int> get_node_on_boundary() const;
+        std::vector<unsigned int> get_node_on_boundary_1() const;
+        std::vector<unsigned int> get_node_on_boundary_2() const;
+        std::vector<unsigned int> get_node_on_boundary_3() const;
+        std::vector<unsigned int> get_nodes_on_boundary(unsigned int Type) const;
 
         //void set_MassMatrix(Mat M);
         //void set_MassMatrixOverRho0(Mat M1);
@@ -164,6 +177,9 @@ class Boundaries2D
     unsigned int ID_Vertex_V2;
     double Jacobian;
     unsigned int Type; // 1 2 3
+    double theta;
+    double nx;
+    double ny;
 
     std::vector<double> node_coordinates_x;
     std::vector<double> node_coordinates_y;
@@ -182,6 +198,11 @@ class Boundaries2D
         //void setType(double T);
         unsigned int getType() const;
         double getJacobian() const;
+        void setNormalX(double normalx);
+        void setNormalY(double normaly);
+        double get_nx() const;
+        double get_ny() const;
+
         //void set_LeftElementID(int E_L);
         //void set_RightElementID(int E_R);
         bool isInternal();
@@ -190,10 +211,12 @@ class Boundaries2D
 
         void set_node_coordinates_x(double x);
         void set_node_coordinates_y(double y);
-        std::vector<double> get_node_coordinates_x() const;
-        std::vector<double> get_node_coordinates_y() const;
+        void set_theta(double T);
+        //std::vector<double> get_node_coordinates_x() const;  Legendre_Gauss_Lobatto is wrong: x & y coordinates from both elements
+        //std::vector<double> get_node_coordinates_y() const;
         unsigned int getVertex_V1() const;
         unsigned int getVertex_V2() const;
+        double get_theta() const;
 
         ~Boundaries2D();
 

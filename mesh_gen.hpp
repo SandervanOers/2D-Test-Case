@@ -26,4 +26,6 @@ void set_Order_Polynomials_Uniform(std::vector<Elements2D> &List_Of_Elements2D, 
 /*--------------------------------------------------------------------------*/
 extern unsigned int get_Number_Of_Nodes(std::vector<Elements2D> &List_Of_Elements2D);
 /*--------------------------------------------------------------------------*/
+void set_theta_Uniform(std::vector<Boundaries2D> &List_Of_Boundaries2D, const double &theta);
+/*--------------------------------------------------------------------------*/
 #endif
