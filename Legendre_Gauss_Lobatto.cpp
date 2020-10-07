@@ -1088,8 +1088,8 @@ void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, s
 
             unsigned int type_node = 0;
 
-            // Boundary Nodes
-            if (abs(s_a[k]+1.0) < NODETOL)
+            // Boundary Elements
+            if (abs(s_a[k]+1.0) < NODETOL || N == 0)
             {
                 // face 1
                 unsigned int ID_B1 = (*i).getBoundary_B1()-1;
@@ -1098,23 +1098,23 @@ void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, s
                 type_node = 1;
                 (*i).set_node_on_boundary_1(k);
             }
-            if (abs(r_a[k]+1.0) < NODETOL)
+            if (abs(r_a[k]+1.0) < NODETOL || N == 0)
             {
                 // face 3
                 unsigned int ID_B3 = (*i).getBoundary_B3()-1;
                 List_Of_Boundaries2D[ID_B3].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B3].set_node_coordinates_y(y);
-                type_node = 2;
-                (*i).set_node_on_boundary_2(k);
+                type_node = 3;                      // Changed
+                (*i).set_node_on_boundary_3(k);     // Changed
             }
-            if (abs(s_a[k]+r_a[k]) < NODETOL)
+            if (abs(s_a[k]+r_a[k]) < NODETOL || N == 0)
             {
                 // face 2
                 unsigned int ID_B2 = (*i).getBoundary_B2()-1;
                 List_Of_Boundaries2D[ID_B2].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B2].set_node_coordinates_y(y);
-                type_node = 3;
-                (*i).set_node_on_boundary_3(k);
+                type_node = 2;                      // Changed
+                (*i).set_node_on_boundary_2(k);     // Changed
             }
             (*i).set_node_on_boundary(type_node);
 
@@ -1170,7 +1170,7 @@ void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D
             unsigned int type_node = 0;
 
             // Boundary Elements
-            if (abs(s_a[k]+1.0) < NODETOL)
+            if (abs(s_a[k]+1.0) < NODETOL || N == 0)
             {
                 // face 1
                 unsigned int ID_B1 = (*i).getBoundary_B1()-1;
@@ -1179,23 +1179,23 @@ void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D
                 type_node = 1;
                 (*i).set_node_on_boundary_1(k);
             }
-            if (abs(r_a[k]+1.0) < NODETOL)
+            if (abs(r_a[k]+1.0) < NODETOL || N == 0)
             {
                 // face 3
                 unsigned int ID_B3 = (*i).getBoundary_B3()-1;
                 List_Of_Boundaries2D[ID_B3].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B3].set_node_coordinates_y(y);
-                type_node = 2;
-                (*i).set_node_on_boundary_2(k);
+                type_node = 3;                      // Changed
+                (*i).set_node_on_boundary_3(k);     // Changed
             }
-            if (abs(s_a[k]+r_a[k]) < NODETOL)
+            if (abs(s_a[k]+r_a[k]) < NODETOL || N == 0)
             {
                 // face 2
                 unsigned int ID_B2 = (*i).getBoundary_B2()-1;
                 List_Of_Boundaries2D[ID_B2].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B2].set_node_coordinates_y(y);
-                type_node = 3;
-                (*i).set_node_on_boundary_3(k);
+                type_node = 2;                      // Changed
+                (*i).set_node_on_boundary_2(k);     // Changed
             }
             (*i).set_node_on_boundary(type_node);
         }
@@ -1271,7 +1271,7 @@ void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elemen
             unsigned int type_node = 0;
 
             // Boundary Elements
-            if (abs(s_a[k]+1.0) < NODETOL)
+            if (abs(s_a[k]+1.0) < NODETOL || N == 0)
             {
                 // face 1
                 unsigned int ID_B1 = (*i).getBoundary_B1()-1;
@@ -1280,23 +1280,23 @@ void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elemen
                 type_node = 1;
                 (*i).set_node_on_boundary_1(k);
             }
-            if (abs(r_a[k]+1.0) < NODETOL)
+            if (abs(r_a[k]+1.0) < NODETOL || N == 0)
             {
                 // face 3
                 unsigned int ID_B3 = (*i).getBoundary_B3()-1;
                 List_Of_Boundaries2D[ID_B3].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B3].set_node_coordinates_y(y);
-                type_node = 2;
-                (*i).set_node_on_boundary_2(k);
+                type_node = 3;                      // Changed
+                (*i).set_node_on_boundary_3(k);     // Changed
             }
-            if (abs(s_a[k]+r_a[k]) < NODETOL)
+            if (abs(s_a[k]+r_a[k]) < NODETOL || N == 0)
             {
                 // face 2
                 unsigned int ID_B2 = (*i).getBoundary_B2()-1;
                 List_Of_Boundaries2D[ID_B2].set_node_coordinates_x(x);
                 List_Of_Boundaries2D[ID_B2].set_node_coordinates_y(y);
-                type_node = 3;
-                (*i).set_node_on_boundary_3(k);
+                type_node = 2;                      // Changed
+                (*i).set_node_on_boundary_2(k);     // Changed
             }
             (*i).set_node_on_boundary(type_node);
         }

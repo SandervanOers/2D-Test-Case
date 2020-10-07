@@ -20,11 +20,11 @@ int main(int argc,char **args)
     PetscInitialize(&argc,&args,(char*)0,help);
 
     {
-    auto t1 = std::chrono::high_resolution_clock::now();
+    auto t0 = std::chrono::high_resolution_clock::now();
     // Read in options from command line
     PetscInt   Number_Of_Elements_Petsc=10, Number_Of_TimeSteps_In_One_Period=10, Method=1;
     PetscInt   Number_Of_Periods=1, kmode=1;
-    PetscScalar N2 = 0.0;//1.0; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
+    PetscScalar N2 = -1.0;//1.0; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 1, N_Q=0;
     PetscScalar nu = 0.0;
@@ -177,45 +177,21 @@ int main(int argc,char **args)
 
     /// Check for CFL condition (when explicit)
 
-
-
-    /*
-    //  Local Matrices
-    Mat M;
-    M = MassMatrix_local(V);
-    // Physical Mass Matrix
-    Mat Mk;
-    MatDuplicate(M, MAT_COPY_VALUES, &Mk);
-    MatScale(Mk, DeltaX/2.0);
-    MatDestroy(&M);
-
-    MatDestroy(&Mk);
-    // Inverse Mass Matrix (local): blocked
-    Mat invM_Elemental;
-    invM_Elemental = MassMatrix_inverse_local(V);
-    MatScale(invM_Elemental, 2.0/DeltaX);
-    PetscScalar invM_values[Np*Np];
-    PetscInt in[Np];
-    for (unsigned int n=0;n<Np; n++)
-    {
-        in[n] = n;
-    }
-    MatAssemblyBegin(invM_Elemental, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(invM_Elemental, MAT_FINAL_ASSEMBLY);
-    MatGetValues(invM_Elemental, Np, in, Np, in, invM_values);
-*/
     Mat E, ET, invM, M1, M2, NMat, NDerivMat;
     Mat Ex, ExT, Ey, EyT;
+    Mat invM_small, M1_small;
      // Np can be variable
-    double Np = (N_Petsc+1)*(N_Petsc+2)/2;
-    //MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &E);  // 2*N_Nodes x N_Nodes
-    //MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &ET); // N_Nodes x 2*N_Nodes
+    double Np = (N_Petsc+1)*(N_Petsc+2)/2; // N_Nodes/N_Elements // Array of N_Nodes per Element
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, N_Nodes, 2*5*Np, NULL, &E);  // 2*N_Nodes x N_Nodes //number of possible nonzero blocks are 5: element and his 4 neighbours (2D)
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, 2*N_Nodes, 5*Np, NULL, &ET); // N_Nodes x 2*N_Nodes
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &Ex);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &ExT);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &Ey);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &EyT);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &invM);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &M1);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, 2*N_Nodes, 2*Np, NULL, &invM);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &invM_small);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, 2*N_Nodes, 2*Np, NULL, &M1);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &M1_small);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &NMat);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &M2);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &NDerivMat);
@@ -484,17 +460,43 @@ int main(int argc,char **args)
                 MatGetRow(invM_el, i, &ncols, &cols, &vals_invM);
                 const PetscInt IndexI = pos+i;
                 PetscInt GlobalIndexCol[ncols];
+                PetscInt GlobalIndexCol2[ncols];
                 for (unsigned int j=0; j < ncols; j++)
                 {
                     GlobalIndexCol[j] = cols[j]+pos;
+                    GlobalIndexCol2[j] = N_Nodes+cols[j]+pos;
                 }
                 PetscInt GlobalIndex[1] = {i + pos};
-                MatSetValues(Ex,1, GlobalIndex, ncols, GlobalIndexCol,vals_Ex,INSERT_VALUES); // When changing to E and Et, indices should be changed
-                //MatSetValues(ExT,1, GlobalIndex, ncols, GlobalIndexCol,vals_ExT,INSERT_VALUES);
-                MatSetValues(Ey,1, GlobalIndex, ncols, GlobalIndexCol,vals_Ey,INSERT_VALUES);
-                //MatSetValues(EyT,1, GlobalIndex, ncols, GlobalIndexCol,vals_EyT,INSERT_VALUES);
-                MatSetValues(M1,1, GlobalIndex, ncols, GlobalIndexCol,vals_M1,INSERT_VALUES);
-                MatSetValues(invM,1, GlobalIndex, ncols, GlobalIndexCol,vals_invM,INSERT_VALUES);
+                PetscInt GlobalIndex2[1] = {N_Nodes+i + pos};
+                //std::cout << "1" << std::endl;
+                MatSetValues(Ex,1, GlobalIndex, ncols, GlobalIndexCol,vals_Ex,ADD_VALUES); // When changing to E and Et, indices should be changed
+                //std::cout << "2" << std::endl;
+                MatSetValues(E,1, GlobalIndex, ncols, GlobalIndexCol,vals_Ex,ADD_VALUES);
+                //std::cout << "3" << std::endl;
+                MatSetValues(ExT,1, GlobalIndex, ncols, GlobalIndexCol,vals_ExT,ADD_VALUES);
+                //std::cout << "4" << std::endl;
+                MatSetValues(ET,1, GlobalIndex, ncols, GlobalIndexCol,vals_ExT,ADD_VALUES);
+                //std::cout << "5" << std::endl;
+                MatSetValues(Ey,1, GlobalIndex, ncols, GlobalIndexCol,vals_Ey,ADD_VALUES);
+                //std::cout << "6" << std::endl;
+                MatSetValues(E,1, GlobalIndex2, ncols, GlobalIndexCol,vals_Ey,ADD_VALUES);
+                //std::cout << "7" << std::endl;
+                MatSetValues(EyT,1, GlobalIndex, ncols, GlobalIndexCol,vals_EyT,ADD_VALUES);
+                //std::cout << "8" << std::endl;
+                MatSetValues(ET,1, GlobalIndex, ncols, GlobalIndexCol2,vals_EyT,ADD_VALUES);
+                //std::cout << "9" << std::endl;
+                MatSetValues(M1_small,1, GlobalIndex, ncols, GlobalIndexCol,vals_M1,ADD_VALUES);
+                //std::cout << "10" << std::endl;
+                MatSetValues(M1,1, GlobalIndex, ncols, GlobalIndexCol,vals_M1,ADD_VALUES);
+                //std::cout << "11" << std::endl;
+                MatSetValues(M1,1, GlobalIndex2, ncols, GlobalIndexCol2,vals_M1,ADD_VALUES);
+                //std::cout << "12" << std::endl;
+                MatSetValues(invM_small,1, GlobalIndex, ncols, GlobalIndexCol,vals_invM,ADD_VALUES);
+                //std::cout << "13" << std::endl;
+                MatSetValues(invM,1, GlobalIndex, ncols, GlobalIndexCol,vals_invM,ADD_VALUES);
+                //std::cout << "14" << std::endl;
+                MatSetValues(invM,1, GlobalIndex2, ncols, GlobalIndexCol2,vals_invM,ADD_VALUES);
+                //std::cout << "15" << std::endl;
                 MatRestoreRow(Ex_el_L, i, &ncols, &cols, &vals_Ex);
                 MatRestoreRow(Ey_el_L, i, &ncols, &cols, &vals_Ey);
                 MatRestoreRow(M1_el_L, i, &ncols, &cols, &vals_M1);
@@ -502,12 +504,12 @@ int main(int argc,char **args)
                 MatRestoreRow(ExT_el_L, i, &ncols, &cols, &vals_ExT);
                 MatRestoreRow(EyT_el_L, i, &ncols, &cols, &vals_EyT);
             }
-            std::cout << "Np = " << Np << std::endl;
-            std::cout << "pos = " << pos << std::endl;
-            std::cout << "N_Nodes = " << N_Nodes << std::endl;
+            //std::cout << "Np = " << Np << std::endl;
+            //std::cout << "pos = " << pos << std::endl;
+            //std::cout << "N_Nodes = " << N_Nodes << std::endl;
 
 
-
+/*
 
             //std::cout << "W = " << std::endl;
             //MatView(W, viewer);
@@ -543,23 +545,7 @@ int main(int argc,char **args)
             MatView(MMInv, viewer);
             MatDestroy(&MMInv);
 
-/*
-            Mat Sr, Ss;
-            MatMatMult(MM,Dr,MAT_INITIAL_MATRIX,1.0, &Sr);
 
-            std::cout << "Sr = " << std::endl;
-            MatView(Sr, viewer);
-
-
-            MatAXPY(Sr,-1.0, cubDr, SAME_NONZERO_PATTERN);
-            std::cout << "Diff = " << std::endl;
-            MatView(Sr  , viewer);
-             PetscReal nrm;
-
-              MatNorm(Sr,NORM_FROBENIUS,&nrm);
-            std::cout << "2 Norm Diff = " << nrm << std::endl;
-
-*/
             //MatDestroy(&V2DInv);
             MatDestroy(&cubDr);
             MatDestroy(&Intermediate);
@@ -578,7 +564,7 @@ int main(int argc,char **args)
 
 
 
-
+*/
 
 
 
@@ -617,87 +603,17 @@ int main(int argc,char **args)
                     PetscInt size_V1, size_V2;
                     MatGetSize(cubV, &size_V1, &size_V2);
                     std::cout << "Size cub V = " << size_V1 << " x " << size_V2 << std::endl;
+           // //MatDestroy(&cubV);
+            //MatDestroy(&MM);
+            //MatDestroy(&MMcub);
 
 
 
 */
 
-            VecDestroy(&R);
-            VecDestroy(&S);
+        VecDestroy(&R);
+        VecDestroy(&S);
 
-
-           // //MatDestroy(&cubV);
-            //MatDestroy(&MM);
-            //MatDestroy(&MMcub);
-   /*
-        Vec Weights;
-        Vec QuadraturePoints;
-        QuadraturePoints = JacobiGQ_withWeights(0, 0, Order_Gaussian_Quadrature, Weights);
-        //QuadraturePoints = JacobiGL_withWeights(0, 0, Order_Gaussian_Quadrature, Weights);
-
-        //VecView(Weights, PETSC_VIEWER_STDOUT_SELF);
-        //VecView(QuadraturePoints, PETSC_VIEWER_STDOUT_SELF);
-        PetscScalar *w, *qp;
-        VecGetArray(Weights, &w);
-        VecGetArray(QuadraturePoints, &qp);
-
-        Vec ri;
-        ri = JacobiGL(0, 0, Order_Polynomials);
-        //std::cout << "VecView " << std::endl;
-        //VecView(ri, PETSC_VIEWER_STDOUT_SELF);
-        //VecView(QuadraturePoints, PETSC_VIEWER_STDOUT_SELF);
-        for (unsigned int i = 0; i <= Order_Polynomials; i++)
-        {
-            for (unsigned int j = 0; j <= Order_Polynomials; j++)
-            {
-                // E Matrix
-                double value_e = 0.0;
-                double value_m = 0.0;
-                double value_n = 0.0;
-                double value_m2 = 0.0;
-                double value_n_deriv = 0.0;
-                for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
-                {
-                    //w_q rho_0(r_q) l_i(r_q) dl_j(r_q)/dr
-                    double Li = LagrangePolynomial(ri, qp[q], i);
-                    double physical_x = (*e).get_xCoordinateLeft()+0.5*(1.0+qp[q])*((*e).get_xCoordinateRight()-(*e).get_xCoordinateLeft());
-                    double rho0 = rho_0_compressible(physical_x, N2);
-                    if (Order_Polynomials > 0)
-                    {
-                        double Ljderiv = LagrangePolynomialDeriv(ri, qp[q], j);
-                        value_e += w[q]*rho0*Li*Ljderiv;
-                    }
-                    // w_q drho_0(r_q)/dr l_i(r_q) l_j(r_q)
-                    double Lj = LagrangePolynomial(ri, qp[q], j);
-                    double rho0deriv = rho_0_deriv_compressible(physical_x, N2);
-                    value_e += w[q]*rho0deriv*Li*Lj*DeltaX/2.0;
-
-                    value_m += w[q]*Li*Lj/rho0*DeltaX/2.0;
-
-                    value_n += w[q]*rho0*Li*Lj*DeltaX/2.0;
-
-                    double N2_val = N_2_compressible(physical_x, N2); // N2 is actually rate: rho(-beta*x) => N2 = beta-1
-
-                    value_m2 += w[q]*Li*Lj/rho0/N2_val*DeltaX/2.0;
-
-                    value_n_deriv += w[q]*Li*Lj*rho0deriv*DeltaX/2.0; /// Should we rewrite this: second term value_e => add and subtract same term
-                }
-                double factor = -1.0;
-                MatSetValue(E, pos+i, pos+j, factor*value_e, ADD_VALUES);
-                value_e = - value_e;
-                MatSetValue(ET, pos+j, pos+i, factor*value_e, ADD_VALUES);
-
-                MatSetValue(M1, pos+i, pos+j, value_m, ADD_VALUES);
-                MatSetValue(NMat, pos+i, pos+j, value_n, ADD_VALUES);
-                MatSetValue(NDerivMat, pos+i, pos+j, value_n_deriv, ADD_VALUES);
-                MatSetValue(M2, pos+i, pos+j, value_m2, ADD_VALUES);
-            }
-        }
-        VecDestroy(&ri);
-        VecDestroy(&QuadraturePoints);
-        VecDestroy(&Weights);
-        MatSetValues(invM,Np, in,Np, in, invM_values, INSERT_VALUES);
-        */
         MatDestroy(&Ex_el);
         MatDestroy(&ExT_el);
         MatDestroy(&Ey_el);
@@ -719,8 +635,12 @@ int main(int argc,char **args)
     }
     MatAssemblyBegin(M1, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(M1, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(M1_small, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(M1_small, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(invM, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(invM, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(invM_small, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(invM_small, MAT_FINAL_ASSEMBLY);
 
     /*
     MatAssemblyBegin(M2, MAT_FINAL_ASSEMBLY);
@@ -734,7 +654,16 @@ int main(int argc,char **args)
     */
 
 
+
     std::cout << "Start Faces Calculations " << std::endl;
+
+    /////////////////////////////////////////////////////////////////////
+    // What happens when N = 0 => Np = 1, one node per element         //
+    /////////////////////////////////////////////////////////////////////
+    // Is the order of the node numbers correct                        //
+    /////////////////////////////////////////////////////////////////////
+    // one node => on entire element, # of nodes on each face is 1     //
+    /////////////////////////////////////////////////////////////////////
     for (auto f = List_Of_Boundaries2D.begin(); f < List_Of_Boundaries2D.end(); f++)
     {
         if ((*f).isInternal())
@@ -824,19 +753,22 @@ int main(int argc,char **args)
                         double Lj = LagrangePolynomial(ri_left, r_a[q], j);
                         value_e += (1.0-theta)*w_a[q]*Rho0_L[q]*Li*Lj*Jacobian;
                         MatSetValue(GLL, Node_Numbers_On_Boundary_Left[i], Node_Numbers_On_Boundary_Left[j], value_e, ADD_VALUES);
-                        //MatSetValue(Ex,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
-                        //MatSetValue(ExT, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
-                        //MatSetValue(Ey,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
-                        //MatSetValue(EyT, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
+                        MatSetValue(Ex,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
+                        MatSetValue(ExT, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
+                        MatSetValue(Ey,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
+                        MatSetValue(EyT, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
+
+                        MatSetValue(E,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
+                        MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
+                        MatSetValue(E,  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
+                        MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
                     }
                 }
             }
             MatAssemblyBegin(GLL, MAT_FINAL_ASSEMBLY);
             MatAssemblyEnd(GLL, MAT_FINAL_ASSEMBLY);
-            MatView(GLL, viewer);
+            //MatView(GLL, viewer);
             MatDestroy(&GLL);
-            //MatSetValue(E, posL+i, posL+j, factor*rho0*(1-theta), ADD_VALUES);
-            //MatSetValue(ET, posL+j, posL+i, factor*-rho0*(1-theta), ADD_VALUES);
             // GLR
             Mat GLR;
             MatCreate(PETSC_COMM_WORLD,&GLR);
@@ -855,17 +787,20 @@ int main(int argc,char **args)
                         double Lj = LagrangePolynomial(ri_right, r_a[q], j);
                         value_e += -(1.0-theta)*w_a[q]*Rho0_R[q]*Li*Lj*Jacobian;
                         MatSetValue(GLR, Node_Numbers_On_Boundary_Left[i], Node_Numbers_On_Boundary_Right[j], value_e, ADD_VALUES);
-                        //MatSetValue(Ex,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
-                        //MatSetValue(ExT, posR+Node_Numbers_On_Boundary_Right[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
-                        //MatSetValue(Ey,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
-                        //MatSetValue(EyT, posR+Node_Numbers_On_Boundary_Right[j],  posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
+                        MatSetValue(Ex,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
+                        MatSetValue(ExT, posR+Node_Numbers_On_Boundary_Right[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
+                        MatSetValue(Ey,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
+                        MatSetValue(EyT, posR+Node_Numbers_On_Boundary_Right[j],  posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
+
+                        MatSetValue(E,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
+                        MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
+                        MatSetValue(E,  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
+                        MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j],  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
                     }
                 }
             }
             MatAssemblyBegin(GLR, MAT_FINAL_ASSEMBLY);
             MatAssemblyEnd(GLR, MAT_FINAL_ASSEMBLY);
-            //MatSetValue(E, posL+i, posR+0, factor*-rho0*(1-theta), ADD_VALUES);
-            //MatSetValue(ET, posR+0, posL+i, factor*rho0*(1-theta), ADD_VALUES);
             MatDestroy(&GLR);
             // GRL
             Mat GRL;
@@ -885,17 +820,20 @@ int main(int argc,char **args)
                         double Lj = LagrangePolynomial(ri_left, r_a[q], j);
                         value_e += theta*w_a[q]*Rho0_L[q]*Li*Lj*Jacobian;
                         MatSetValue(GRL, Node_Numbers_On_Boundary_Right[i], Node_Numbers_On_Boundary_Left[j], value_e, ADD_VALUES);
-                        //MatSetValue(Ex,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
-                        //MatSetValue(ExT, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
-                        //MatSetValue(Ey,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
-                        //MatSetValue(EyT, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
+                        MatSetValue(Ex,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
+                        MatSetValue(ExT, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
+                        MatSetValue(Ey,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
+                        MatSetValue(EyT, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
+
+                        MatSetValue(E,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
+                        MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
+                        MatSetValue(E,  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
+                        MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j],  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
                     }
                 }
             }
             MatAssemblyBegin(GRL, MAT_FINAL_ASSEMBLY);
             MatAssemblyEnd(GRL, MAT_FINAL_ASSEMBLY);
-            //MatSetValue(E, posR+0, posL+j, factor*rho0*theta, ADD_VALUES);
-            //MatSetValue(ET, posL+j, posR+0, factor*-rho0*theta, ADD_VALUES);
             MatDestroy(&GRL);
             // GRR
             Mat GRR;
@@ -915,17 +853,20 @@ int main(int argc,char **args)
                         double Lj = LagrangePolynomial(ri_right, r_a[q], j);
                         value_e += -theta*w_a[q]*Rho0_R[q]*Li*Lj*Jacobian;
                         MatSetValue(GRR, Node_Numbers_On_Boundary_Right[i], Node_Numbers_On_Boundary_Right[j], value_e, ADD_VALUES);
-                        //MatSetValue(Ex,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
-                        //MatSetValue(ExT, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
-                        //MatSetValue(Ey,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
-                        //MatSetValue(EyT, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
+                        MatSetValue(Ex,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
+                        MatSetValue(ExT, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
+                        MatSetValue(Ey,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
+                        MatSetValue(EyT, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
+
+                        MatSetValue(E,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
+                        MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
+                        MatSetValue(E,  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
+                        MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
                     }
                 }
             }
             MatAssemblyBegin(GRR, MAT_FINAL_ASSEMBLY);
             MatAssemblyEnd(GRR, MAT_FINAL_ASSEMBLY);
-            //MatSetValue(E, posR+0, posR+0, factor*-rho0*theta, ADD_VALUES);
-            //MatSetValue(ET, posR+0, posR+0, factor*rho0*theta, ADD_VALUES);
             MatDestroy(&GRR);
 
             VecRestoreArray(QuadraturePoints, &r_a);
@@ -937,119 +878,10 @@ int main(int argc,char **args)
 
 
             /////////////////////////////////////////////
-            // Combine Ex and Ey to E
-            /////////////////////////////////////////////
-            // Normals from nodal book
-            /////////////////////////////////////////////
-            // Put values into E matrices directly
-            /////////////////////////////////////////////
-            // Move Assembly E matrices Below
-            /////////////////////////////////////////////
-
-
-
-            /////////////////////////////////////////////
             // vec n = (nx, ny) -> still split into Ex, Ey?
             // if nx = 0 -> where in E do the boundary terms show up -> in Ey.
             // if nx, ny /= 0, then in both Ex and Ey
             /////////////////////////////////////////////
-/*
-
-            double physical_x = (*f).getxCoordinate();
-            double rho0 = rho_0_compressible(physical_x, N2);
-            unsigned int i = Order_Polynomials_left;
-            unsigned int j = Order_Polynomials_left;
-
-            double factor = 1.0;
-            // GLL
-            MatSetValue(E, posL+i, posL+j, factor*rho0*(1-theta), ADD_VALUES);
-            MatSetValue(ET, posL+j, posL+i, factor*-rho0*(1-theta), ADD_VALUES);
-            // GLR
-            MatSetValue(E, posL+i, posR+0, factor*-rho0*(1-theta), ADD_VALUES);
-            MatSetValue(ET, posR+0, posL+i, factor*rho0*(1-theta), ADD_VALUES);
-            // GRL
-            MatSetValue(E, posR+0, posL+j, factor*rho0*theta, ADD_VALUES);
-            MatSetValue(ET, posL+j, posR+0, factor*-rho0*theta, ADD_VALUES);
-            // GRR
-            MatSetValue(E, posR+0, posR+0, factor*-rho0*theta, ADD_VALUES);
-            MatSetValue(ET, posR+0, posR+0, factor*rho0*theta, ADD_VALUES);
-            */
-
-            /*
-        unsigned int Order_Gaussian_Quadrature = ceil(Order_Polynomials+3+N_Q); // + higher order for rho_0 term
-
-        for (unsigned int n=0;n<=Np; n++)
-        {
-            in[n] = n+pos;
-        }
-        // Quadrature Rules
-        Vec Weights;
-        Vec QuadraturePoints;
-        QuadraturePoints = JacobiGQ_withWeights(0, 0, Order_Gaussian_Quadrature, Weights);
-        //QuadraturePoints = JacobiGL_withWeights(0, 0, Order_Gaussian_Quadrature, Weights);
-
-        //VecView(Weights, PETSC_VIEWER_STDOUT_SELF);
-        //VecView(QuadraturePoints, PETSC_VIEWER_STDOUT_SELF);
-        PetscScalar *w, *qp;
-        VecGetArray(Weights, &w);
-        VecGetArray(QuadraturePoints, &qp);
-
-        Vec ri;
-        ri = JacobiGL(0, 0, Order_Polynomials);
-        //std::cout << "VecView " << std::endl;
-        //VecView(ri, PETSC_VIEWER_STDOUT_SELF);
-        //VecView(QuadraturePoints, PETSC_VIEWER_STDOUT_SELF);
-        for (unsigned int i = 0; i <= Order_Polynomials; i++)
-        {
-            for (unsigned int j = 0; j <= Order_Polynomials; j++)
-            {
-                // E Matrix
-                double value_e = 0.0;
-                double value_m = 0.0;
-                double value_n = 0.0;
-                double value_m2 = 0.0;
-                double value_n_deriv = 0.0;
-                for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
-                {
-                    //w_q rho_0(r_q) l_i(r_q) dl_j(r_q)/dr
-                    double Li = LagrangePolynomial(ri, qp[q], i);
-                    double physical_x = (*e).get_xCoordinateLeft()+0.5*(1.0+qp[q])*((*e).get_xCoordinateRight()-(*e).get_xCoordinateLeft());
-                    double rho0 = rho_0_compressible(physical_x, N2);
-                    if (Order_Polynomials > 0)
-                    {
-                        double Ljderiv = LagrangePolynomialDeriv(ri, qp[q], j);
-                        value_e += w[q]*rho0*Li*Ljderiv;
-                    }
-                    // w_q drho_0(r_q)/dr l_i(r_q) l_j(r_q)
-                    double Lj = LagrangePolynomial(ri, qp[q], j);
-                    double rho0deriv = rho_0_deriv_compressible(physical_x, N2);
-                    value_e += w[q]*rho0deriv*Li*Lj*DeltaX/2.0;
-
-                    value_m += w[q]*Li*Lj/rho0*DeltaX/2.0;
-
-                    value_n += w[q]*rho0*Li*Lj*DeltaX/2.0;
-
-                    double N2_val = N_2_compressible(physical_x, N2); // N2 is actually rate: rho(-beta*x) => N2 = beta-1
-
-                    value_m2 += w[q]*Li*Lj/rho0/N2_val*DeltaX/2.0;
-
-                    value_n_deriv += w[q]*Li*Lj*rho0deriv*DeltaX/2.0; /// Should we rewrite this: second term value_e => add and subtract same term
-                }
-                double factor = -1.0;
-                MatSetValue(E, pos+i, pos+j, factor*value_e, ADD_VALUES);
-                value_e = - value_e;
-                MatSetValue(ET, pos+j, pos+i, factor*value_e, ADD_VALUES);
-
-                MatSetValue(M1, pos+i, pos+j, value_m, ADD_VALUES);
-                MatSetValue(NMat, pos+i, pos+j, value_n, ADD_VALUES);
-                MatSetValue(NDerivMat, pos+i, pos+j, value_n_deriv, ADD_VALUES);
-                MatSetValue(M2, pos+i, pos+j, value_m2, ADD_VALUES);
-            }
-        }
-        VecDestroy(&ri);
-        VecDestroy(&QuadraturePoints);
-        VecDestroy(&Weights);
-        */
 
         }
         else
@@ -1061,6 +893,14 @@ int main(int argc,char **args)
     MatAssemblyEnd(Ex, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(Ey, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(Ey, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(ExT, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(ExT, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(EyT, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(EyT, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(E, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(E, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(ET, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(ET, MAT_FINAL_ASSEMBLY);
 
     //std::cout << "List of Boundaries "  << std::endl;
     //std::cout << "ID : isInternal LeftElement RightElement"  << std::endl;
@@ -1070,11 +910,229 @@ int main(int argc,char **args)
 
     std::cout << "Start Global Matrices Construction" << std::endl;
 
+    double fillBF = 1;
+
+    Mat BF1, BF1_TEMP1, BF1_TEMP2;
+    MatMatMult(E, invM_small, MAT_INITIAL_MATRIX, fillBF, &BF1_TEMP1);
+    MatMatMult(BF1_TEMP1, M1_small, MAT_INITIAL_MATRIX, fillBF, &BF1_TEMP2);
+    MatMatMult(invM, BF1_TEMP2, MAT_INITIAL_MATRIX, fillBF, &BF1);
+    MatDestroy(&BF1_TEMP1);
+    MatDestroy(&BF1_TEMP2);
+/*
+    Mat BF2, BF2_TEMP1, BF2_TEMP2;
+    MatMatMult(E, invM, MAT_INITIAL_MATRIX, fillBF, &BF2_TEMP1);
+    MatMatMult(BF2_TEMP1, M2, MAT_INITIAL_MATRIX, fillBF, &BF2_TEMP2);
+    MatMatMult(invM, BF2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &BF2);
+    MatDestroy(&BF2_TEMP1);
+    MatDestroy(&BF2_TEMP2);
+*/
+    Mat DIV, DIV_TEMP1, DIV_TEMP2;
+    MatMatMult(ET, invM, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP1);
+    MatMatMult(DIV_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP2);
+    MatMatMult(invM_small, DIV_TEMP2, MAT_INITIAL_MATRIX, fillBF, &DIV);
+    MatDestroy(&DIV_TEMP1);
+    MatDestroy(&DIV_TEMP2);
+/*
+    Mat C, C_TEMP1, C_TEMP2;
+    MatMatMult(NMat, invM, MAT_INITIAL_MATRIX, fillBF, &C_TEMP1);
+    MatMatMult(C_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &C_TEMP2);
+    MatMatMult(invM, C_TEMP2, MAT_INITIAL_MATRIX, fillBF, &C);
+    MatDestroy(&C_TEMP1);
+    MatDestroy(&C_TEMP2);
+
+    Mat C2, C2_TEMP1, C2_TEMP2;
+    MatMatMult(NMat, invM, MAT_INITIAL_MATRIX, fillBF, &C2_TEMP1);
+    MatMatMult(C2_TEMP1, M2, MAT_INITIAL_MATRIX, fillBF, &C2_TEMP2);
+    MatMatMult(invM, C2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &C2);
+    MatDestroy(&C2_TEMP1);
+    MatDestroy(&C2_TEMP2);
+
+    Mat D1, D1_TEMP1, D1_TEMP2;
+    MatMatMult(NDerivMat, invM, MAT_INITIAL_MATRIX, fillBF, &D1_TEMP1);
+    MatMatMult(D1_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &D1_TEMP2);
+    MatMatMult(invM, D1_TEMP2, MAT_INITIAL_MATRIX, fillBF, &D1);
+    MatDestroy(&D1_TEMP1);
+    MatDestroy(&D1_TEMP2);
+
+    Mat D2, D2_TEMP1, D2_TEMP2;
+    MatMatMult(NDerivMat, invM, MAT_INITIAL_MATRIX, fillBF, &D2_TEMP1);
+    MatMatMult(D2_TEMP1, M2, MAT_INITIAL_MATRIX, fillBF, &D2_TEMP2);
+    MatMatMult(invM, D2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &D2);
+    MatDestroy(&D2_TEMP1);
+    MatDestroy(&D2_TEMP2);
+
+    MatDestroy(&E);
+    MatDestroy(&ET);
+    MatDestroy(&invM);
+    MatDestroy(&NMat);
+    MatDestroy(&NDerivMat);
+
+    Mat Laplacian;
+	MatMatMult(BF1, DIV, MAT_INITIAL_MATRIX, 1, &Laplacian);
+	MatScale(Laplacian, nu);
+
+	//MatView(Laplacian, viewer_info);
+    */
+    Mat A, B;    // factor 3 = Number of Variables
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 6*Np+1+3*Np*Np,  NULL, &A);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 6*Np+1+3*Np*Np,  NULL, &B);
+    std::cout << " Global Matrices Preallocated" << std::endl;
+
+    for (unsigned int i = 0; i < N_Nodes; i++)
+    {
+        double dummy=0;
+        const PetscInt* cols;
+        const PetscScalar* values;
+        PetscInt 	numberOfNonZeros;
+
+        // Fill Diagonals
+        MatSetValue(A, i, i, 1.0, ADD_VALUES);
+        MatSetValue(A, N_Nodes+i, N_Nodes+i, 1.0, ADD_VALUES);
+        MatSetValue(A, 2*N_Nodes+i, 2*N_Nodes+i, 1.0, ADD_VALUES);
+        MatSetValue(A, 3*N_Nodes+i, 3*N_Nodes+i, 1.0, ADD_VALUES);
+
+        MatSetValue(B, i, i, 1.0, ADD_VALUES);
+        MatSetValue(B, N_Nodes+i, N_Nodes+i, 1.0, ADD_VALUES);
+        MatSetValue(B, 2*N_Nodes+i, 2*N_Nodes+i, 1.0, ADD_VALUES);
+        MatSetValue(B, 3*N_Nodes+i, 3*N_Nodes+i, 1.0, ADD_VALUES);
+
+        /*
+        MatGetRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
+        */
+        MatGetRow(BF1, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     3*N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     3*N_Nodes+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(BF1, i, &numberOfNonZeros, &cols, &values);
+        /*
+        MatGetRow(BF2, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
+
+                MatSetValue(A, 	i,     Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     Np*Number_Of_Elements+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(BF2, i, &numberOfNonZeros, &cols, &values);
+        * /
+        MatGetRow(C, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+
+                MatSetValue(A, 	2*Np*Number_Of_Elements+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	2*Np*Number_Of_Elements+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(C, i, &numberOfNonZeros, &cols, &values);
+        MatGetRow(C2, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+
+                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(C2, i, &numberOfNonZeros, &cols, &values);
+
+        MatGetRow(D1, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	Np*Number_Of_Elements+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	Np*Number_Of_Elements+i,     cols[j],    -0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(D1, i, &numberOfNonZeros, &cols, &values);
+        MatGetRow(D2, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+
+                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(D2, i, &numberOfNonZeros, &cols, &values);
+        */
+        MatGetRow(DIV, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	3*N_Nodes+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	3*N_Nodes+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+
+                //MatSetValue(A, 	Np*Number_Of_Elements+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                //MatSetValue(B, 	Np*Number_Of_Elements+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(DIV, i, &numberOfNonZeros, &cols, &values);
+
+    }
+
+    std::cout << " Global Matrices Constructed" << std::endl;
+    MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY);
+    /*
+    MatDestroy(&BF2);
+    MatDestroy(&C);
+    MatDestroy(&C2);
+    MatDestroy(&D1);
+    MatDestroy(&D2);
+    MatDestroy(&Laplacian);
+    */
+
+    //MatView(BF1, viewer);
+    MatDestroy(&BF1);
+    MatDestroy(&DIV);
 
     MatDestroy(&Ex);
     MatDestroy(&Ey);
+    MatDestroy(&E);
+    MatDestroy(&ET);
     MatDestroy(&M1);
     MatDestroy(&invM);
+    MatDestroy(&invM_small);
     std::cout << "Store Global Matrices" << std::endl;
 
 
@@ -1132,22 +1190,13 @@ int main(int argc,char **args)
     VecAssemblyBegin(VecP);
     VecAssemblyEnd(VecP);
 
+
+    double H0 = calculate_Hamiltonian2D(M1_small, Initial_Condition, List_Of_Elements2D, N_Nodes);
+    std::cout << "Initial Energy = " << std::setprecision(16) << H0 << std::endl;
+
     std::cout << "Start Simulations " << std::endl;
 
 
-
-
-
-
-
-
-
-
-    VecDestroy(&VecU);
-    VecDestroy(&VecW);
-    VecDestroy(&VecR);
-    VecDestroy(&VecP);
-    VecDestroy(&Initial_Condition);
 
 
     //MatDestroy(&E);
@@ -1160,572 +1209,6 @@ int main(int argc,char **args)
     MatDestroy(&NDerivMat);
     //MatDestroy(&M1);
     MatDestroy(&M2);
-
-    /*--------------------------------------------------------------------------*/
-    /* End Initial Condition / Exact Solution                                   */
-    /*--------------------------------------------------------------------------*/
-
-
-
-
-
-
-
-
-    std::cout << "**********************************************************"<< std::endl;
-
-    std::vector<std::vector<double>> L2Errors;
-    FILE *g = fopen("L2Errors.txt", "w");
-    fprintf(g, "1/h \t N \t L2 Error \t \t \t Order \t \t time [s] \n");
-    fclose(g);
-    for (unsigned int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 1; Number_Of_Polynomial_Steps++)
-    {
-    double Eold = 0;
-    FILE *g = fopen("L2Errors.txt", "a");
-    fprintf(g, "\n");
-    fclose(g);
-    for (unsigned int Number_Of_Spatial_Steps = 0; Number_Of_Spatial_Steps < 1; Number_Of_Spatial_Steps++) //11-Number_Of_Polynomial_Steps
-    {
-    auto t0 = std::chrono::high_resolution_clock::now();
-    unsigned int Number_Of_Elements = pow(2, Number_Of_Spatial_Steps); //Number_Of_Elements_Petsc;
-    unsigned int N = Number_Of_Polynomial_Steps; //N_Petsc;
-
-
-    std::cout << "**********************************************************"<< std::endl;
-    std::cout << "N = " << N << ", 1/h = " << Number_Of_Elements << std::endl;
-    std::cout << "**********************************************************"<< std::endl;
-
-    unsigned int Np = N + 1;
-    unsigned int Nfp = 1;
-    unsigned int Nfaces = 2;
-
-
-    double xmin = 0;
-    double xmax = 1;
-
-    std::vector<Elements> List_Of_Elements;
-    std::vector<Boundaries> List_Of_Boundaries;
-    for (unsigned int i=0; i<Number_Of_Elements+1; i++)
-    {
-        double xCoordinate = (xmax-xmin)*(double)(i)/Number_Of_Elements+xmin;
-        bool isInternal = 1;
-        int leftID = i-1;
-        int rightID = i;
-
-        if (i==0)
-        {
-            isInternal = 0;
-            leftID = -1;
-        }
-        if (i==Number_Of_Elements)
-        {
-            isInternal = 0;
-            rightID = -1;
-        }
-
-        Boundaries B(i, leftID, rightID, isInternal, xCoordinate);
-        List_Of_Boundaries.push_back(B);
-    }
-
-    for (unsigned int i=0; i<Number_Of_Elements; i++)
-    {
-        // Evenly-Spaced
-        double left_xCoordinate = (xmax-xmin)*(double)(i)/Number_Of_Elements+xmin;
-        double right_xCoordinate = (xmax-xmin)*(double)(i+1)/Number_Of_Elements+xmin;
-        double Jacobian = (right_xCoordinate-left_xCoordinate)/2.0;
-        Elements E(i, Jacobian, i, i+1, left_xCoordinate, right_xCoordinate, N);
-        List_Of_Elements.push_back(E);
-    }
-
-    /// Different Order N for different Elements
-    /// Call JacobiGL for different N values
-    Vec r;
-    r = JacobiGL(0, 0, N);
-
-    Mat V;
-    V = Vandermonde1D(r, N);
-
-    PetscInt MS, NS;
-    MatGetSize(V,&MS,&NS);
-    std::cout << "V Size = " << MS << " x " << NS << std::endl;
-
-    Mat Dr;
-    Dr = DMatrix1D(r, N, V);
-
-    // Affine mapping
-    // (physical) coordinates of all nodes
-    Mat x;
-    MatCreate(PETSC_COMM_WORLD, &x);
-    MatSetSizes(x, PETSC_DECIDE, PETSC_DECIDE, N+1, Number_Of_Elements);
-    MatSetType(x,MATSEQAIJ);
-    MatSeqAIJSetPreallocation(x, Number_Of_Elements, NULL);
-
-    PetscScalar *raa;
-    VecGetArray(r, &raa);
-    std::cout << "x Coordinates Nodes " << std::endl;
-    int i = 0;
-    for (auto k = List_Of_Elements.begin(); k < List_Of_Elements.end(); k ++)
-    {
-        for (unsigned int n = 0; n <= N; n ++)
-        {
-            double val = (*k).get_xCoordinateLeft()+0.5*(raa[n]+1.0)*((*k).get_xCoordinateRight()-(*k).get_xCoordinateLeft());
-            MatSetValue(x, n, i, val, INSERT_VALUES);
-            (*k).set_VertexCoordinates(val);
-        }
-        i++;
-    }
-    VecRestoreArray(r, &raa);
-
-    MatAssemblyBegin(x, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(x, MAT_FINAL_ASSEMBLY);
-    //MatView(x, PETSC_VIEWER_STDOUT_SELF);
-    MatDestroy(&Dr);
-    VecDestroy(&r);
-
-    MatConvert(x, MATSEQDENSE,  MAT_INPLACE_MATRIX, &x);
-    PetscViewer xviewer;
-    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "coordinates.txt", &xviewer);
-    MatView(x,xviewer);
-    PetscViewerDestroy(&xviewer);
-    MatDestroy(&x);
-
-    /*--------------------------------------------------------------------------*/
-    /* Problem Specific */
-    /*--------------------------------------------------------------------------*/
-
-    PetscInt kxmode, kzmode;
-    PetscScalar   sigma;
-    sigma = calculate_sigma_system1dcom(N2, kmode);
-    PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
-    PetscScalar   DeltaX = 1.0/(double)Number_Of_Elements;
-    Number_Of_TimeSteps_In_One_Period = 10*pow(Number_Of_Elements, (Np+1)/2);//Number_Of_Elements*Number_Of_Elements;
-    PetscScalar DeltaT=1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
-    std::cout << Number_Of_Elements << " => " << DeltaX << std::endl;
-    std::cout << Number_Of_TimeSteps_In_One_Period << " => " << DeltaT << std::endl;
-    /// Check for CFL condition (when explicit)
-
-    // Initial Condition
-    Vec Initial_Condition, VecU, VecR, VecP;
-    VecCreateSeq(PETSC_COMM_WORLD, 3*Number_Of_Elements*Np,&Initial_Condition);
-    VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Elements*Np, &VecU);
-    VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Elements*Np, &VecR);
-    VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Elements*Np, &VecP);
-
-    for (auto k = List_Of_Elements.begin(); k < List_Of_Elements.end(); k++)
-    {
-        unsigned int ID = (*k).getID();
-        unsigned int pos = ID*Np;
-        std::vector<double> xCoor;
-        xCoor = (*k).get_VertexCoordinates();
-        int i = 0;
-        double t = 0;
-        for (auto c = xCoor.begin(); c < xCoor.end(); c++)
-        {
-            double value = Exact_Solution_m_system1dcom(*c, t, N2, sigma, kmode);
-            VecSetValue(VecU, pos + i, value, INSERT_VALUES);
-            VecSetValue(Initial_Condition, pos + i, value, INSERT_VALUES);
-            value = Exact_Solution_p_system1dcom(*c, t, N2, sigma, kmode);
-            VecSetValue(VecP, pos + i, value, INSERT_VALUES);
-            VecSetValue(Initial_Condition, 2*Number_Of_Elements*Np+pos + i, value, INSERT_VALUES);
-            value = Exact_Solution_r_system1dcom(*c, t, N2, sigma, kmode);
-            VecSetValue(VecR, pos + i, value, INSERT_VALUES);
-            VecSetValue(Initial_Condition, Number_Of_Elements*Np+pos + i, value, INSERT_VALUES);
-            i++;
-        }
-    }
-    VecAssemblyBegin(Initial_Condition);
-    VecAssemblyEnd(Initial_Condition);
-    VecAssemblyBegin(VecU);
-    VecAssemblyEnd(VecU);
-    VecAssemblyBegin(VecR);
-    VecAssemblyEnd(VecR);
-    VecAssemblyBegin(VecP);
-    VecAssemblyEnd(VecP);
-
-    /// In the future:
-    /// Get Order of Polynomials from Element
-    /// Calculate Mass Matrix for each element
-    //  Local Matrices
-    Mat M;
-    M = MassMatrix_local(V);
-    // Physical Mass Matrix
-    Mat Mk;
-    MatDuplicate(M, MAT_COPY_VALUES, &Mk);
-    MatScale(Mk, DeltaX/2.0);
-    MatDestroy(&M);
-
-    MatDestroy(&Mk);
-    // Inverse Mass Matrix (local): blocked
-    Mat invM_Elemental;
-    invM_Elemental = MassMatrix_inverse_local(V);
-    MatScale(invM_Elemental, 2.0/DeltaX);
-    PetscScalar invM_values[Np*Np];
-    PetscInt in[Np];
-    for (unsigned int n=0;n<Np; n++)
-    {
-        in[n] = n;
-    }
-    MatAssemblyBegin(invM_Elemental, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(invM_Elemental, MAT_FINAL_ASSEMBLY);
-    MatGetValues(invM_Elemental, Np, in, Np, in, invM_values);
-
-    Mat E, ET, invM, M1, M2, NMat, NDerivMat;
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,3*Np, NULL, &E);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,3*Np, NULL, &ET);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,2*Np, NULL, &invM);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,2*Np, NULL, &M1);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,2*Np, NULL, &NMat);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,2*Np, NULL, &M2);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, Number_Of_Elements*Np, Number_Of_Elements*Np,2*Np, NULL, &NDerivMat);
-
-    std::cout << " Start Elemental Calculations " << std::endl;
-    for (auto e = List_Of_Elements.begin(); e < List_Of_Elements.end(); e++)
-    {
-        unsigned int ID = (*e).getID();
-        unsigned int pos = ID*Np;   // Assumes Ordering
-        unsigned int Order_Polynomials = (*e).getOrderOfPolynomials();
-        unsigned int Order_Gaussian_Quadrature = ceil(Order_Polynomials+3+N_Q); // + higher order for rho_0 term
-
-        for (unsigned int n=0;n<=Np; n++)
-        {
-            in[n] = n+pos;
-        }
-        // Quadrature Rules
-        Vec Weights;
-        Vec QuadraturePoints;
-        QuadraturePoints = JacobiGQ_withWeights(0, 0, Order_Gaussian_Quadrature, Weights);
-        //QuadraturePoints = JacobiGL_withWeights(0, 0, Order_Gaussian_Quadrature, Weights);
-
-        //VecView(Weights, PETSC_VIEWER_STDOUT_SELF);
-        //VecView(QuadraturePoints, PETSC_VIEWER_STDOUT_SELF);
-        PetscScalar *w, *qp;
-        VecGetArray(Weights, &w);
-        VecGetArray(QuadraturePoints, &qp);
-
-        Vec ri;
-        ri = JacobiGL(0, 0, Order_Polynomials);
-        //std::cout << "VecView " << std::endl;
-        //VecView(ri, PETSC_VIEWER_STDOUT_SELF);
-        //VecView(QuadraturePoints, PETSC_VIEWER_STDOUT_SELF);
-        for (unsigned int i = 0; i <= Order_Polynomials; i++)
-        {
-            for (unsigned int j = 0; j <= Order_Polynomials; j++)
-            {
-                // E Matrix
-                double value_e = 0.0;
-                double value_m = 0.0;
-                double value_n = 0.0;
-                double value_m2 = 0.0;
-                double value_n_deriv = 0.0;
-                for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
-                {
-                    //w_q rho_0(r_q) l_i(r_q) dl_j(r_q)/dr
-                    double Li = LagrangePolynomial(ri, qp[q], i);
-                    double physical_x = (*e).get_xCoordinateLeft()+0.5*(1.0+qp[q])*((*e).get_xCoordinateRight()-(*e).get_xCoordinateLeft());
-                    double rho0 = rho_0_compressible(physical_x, N2);
-                    if (Order_Polynomials > 0)
-                    {
-                        double Ljderiv = LagrangePolynomialDeriv(ri, qp[q], j);
-                        value_e += w[q]*rho0*Li*Ljderiv;
-                    }
-                    // w_q drho_0(r_q)/dr l_i(r_q) l_j(r_q)
-                    double Lj = LagrangePolynomial(ri, qp[q], j);
-                    double rho0deriv = rho_0_deriv_compressible(physical_x, N2);
-                    value_e += w[q]*rho0deriv*Li*Lj*DeltaX/2.0;
-
-                    value_m += w[q]*Li*Lj/rho0*DeltaX/2.0;
-
-                    value_n += w[q]*rho0*Li*Lj*DeltaX/2.0;
-
-                    double N2_val = N_2_compressible(physical_x, N2); // N2 is actually rate: rho(-beta*x) => N2 = beta-1
-
-                    value_m2 += w[q]*Li*Lj/rho0/N2_val*DeltaX/2.0;
-
-                    value_n_deriv += w[q]*Li*Lj*rho0deriv*DeltaX/2.0; /// Should we rewrite this: second term value_e => add and subtract same term
-                }
-                double factor = -1.0;
-                MatSetValue(E, pos+i, pos+j, factor*value_e, ADD_VALUES);
-                value_e = - value_e;
-                MatSetValue(ET, pos+j, pos+i, factor*value_e, ADD_VALUES);
-
-                MatSetValue(M1, pos+i, pos+j, value_m, ADD_VALUES);
-                MatSetValue(NMat, pos+i, pos+j, value_n, ADD_VALUES);
-                MatSetValue(NDerivMat, pos+i, pos+j, value_n_deriv, ADD_VALUES);
-                MatSetValue(M2, pos+i, pos+j, value_m2, ADD_VALUES);
-            }
-        }
-        VecDestroy(&ri);
-        VecDestroy(&QuadraturePoints);
-        VecDestroy(&Weights);
-        MatSetValues(invM,Np, in,Np, in, invM_values, INSERT_VALUES);
-    }
-    MatAssemblyBegin(M1, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(M1, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(M2, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(M2, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(NMat, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(NMat, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(NDerivMat, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(NDerivMat, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(invM, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(invM, MAT_FINAL_ASSEMBLY);
-
-    MatDestroy(&invM_Elemental);
-
-    for (auto f = List_Of_Boundaries.begin(); f < List_Of_Boundaries.end(); f++)
-    {
-        if ((*f).isInternal())
-        {
-            //std::cout << "Internal" << std::endl;
-            int left = (*f).getLeftElementID();
-            int right = (*f).getRightElementID();
-
-            unsigned int posL = left*Np;    // Assumes Ordering
-            unsigned int posR = right*Np;
-
-            unsigned int Order_Polynomials_left = (List_Of_Elements[left]).getOrderOfPolynomials();
-            unsigned int Order_Polynomials_right = (List_Of_Elements[right]).getOrderOfPolynomials();
-
-            double physical_x = (*f).getxCoordinate();
-            double rho0 = rho_0_compressible(physical_x, N2);
-            unsigned int i = Order_Polynomials_left;
-            unsigned int j = Order_Polynomials_left;
-
-            double factor = 1.0;
-            // GLL
-            MatSetValue(E, posL+i, posL+j, factor*rho0*(1-theta), ADD_VALUES);
-            MatSetValue(ET, posL+j, posL+i, factor*-rho0*(1-theta), ADD_VALUES);
-            // GLR
-            MatSetValue(E, posL+i, posR+0, factor*-rho0*(1-theta), ADD_VALUES);
-            MatSetValue(ET, posR+0, posL+i, factor*rho0*(1-theta), ADD_VALUES);
-            // GRL
-            MatSetValue(E, posR+0, posL+j, factor*rho0*theta, ADD_VALUES);
-            MatSetValue(ET, posL+j, posR+0, factor*-rho0*theta, ADD_VALUES);
-            // GRR
-            MatSetValue(E, posR+0, posR+0, factor*-rho0*theta, ADD_VALUES);
-            MatSetValue(ET, posR+0, posR+0, factor*rho0*theta, ADD_VALUES);
-        }
-        //else
-            //std::cout << "External" << std::endl;
-    }
-
-    std::cout << "Started Assembly DIV Matrices" << std::endl;
-    MatAssemblyBegin(E, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(E, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(ET, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(ET, MAT_FINAL_ASSEMBLY);
-    //MatView(E, viewer_dense);
-    //MatView(ET, viewer_dense);
-    std::cout << "Finished Assembly DIV Matrices" << std::endl;
-    double fillBF = 1;
-
-    Mat BF1, BF1_TEMP1, BF1_TEMP2;
-    MatMatMult(E, invM, MAT_INITIAL_MATRIX, fillBF, &BF1_TEMP1);
-    MatMatMult(BF1_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &BF1_TEMP2);
-    MatMatMult(invM, BF1_TEMP2, MAT_INITIAL_MATRIX, fillBF, &BF1);
-    MatDestroy(&BF1_TEMP1);
-    MatDestroy(&BF1_TEMP2);
-
-    Mat BF2, BF2_TEMP1, BF2_TEMP2;
-    MatMatMult(E, invM, MAT_INITIAL_MATRIX, fillBF, &BF2_TEMP1);
-    MatMatMult(BF2_TEMP1, M2, MAT_INITIAL_MATRIX, fillBF, &BF2_TEMP2);
-    MatMatMult(invM, BF2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &BF2);
-    MatDestroy(&BF2_TEMP1);
-    MatDestroy(&BF2_TEMP2);
-
-    Mat DIV, DIV_TEMP1, DIV_TEMP2;
-    MatMatMult(ET, invM, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP1);
-    MatMatMult(DIV_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP2);
-    MatMatMult(invM, DIV_TEMP2, MAT_INITIAL_MATRIX, fillBF, &DIV);
-    MatDestroy(&DIV_TEMP1);
-    MatDestroy(&DIV_TEMP2);
-
-    Mat C, C_TEMP1, C_TEMP2;
-    MatMatMult(NMat, invM, MAT_INITIAL_MATRIX, fillBF, &C_TEMP1);
-    MatMatMult(C_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &C_TEMP2);
-    MatMatMult(invM, C_TEMP2, MAT_INITIAL_MATRIX, fillBF, &C);
-    MatDestroy(&C_TEMP1);
-    MatDestroy(&C_TEMP2);
-
-    Mat C2, C2_TEMP1, C2_TEMP2;
-    MatMatMult(NMat, invM, MAT_INITIAL_MATRIX, fillBF, &C2_TEMP1);
-    MatMatMult(C2_TEMP1, M2, MAT_INITIAL_MATRIX, fillBF, &C2_TEMP2);
-    MatMatMult(invM, C2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &C2);
-    MatDestroy(&C2_TEMP1);
-    MatDestroy(&C2_TEMP2);
-
-    Mat D1, D1_TEMP1, D1_TEMP2;
-    MatMatMult(NDerivMat, invM, MAT_INITIAL_MATRIX, fillBF, &D1_TEMP1);
-    MatMatMult(D1_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &D1_TEMP2);
-    MatMatMult(invM, D1_TEMP2, MAT_INITIAL_MATRIX, fillBF, &D1);
-    MatDestroy(&D1_TEMP1);
-    MatDestroy(&D1_TEMP2);
-
-    Mat D2, D2_TEMP1, D2_TEMP2;
-    MatMatMult(NDerivMat, invM, MAT_INITIAL_MATRIX, fillBF, &D2_TEMP1);
-    MatMatMult(D2_TEMP1, M2, MAT_INITIAL_MATRIX, fillBF, &D2_TEMP2);
-    MatMatMult(invM, D2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &D2);
-    MatDestroy(&D2_TEMP1);
-    MatDestroy(&D2_TEMP2);
-
-    MatDestroy(&E);
-    MatDestroy(&ET);
-    MatDestroy(&invM);
-    MatDestroy(&NMat);
-    MatDestroy(&NDerivMat);
-
-    Mat Laplacian;
-	MatMatMult(BF1, DIV, MAT_INITIAL_MATRIX, 1, &Laplacian);
-	MatScale(Laplacian, nu);
-
-	//MatView(Laplacian, viewer_info);
-
-    Mat A, B;    // factor 3 = Number of Variables
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, Np*Number_Of_Elements*3, Np*Number_Of_Elements*3, 6*Np+1+3*Np*Np,  NULL, &A);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, Np*Number_Of_Elements*3, Np*Number_Of_Elements*3, 6*Np+1+3*Np*Np,  NULL, &B);
-    std::cout << " Global Matrices Preallocated" << std::endl;
-
-    for (unsigned int i = 0; i < Np*Number_Of_Elements; i++)
-    {
-        MatSetValue(A, i, i, 1.0, ADD_VALUES);
-        MatSetValue(A, Np*Number_Of_Elements+i, Np*Number_Of_Elements+i, 1.0, ADD_VALUES);
-        MatSetValue(A, 2*Np*Number_Of_Elements+i, 2*Np*Number_Of_Elements+i, 1.0, ADD_VALUES);
-        MatSetValue(B, i, i, 1.0, ADD_VALUES);
-        MatSetValue(B, Np*Number_Of_Elements+i, Np*Number_Of_Elements+i, 1.0, ADD_VALUES);
-        MatSetValue(B, 2*Np*Number_Of_Elements+i, 2*Np*Number_Of_Elements+i, 1.0, ADD_VALUES);
-
-        double dummy=0;
-        const PetscInt* cols;
-        const PetscScalar* values;
-        PetscInt 	numberOfNonZeros;
-
-        MatGetRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
-        for (int j=0;j<numberOfNonZeros;++j)
-        {
-            dummy = (values[j]);
-            if (dummy!=0.0)
-            {
-                MatSetValue(A, 	i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-            }
-        }
-        MatRestoreRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
-
-        MatGetRow(BF1, i, &numberOfNonZeros, &cols, &values);
-        for (int j=0;j<numberOfNonZeros;++j)
-        {
-            dummy = (values[j]);
-            if (dummy!=0.0)
-            {
-                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
-            }
-        }
-        MatRestoreRow(BF1, i, &numberOfNonZeros, &cols, &values);
-        /*
-        MatGetRow(BF2, i, &numberOfNonZeros, &cols, &values);
-        for (int j=0;j<numberOfNonZeros;++j)
-        {
-            dummy = (values[j]);
-            if (dummy!=0.0)
-            {
-                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
-
-                MatSetValue(A, 	i,     Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     Np*Number_Of_Elements+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
-            }
-        }
-        MatRestoreRow(BF2, i, &numberOfNonZeros, &cols, &values);
-        */
-        MatGetRow(C, i, &numberOfNonZeros, &cols, &values);
-        for (int j=0;j<numberOfNonZeros;++j)
-        {
-            dummy = (values[j]);
-            if (dummy!=0.0)
-            {
-                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-
-                MatSetValue(A, 	2*Np*Number_Of_Elements+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	2*Np*Number_Of_Elements+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-            }
-        }
-        MatRestoreRow(C, i, &numberOfNonZeros, &cols, &values);
-        MatGetRow(C2, i, &numberOfNonZeros, &cols, &values);
-        for (int j=0;j<numberOfNonZeros;++j)
-        {
-            dummy = (values[j]);
-            if (dummy!=0.0)
-            {
-                MatSetValue(A, 	i,     Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-
-                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-            }
-        }
-        MatRestoreRow(C2, i, &numberOfNonZeros, &cols, &values);
-
-        MatGetRow(D1, i, &numberOfNonZeros, &cols, &values);
-        for (int j=0;j<numberOfNonZeros;++j)
-        {
-            dummy = (values[j]);
-            if (dummy!=0.0)
-            {
-                MatSetValue(A, 	Np*Number_Of_Elements+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	Np*Number_Of_Elements+i,     cols[j],    -0.5*DeltaT*dummy, 	ADD_VALUES);
-            }
-        }
-        MatRestoreRow(D1, i, &numberOfNonZeros, &cols, &values);
-        MatGetRow(D2, i, &numberOfNonZeros, &cols, &values);
-        for (int j=0;j<numberOfNonZeros;++j)
-        {
-            dummy = (values[j]);
-            if (dummy!=0.0)
-            {
-                MatSetValue(A, 	i,     Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-
-                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-            }
-        }
-        MatRestoreRow(D2, i, &numberOfNonZeros, &cols, &values);
-
-        MatGetRow(DIV, i, &numberOfNonZeros, &cols, &values);
-        for (int j=0;j<numberOfNonZeros;++j)
-        {
-            dummy = (values[j]);
-            if (dummy!=0.0)
-            {
-                MatSetValue(A, 	2*Np*Number_Of_Elements+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	2*Np*Number_Of_Elements+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-
-                MatSetValue(A, 	Np*Number_Of_Elements+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	Np*Number_Of_Elements+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-            }
-        }
-        MatRestoreRow(DIV, i, &numberOfNonZeros, &cols, &values);
-
-
-    }
-    std::cout << " Global Matrices Constructed" << std::endl;
-    MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY);
-    MatDestroy(&BF1);
-    MatDestroy(&BF2);
-    MatDestroy(&DIV);
-    MatDestroy(&C);
-    MatDestroy(&C2);
-    MatDestroy(&D1);
-    MatDestroy(&D2);
-    MatDestroy(&Laplacian);
-
-    double H0 = calculate_Hamiltonian_comp(M1, M2, Initial_Condition, Number_Of_Elements, Np);
-    std::cout << "Initial Energy      = " << std::setprecision(16) << H0 << std::endl;
 
     KSP ksp;
     PC pc;
@@ -1751,8 +1234,8 @@ int main(int argc,char **args)
     KSPSetFromOptions(ksp);
 
     Vec Sol, QX;
-    VecCreateSeq(PETSC_COMM_WORLD, 3*Number_Of_Elements*Np, &Sol);
-    VecCreateSeq(PETSC_COMM_WORLD, 3*Number_Of_Elements*Np, &QX);
+    VecCreateSeq(PETSC_COMM_WORLD, 4*N_Nodes, &Sol);
+    VecCreateSeq(PETSC_COMM_WORLD, 4*N_Nodes, &QX);
     VecCopy(Initial_Condition, Sol);
     double H1 = 0.0;
 
@@ -1764,17 +1247,20 @@ int main(int argc,char **args)
     // Solve Linear System
     std::cout << "Start Time Stepping" << std::endl;
     double time = 0.0;
-    for (unsigned int t = 0; t < Number_Of_Periods*Number_Of_TimeSteps_In_One_Period; t++)
+
+    double Hold = H0;
+    for (unsigned int t = 0; t < Number_Of_Periods*Number_Of_TimeSteps_In_One_Period; t++) //
     {
 
-        H1 = calculate_Hamiltonian_comp(M1, M2, Sol, Number_Of_Elements, Np);
         fprintf(f, "%1.16e \t %1.16e\n", time, H1);
         time = (t+1)*DeltaT;
             MatMult(B, Sol, QX);
             KSPSolve(ksp, QX, Sol);
 
-        //std::cout << "Energy Diff= " << std::setprecision(16) << H1-calculate_Hamiltonian(M1, Sol, Number_Of_Elements, Np) <<std::endl;
+            H1 = calculate_Hamiltonian2D(M1_small, Sol, List_Of_Elements2D, N_Nodes);
 
+        std::cout << "Energy Diff= " << std::setprecision(16) << H1-Hold <<std::endl;
+            Hold = H1;
         /*
         PetscViewer viewer2;
         sprintf(szFileName, "solution%d.txt", t);
@@ -1784,7 +1270,7 @@ int main(int argc,char **args)
         */
 
     }
-    H1 = calculate_Hamiltonian_comp(M1, M2, Sol, Number_Of_Elements, Np);
+    H1 = calculate_Hamiltonian2D(M1_small, Sol, List_Of_Elements2D, N_Nodes);
 
     fprintf(f, "%1.16e \t %1.16e\n", time, H1);
     fclose(f);
@@ -1813,7 +1299,7 @@ int main(int argc,char **args)
     MatView(B,Bviewer);
     PetscViewerDestroy(&Bviewer);
 */
-    double Enew = calculate_Error(Initial_Condition, Sol, Number_Of_Elements, Np, DeltaX);
+    double Enew = calculate_Error2D(Initial_Condition, Sol, 2, DeltaX, DeltaY);
     PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error new %1.3e\n",(double)Enew);
 
     /*
@@ -1848,14 +1334,16 @@ int main(int argc,char **args)
     */
 
     VecDestroy(&Sol);
-    MatDestroy(&V);
+    //MatDestroy(&V);
     VecDestroy(&Initial_Condition);
     VecDestroy(&VecU);
+    VecDestroy(&VecW);
     VecDestroy(&VecR);
     VecDestroy(&VecP);
 
     MatDestroy(&A);
     MatDestroy(&B);
+    MatDestroy(&M1_small);
 
 
     auto t2 = std::chrono::high_resolution_clock::now();
@@ -1865,6 +1353,7 @@ int main(int argc,char **args)
               << std::chrono::duration_cast<std::chrono::seconds>(t2-t0).count()
               << " seconds\n";
 
+/*
     std::vector<double> L2Error;
     L2Error.push_back(Number_Of_Elements);
     L2Error.push_back(N);
@@ -1906,7 +1395,7 @@ int main(int argc,char **args)
     std::cout << "Execution took "
               << std::chrono::duration_cast<std::chrono::seconds>(t2-t1).count()
               << " seconds\n";
-
+*/
     PetscViewerDestroy(&viewer);
     PetscViewerDestroy(&viewer_dense);
     PetscViewerDestroy(&viewer_info);

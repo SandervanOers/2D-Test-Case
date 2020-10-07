@@ -308,6 +308,8 @@ void Calculate_Jacobian(std::vector<Elements2D> &List_Of_Elements2D, const std::
         double x3 = List_Of_Vertices[(*i).getVertex_V3()-1].getxCoordinate();
         double y3 = List_Of_Vertices[(*i).getVertex_V3()-1].getyCoordinate();
 
+        double Area = 0.5*abs(x1*y2+x2*y3+x3*y1-x2*y1-x3*y2-x1*y3);
+
         double dxdr = (x2-x1)/2.0;
         double dydr = (y2-y1)/2.0;
         double dxds = (x3-x1)/2.0;
@@ -315,6 +317,7 @@ void Calculate_Jacobian(std::vector<Elements2D> &List_Of_Elements2D, const std::
 
         double Jacobian = dxdr*dyds-dxds*dydr;
         (*i).setJacobian(Jacobian);
+        (*i).setArea(Area);
 
         double drdx = dyds/Jacobian;
         double drdy = -dxds/Jacobian;

@@ -85,6 +85,7 @@ class Elements2D
 {
     unsigned int ID;
     double Jacobian;
+    double Area;
     double rx;
     double ry;
     double sx;
@@ -124,12 +125,14 @@ class Elements2D
         unsigned int getNumber_Of_Faces() const;
         unsigned int getPosition() const;
         void setJacobian(double J);
+        void setArea(double A);
         void set_rx(double rx_v);
         void set_ry(double ry_v);
         void set_sx(double sx_v);
         void set_sy(double sy_v);
         //void computeJacobian(const std::vector<VertexCoordinates2D> &List_Of_Vertices);
         double getJacobian() const;
+        double getArea() const;
         double get_rx() const;
         double get_ry() const;
         double get_sx() const;

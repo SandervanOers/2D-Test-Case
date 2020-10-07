@@ -161,6 +161,10 @@ void Elements2D::setJacobian(double J)
 {
     Jacobian = J;
 }
+void Elements2D::setArea(double A)
+{
+    Area = A;
+}
 void Elements2D::set_rx(double rx_v)
 {
     rx = rx_v;
@@ -204,6 +208,10 @@ void Elements2D::set_pos(unsigned int POS)
 double Elements2D::getJacobian() const
 {
     return Jacobian;
+}
+double Elements2D::getArea() const
+{
+    return Area;
 }
 double Elements2D::get_rx() const
 {

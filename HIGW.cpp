@@ -43,6 +43,44 @@ extern Mat MassMatrix_inverse_local(const Mat &V)
     return M;
 }
 /*--------------------------------------------------------------------------*/
+extern double calculate_Hamiltonian2D(const Mat &M1, const Vec &Solution, const std::vector<Elements2D> &List_Of_Elements2D, const unsigned int &N_Nodes)
+{
+    double H = 0.0;
+    PetscScalar *XTemp;
+    VecGetArray(Solution, &XTemp);
+
+    for (auto k = List_Of_Elements2D.begin(); k < List_Of_Elements2D.end(); k++)
+    {
+        unsigned int Np = (*k).get_Number_Of_Nodes();
+        unsigned int pos = (*k).getPosition();
+
+        // Get Submatrix from M1
+        Mat M1_Elemental;
+        IS isrow;
+        ISCreateStride(PETSC_COMM_WORLD, Np, pos, 1, &isrow);
+        MatGetSubMatrix(M1,isrow, isrow,MAT_INITIAL_MATRIX, &M1_Elemental);
+
+        for (unsigned int i = 0; i < Np; i++)
+        {
+            for (unsigned int j = 0; j < Np; j++)
+            {
+                double massij;
+                const PetscInt idxm[1] = {i};
+                const PetscInt idxn[1] = {j};
+
+                MatGetValues(M1_Elemental, 1, idxm, 1,  idxn, &massij);
+                H += 0.5*massij*(XTemp[pos+i]*XTemp[pos+j]+XTemp[N_Nodes+pos+i]*XTemp[N_Nodes+pos+j]+XTemp[3*N_Nodes+pos+i]*XTemp[3*N_Nodes+pos+j]);
+
+            }
+        }
+
+        MatDestroy(&M1_Elemental);
+        ISDestroy(&isrow);
+    }
+    VecRestoreArray(Solution, &XTemp);
+    return H;
+}
+/*--------------------------------------------------------------------------*/
 extern double calculate_Hamiltonian(const Mat &M1, const Vec &Solution, const unsigned int &Number_Of_Elements, const unsigned int &Np)
 {
 
@@ -191,5 +229,32 @@ extern double calculate_Error(const Vec &Exact, const Vec &Solution, const unsig
     VecRestoreArray(Solution, &SolutionTemp);
 
     return error;
+}
+/*--------------------------------------------------------------------------*/
+extern double calculate_Error2D(const Vec &Exact, const Vec &Solution, const unsigned int &Norm_Type, const double &DeltaX, const double &DeltaY)
+{
+    Vec Difference;
+    VecDuplicate(Exact, &Difference);
+
+    VecWAXPY(Difference, -1.0, Exact, Solution);
+
+    PetscReal error;
+    if (Norm_Type == 1)
+    {
+        VecNorm(Difference, NORM_1, &error);
+    }
+    else if (Norm_Type == 2)
+    {
+        VecNorm(Difference, NORM_2, &error);
+    }
+    else
+    {
+        VecNorm(Difference, NORM_INFINITY, &error);
+    }
+
+    VecDestroy(&Difference);
+    error *= sqrt(DeltaX*DeltaY);
+    return error;
+
 }
 /*--------------------------------------------------------------------------*/
