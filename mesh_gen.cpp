@@ -352,7 +352,7 @@ void Calculate_Jacobian_boundaries(std::vector<Boundaries2D> &List_Of_Boundaries
 
         double Jacobian = Length/ReferenceLength;
         (*i).setJacobian(Jacobian);
-        std::cout << (*i).getID() << " " << Type << " (" << (dy)/Length << ", " << -(dx)/Length << ")" << std::endl;
+        //std::cout << (*i).getID() << " " << Type << " (" << (dy)/Length << ", " << -(dx)/Length << ")" << std::endl;
         (*i).setNormalX(dy/Length);
         (*i).setNormalY(-dx/Length);
 

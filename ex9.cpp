@@ -22,11 +22,11 @@ int main(int argc,char **args)
     {
     auto t0 = std::chrono::high_resolution_clock::now();
     // Read in options from command line
-    PetscInt   Number_Of_Elements_Petsc=10, Number_Of_TimeSteps_In_One_Period=10, Method=1;
+    PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=10, Method=1;
     PetscInt   Number_Of_Periods=1, kmode=1;
     PetscScalar N2 = -1.0;//1.0; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
     PetscScalar   theta = 0.5;
-    PetscInt    N_Petsc = 1, N_Q=0;
+    PetscInt    N_Petsc = 0, N_Q=0;
     PetscScalar nu = 0.0;
     PetscInt    Dimensions = 2;
 
@@ -72,8 +72,8 @@ int main(int argc,char **args)
     //store_Nodes_Reference_Triangle();
 
 
-    unsigned int Nel_x = 6;
-    unsigned int Nel_y = 4;
+    unsigned int Nel_x = Number_Of_Elements_Petsc;//2;
+    unsigned int Nel_y = Number_Of_Elements_Petsc;//2;
     Compute_Vertex_Coordinates_Uniform_Rectangle_2D(0,1, 0,1, Nel_x, Nel_y, List_Of_Vertices, List_Of_Boundaries2D, List_Of_Elements2D);
     Calculate_Jacobian(List_Of_Elements2D, List_Of_Vertices);
     Calculate_Jacobian_boundaries(List_Of_Boundaries2D, List_Of_Vertices);
@@ -109,17 +109,17 @@ int main(int argc,char **args)
     std::cout << "Total Number of Nodes = " << N_Nodes << std::endl;
     unsigned int N_Elements = List_Of_Elements2D.size();
     std::cout << "Total Number of Elements = " << N_Elements << std::endl;
-  /*
+/*
     std::cout << "List of Vertices "  << std::endl;
     std::cout << "ID : x y isInternal "  << std::endl;
     for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
-        std::cout << (*i).getID() << ": " << (*i).getxCoordinate() << "  " << (*i).getyCoordinate() << " " << (*i).isInternal() << std::endl;
+        std::cout << (*i).getID() << ": " << (*i).getxCoordinate() << " " << (*i).getyCoordinate() << " " << (*i).isInternal() << std::endl;
 
 
     std::cout << "List of Boundaries "  << std::endl;
     std::cout << "ID : isInternal : V1 V2: LeftElement RightElement"  << std::endl;
     for(auto i = List_Of_Boundaries2D.begin(); i < List_Of_Boundaries2D.end(); i++)
-        std::cout << (*i).getID() << ": " << (*i).isInternal() << " : " << (*i).getVertex_V1() << "  " << (*i).getVertex_V2() << " : " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << std::endl;
+        std::cout << (*i).getID() << ": " << (*i).isInternal() << " : " << (*i).getVertex_V1() << " " << (*i).getVertex_V2() << " : " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << std::endl;
 
 
 
@@ -129,7 +129,7 @@ int main(int argc,char **args)
     {
         std::cout << (*i).getID() << ": " << (*i).getVertex_V1() << "  " << (*i).getVertex_V2() << " " << (*i).getVertex_V3() << ": " << (*i).getBoundary_B1() << " " <<  (*i).getBoundary_B2() << " " << (*i).getBoundary_B3() << " " << (*i).getJacobian() << " " << (*i).get_Order_Of_Polynomials()<< std::endl;
     }
-    */
+*/
 /*
 
 
@@ -167,12 +167,17 @@ int main(int argc,char **args)
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
 
-    PetscScalar DeltaX = 1.0/(double)Nel_x;
-    PetscScalar DeltaY = 1.0/(double)Nel_y;
-    Number_Of_TimeSteps_In_One_Period = 10*pow((Nel_x+Nel_y)/2, (N_Petsc+1)/2);//Number_Of_Elements*Number_Of_Elements;
+    PetscScalar DeltaX = 1.0/((double)Nel_x/2.0);
+    PetscScalar DeltaY = 1.0/((double)Nel_y/2.0);
+    //Number_Of_TimeSteps_In_One_Period = 10*pow((Nel_x+Nel_y)/2, (N_Petsc+1)/2);//Number_Of_Elements*Number_Of_Elements;
+    //Number_Of_TimeSteps_In_One_Period = 10*pow(N_Elements, (N_Petsc+1.0)/2.0);//Number_Of_Elements*Number_Of_Elements;
+    Number_Of_TimeSteps_In_One_Period = 10.0 * pow(std::ceil(sqrt(sqrt(N_Elements))), N_Petsc+1.0);
+    std::cout << "Number_Of_TimeSteps_In_One_Period = " <<  Number_Of_TimeSteps_In_One_Period << std::endl;
 
     PetscScalar DeltaT=1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
 
+    std::cout << "DeltaX = " << DeltaX << std::endl;
+    std::cout << "DeltaY = " << DeltaY << std::endl;
     std::cout << Number_Of_TimeSteps_In_One_Period << " => " << DeltaT << std::endl;
 
     /// Check for CFL condition (when explicit)
@@ -182,12 +187,12 @@ int main(int argc,char **args)
     Mat invM_small, M1_small;
      // Np can be variable
     double Np = (N_Petsc+1)*(N_Petsc+2)/2; // N_Nodes/N_Elements // Array of N_Nodes per Element
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, N_Nodes, 2*5*Np, NULL, &E);  // 2*N_Nodes x N_Nodes //number of possible nonzero blocks are 5: element and his 4 neighbours (2D)
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, 2*N_Nodes, 5*Np, NULL, &ET); // N_Nodes x 2*N_Nodes
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &Ex);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &ExT);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &Ey);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &EyT);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, N_Nodes, 5*Np, NULL, &E);  // 2*N_Nodes x N_Nodes //number of possible nonzero blocks are 5: element and his 4 neighbours (2D)
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, 2*N_Nodes, 2*5*Np, NULL, &ET); // N_Nodes x 2*N_Nodes
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 5*Np, NULL, &Ex);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 5*Np, NULL, &ExT);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 5*Np, NULL, &Ey);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 5*Np, NULL, &EyT);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, 2*N_Nodes, 2*Np, NULL, &invM);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &invM_small);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, 2*N_Nodes, 2*Np, NULL, &M1);
@@ -197,7 +202,7 @@ int main(int argc,char **args)
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &NDerivMat);
 
 
-    std::cout << " Start Elemental Calculations " << std::endl;
+    std::cout << "Start Elemental Calculations " << std::endl;
     unsigned int Order_Polynomials_old = 1000;
     for (auto e = List_Of_Elements2D.begin(); e < List_Of_Elements2D.end(); e++)
     {
@@ -641,7 +646,21 @@ int main(int argc,char **args)
     MatAssemblyEnd(invM, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(invM_small, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(invM_small, MAT_FINAL_ASSEMBLY);
+/*
+    MatAssemblyBegin(E, MAT_FINAL_ASSEMBLY );
+    MatAssemblyEnd(E, MAT_FINAL_ASSEMBLY );
+    MatAssemblyBegin(ET, MAT_FINAL_ASSEMBLY );
+    MatAssemblyEnd(ET, MAT_FINAL_ASSEMBLY );
 
+    std::cout << "M1 = " << std::endl;
+    MatView(M1, viewer);
+    std::cout << "M1_small = " << std::endl;
+    MatView(M1_small, viewer);
+    std::cout << "E = " << std::endl;
+    MatView(E, viewer);
+    std::cout << "ET = " << std::endl;
+    MatView(ET, viewer);
+    */
     /*
     MatAssemblyBegin(M2, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(M2, MAT_FINAL_ASSEMBLY);
@@ -675,6 +694,7 @@ int main(int argc,char **args)
             double theta = (*f).get_theta();
             double nx = (*f).get_nx();
             double ny = (*f).get_ny();
+            //std::cout << " nx = " << nx << ", ny = " << ny << std::endl;
 
             int left = (*f).getLeftElementID()-1;
             int right = (*f).getRightElementID()-1;
@@ -907,6 +927,19 @@ int main(int argc,char **args)
     //for(auto i = List_Of_Boundaries2D.begin(); i < List_Of_Boundaries2D.end(); i++)
     //    std::cout << (*i).getID() << ": " << (*i).isInternal()  << " " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << std::endl;
 
+    MatAssemblyBegin(E, MAT_FINAL_ASSEMBLY );
+    MatAssemblyEnd(E, MAT_FINAL_ASSEMBLY );
+    MatAssemblyBegin(ET, MAT_FINAL_ASSEMBLY );
+    MatAssemblyEnd(ET, MAT_FINAL_ASSEMBLY );
+
+    //std::cout << "M1 = " << std::endl;
+    //MatView(M1, viewer);
+    //std::cout << "M1_small = " << std::endl;
+    //MatView(M1_small, viewer);
+    //std::cout << "E = " << std::endl;
+    //MatView(E, viewer);
+    //std::cout << "ET = " << std::endl;
+    //MatView(ET, viewer);
 
     std::cout << "Start Global Matrices Construction" << std::endl;
 
@@ -1259,7 +1292,7 @@ int main(int argc,char **args)
 
             H1 = calculate_Hamiltonian2D(M1_small, Sol, List_Of_Elements2D, N_Nodes);
 
-        std::cout << "Energy Diff= " << std::setprecision(16) << H1-Hold <<std::endl;
+            //std::cout << "Energy Diff= " << std::setprecision(16) << H1-Hold <<std::endl;
             Hold = H1;
         /*
         PetscViewer viewer2;
