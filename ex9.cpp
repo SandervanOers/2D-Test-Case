@@ -19,6 +19,7 @@ int main(int argc,char **args)
 {
     PetscInitialize(&argc,&args,(char*)0,help);
 
+    //for (unsigned int I = 1; I <= 6; I++)
     {
     auto t0 = std::chrono::high_resolution_clock::now();
     // Read in options from command line
@@ -71,7 +72,7 @@ int main(int argc,char **args)
     // Only Run when Recomputing the Nodes on Reference Triangles
     //store_Nodes_Reference_Triangle();
 
-
+    //Number_Of_Elements_Petsc = pow(2.0,(double)I);
     unsigned int Nel_x = Number_Of_Elements_Petsc;//2;
     unsigned int Nel_y = Number_Of_Elements_Petsc;//2;
     Compute_Vertex_Coordinates_Uniform_Rectangle_2D(0,1, 0,1, Nel_x, Nel_y, List_Of_Vertices, List_Of_Boundaries2D, List_Of_Elements2D);
@@ -104,7 +105,7 @@ int main(int argc,char **args)
           << std::chrono::duration_cast<std::chrono::milliseconds>(tn4-tn3).count()
           << " milliseconds\n";
     */
-
+    std::cout << "N = " << N_Petsc << std::endl;// << ", Np = " << Np << std::endl;
     unsigned int N_Nodes = get_Number_Of_Nodes(List_Of_Elements2D);
     std::cout << "Total Number of Nodes = " << N_Nodes << std::endl;
     unsigned int N_Elements = List_Of_Elements2D.size();
@@ -150,8 +151,28 @@ int main(int argc,char **args)
     }
     */
 
+    {
+        // Compute the nodes for a equilateral element
+        Vec X, Y;
+        Nodes2D(N_Petsc, X, Y);
+        // Convert nodes to a reference element
+        Vec R, S;
+        XYtoRS(X, Y, R, S);
 
+        Mat V2Dr, V2Ds;
+        GradVandermonde2D(N_Petsc, R, S, V2Dr, V2Ds);
+        std::cout << "V2Dr = " << std::endl;
+        MatView(V2Dr, viewer);
+        std::cout << "V2Ds = " << std::endl;
+        MatView(V2Ds, viewer);
 
+        MatDestroy(&V2Dr);
+        MatDestroy(&V2Ds);
+        VecDestroy(&X);
+        VecDestroy(&Y);
+        VecDestroy(&R);
+        VecDestroy(&S);
+    }
 
     /*--------------------------------------------------------------------------*/
     /* Initial Condition / Exact Solution                                       */
@@ -217,7 +238,9 @@ int main(int argc,char **args)
         unsigned int pos = (*e).getPosition();
 
         unsigned int Order_Polynomials = (*e).get_Order_Of_Polynomials();
-        unsigned int Order_Gaussian_Quadrature = 10;//2*Order_Polynomials;//ceil(Order_Polynomials+3+N_Q); // + higher order for rho_0 term
+        unsigned int Order_Gaussian_Quadrature = 2*Order_Polynomials+3+N_Q;//ceil(Order_Polynomials+3+N_Q); // + higher order for rho_0 term
+        Order_Gaussian_Quadrature = 4;//std::max((uint)10, Order_Gaussian_Quadrature);
+
         // Elemental Matrices
         Mat Ex_el, ExT_el, Ey_el, EyT_el,  M1_el, NMat_el, M2_el, NDerivMat_el; //invM_el,
         MatCreateSeqAIJ(PETSC_COMM_WORLD, Np, Np, Np, NULL, &Ex_el);
@@ -255,6 +278,17 @@ int main(int argc,char **args)
             Mat dLdr = load_DerivativeLagrangePolynomial_Cubature(Order_Polynomials, Order_Gaussian_Quadrature, 1);
             Mat dLds = load_DerivativeLagrangePolynomial_Cubature(Order_Polynomials, Order_Gaussian_Quadrature, 0);
 
+            std::cout << "drdx = " << drdx << std::endl;
+            std::cout << "drdy = " << drdy << std::endl;
+            std::cout << "dsdx = " << dsdx << std::endl;
+            std::cout << "dsdy = " << dsdy << std::endl;
+
+            std::cout << "dLdr = " << std::endl;
+            MatView(dLdr, viewer);
+            std::cout << "dLds = " << std::endl;
+            MatView(dLds, viewer);
+
+
             /// Not Lagrange Polynomials, but Legendre Polynomials
 
             // Transform from (r,s) derivatives to (x,y) derivatives
@@ -269,6 +303,10 @@ int main(int argc,char **args)
 
             MatDestroy(&dLdr);
             MatDestroy(&dLds);
+            std::cout << "dLdx = " << std::endl;
+            MatView(dLdx, viewer);
+            std::cout << "dLdy = " << std::endl;
+            MatView(dLdy, viewer);
 
             PetscScalar *r_a, *s_a;
             VecGetArray(cubR, &r_a);
@@ -409,6 +447,10 @@ int main(int argc,char **args)
 
             MatAssemblyBegin(W, MAT_FINAL_ASSEMBLY);
             MatAssemblyEnd(W, MAT_FINAL_ASSEMBLY);
+            std::cout << "Ex_el = " << std::endl;
+            MatView(Ex_el, viewer);
+            std::cout << "Ey_el = " << std::endl;
+            MatView(Ey_el, viewer);
 
             Mat Ex_el_L, Ey_el_L, ExT_el_L, EyT_el_L, M1_el_L, NMat_el_L, NDerivMat_el_L, M2_el_L;
             Mat V2DInv = load_InverseVandermondeMatrix(N_Petsc);
@@ -420,6 +462,10 @@ int main(int argc,char **args)
             M2_el_L = VandermondeMultiply(V2DInv, M2_el);
             NMat_el_L = VandermondeMultiply(V2DInv, NMat_el);
             NDerivMat_el_L = VandermondeMultiply(V2DInv, NDerivMat_el);
+            std::cout << "Ex_el_L = " << std::endl;
+            MatView(Ex_el_L, viewer);
+            std::cout << "Ey_el_L = " << std::endl;
+            MatView(Ey_el_L, viewer);
 
             Mat W_L;
             W_L = VandermondeMultiply(V2DInv, W);
@@ -437,13 +483,8 @@ int main(int argc,char **args)
             //MatView(W_L, viewer);
             //std::cout << "V2DInv = " << std::endl;
             //MatView(V2DInv, viewer);
-            Mat V2DInvT;
-            MatTranspose(V2DInv,MAT_INITIAL_MATRIX,&V2DInvT);
-            //std::cout << "V2DInv^T = " << std::endl;
-            //MatView(V2DInvT, viewer);
 
             MatDestroy(&W_L);
-            MatDestroy(&V2DInvT);
 
             Mat invM_el = InverseMassMatrix2D(N_Petsc);
             //std::cout << "invM_el = " << std::endl;
@@ -702,12 +743,46 @@ int main(int argc,char **args)
             std::vector<unsigned int> Node_Numbers_On_Boundary_Left = List_Of_Elements2D[left].get_nodes_on_boundary(Type_Boundary);
             std::vector<unsigned int> Node_Numbers_On_Boundary_Right = List_Of_Elements2D[right].get_nodes_on_boundary(Type_Boundary);
 
-            //std::cout << "Node Number on Boundary of Left Element" << std::endl;
-            //for (auto i = Node_Numbers_On_Boundary_Left.begin(); i < Node_Numbers_On_Boundary_Left.end(); i++)
-            //{
-            //    std::cout << (*i) << " " ;
-            //}
-            //std::cout << std::endl;
+            std::cout << std::endl << "Internal Boundary " << (*f).getID() << " Type = " << Type_Boundary << std::endl;
+            std::cout << "Left: " ;
+            for (auto i = Node_Numbers_On_Boundary_Left.begin(); i < Node_Numbers_On_Boundary_Left.end(); i++)
+            {
+                std::cout << (*i) << " ";
+            }
+            std::cout << "Right: " ;
+            for (auto i = Node_Numbers_On_Boundary_Right.begin(); i < Node_Numbers_On_Boundary_Right.end(); i++)
+            {
+                std::cout << (*i) << " ";
+            }
+            std::cout << std::endl << std::endl;
+            if (Type_Boundary == 3)
+            {
+                std::reverse(Node_Numbers_On_Boundary_Left.begin(),Node_Numbers_On_Boundary_Left.end());
+                //std::reverse(Node_Numbers_On_Boundary_Right.begin(),Node_Numbers_On_Boundary_Right.end());
+            }
+            if (Type_Boundary == 1)
+            {
+                std::reverse(Node_Numbers_On_Boundary_Right.begin(),Node_Numbers_On_Boundary_Right.end());
+            }
+            if (Type_Boundary == 2)
+            {
+                std::reverse(Node_Numbers_On_Boundary_Right.begin(),Node_Numbers_On_Boundary_Right.end());
+                //std::reverse(Node_Numbers_On_Boundary_Left.begin(),Node_Numbers_On_Boundary_Left.end());
+            }
+
+            std::cout << "Internal Boundary " << (*f).getID() << std::endl;
+            std::cout << "Left: " ;
+            for (auto i = Node_Numbers_On_Boundary_Left.begin(); i < Node_Numbers_On_Boundary_Left.end(); i++)
+            {
+                std::cout << (*i) << " ";
+            }
+            std::cout << "Right: " ;
+            for (auto i = Node_Numbers_On_Boundary_Right.begin(); i < Node_Numbers_On_Boundary_Right.end(); i++)
+            {
+                std::cout << (*i) << " ";
+            }
+            std::cout << std::endl;
+
 
             unsigned int Np_left = List_Of_Elements2D[left].get_Number_Of_Nodes(); // Assumes Ordering
             unsigned int Np_right = List_Of_Elements2D[right].get_Number_Of_Nodes(); // Assumes Ordering
@@ -721,7 +796,8 @@ int main(int argc,char **args)
             /// Or use two different gaussian quadratures
             // unsigned int Order_Gaussian_Quadrature_L
             // unsigned int Order_Gaussian_Quadrature_R
-            unsigned int Order_Gaussian_Quadrature = 10;//ceil(std::max(Order_Polynomials_left, Order_Polynomials_right)+3+N_Q);
+            unsigned int Order_Gaussian_Quadrature  = ceil(std::max(2*Order_Polynomials_left, 2*Order_Polynomials_right)+3+N_Q);
+            Order_Gaussian_Quadrature = 2;//std::max((uint)10, Order_Gaussian_Quadrature);
             // Order_Gaussian_Quadrature+1 = Number of Points
             Vec Weights;
             Vec QuadraturePoints;
@@ -761,6 +837,7 @@ int main(int argc,char **args)
             MatSetType(GLL,MATSEQAIJ);
             MatSetSizes(GLL, Np_left, Np_left, PETSC_DECIDE, PETSC_DECIDE);
             MatSeqAIJSetPreallocation(GLL, Order_Polynomials_left+1, NULL);
+            std::cout << "MM 1D = " << std::endl;
             for (unsigned int i = 0; i <= Order_Polynomials_left; i++) // Should be N_Left + 1, etc.
             {
                 for (unsigned int j = 0; j <= Order_Polynomials_left; j++)
@@ -772,22 +849,27 @@ int main(int argc,char **args)
                         double Li = LagrangePolynomial(ri_left, r_a[q], i);
                         double Lj = LagrangePolynomial(ri_left, r_a[q], j);
                         value_e += (1.0-theta)*w_a[q]*Rho0_L[q]*Li*Lj*Jacobian;
-                        MatSetValue(GLL, Node_Numbers_On_Boundary_Left[i], Node_Numbers_On_Boundary_Left[j], value_e, ADD_VALUES);
-                        MatSetValue(Ex,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
-                        MatSetValue(ExT, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
-                        MatSetValue(Ey,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
-                        MatSetValue(EyT, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
 
-                        MatSetValue(E,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
-                        MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
-                        MatSetValue(E,  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
-                        MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
                     }
+                    MatSetValue(GLL, Node_Numbers_On_Boundary_Left[i], Node_Numbers_On_Boundary_Left[j], value_e, ADD_VALUES);
+                    MatSetValue(Ex,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
+                    MatSetValue(ExT, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
+                    MatSetValue(Ey,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
+                    MatSetValue(EyT, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
+
+                    MatSetValue(E,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
+                    MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
+                    MatSetValue(E,  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
+                    MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
+                    std::cout << value_e << " " ;
                 }
+                std::cout << std::endl;
             }
+                std::cout << std::endl;
             MatAssemblyBegin(GLL, MAT_FINAL_ASSEMBLY);
             MatAssemblyEnd(GLL, MAT_FINAL_ASSEMBLY);
-            //MatView(GLL, viewer);
+            std::cout << "GLL = " << std::endl;
+            MatView(GLL, viewer);
             MatDestroy(&GLL);
             // GLR
             Mat GLR;
@@ -806,17 +888,17 @@ int main(int argc,char **args)
                         double Li = LagrangePolynomial(ri_left, r_a[q], i);
                         double Lj = LagrangePolynomial(ri_right, r_a[q], j);
                         value_e += -(1.0-theta)*w_a[q]*Rho0_R[q]*Li*Lj*Jacobian;
-                        MatSetValue(GLR, Node_Numbers_On_Boundary_Left[i], Node_Numbers_On_Boundary_Right[j], value_e, ADD_VALUES);
-                        MatSetValue(Ex,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
-                        MatSetValue(ExT, posR+Node_Numbers_On_Boundary_Right[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
-                        MatSetValue(Ey,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
-                        MatSetValue(EyT, posR+Node_Numbers_On_Boundary_Right[j],  posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
-
-                        MatSetValue(E,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
-                        MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
-                        MatSetValue(E,  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
-                        MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j],  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
                     }
+                    MatSetValue(GLR, Node_Numbers_On_Boundary_Left[i], Node_Numbers_On_Boundary_Right[j], value_e, ADD_VALUES);
+                    MatSetValue(Ex,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
+                    MatSetValue(ExT, posR+Node_Numbers_On_Boundary_Right[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
+                    MatSetValue(Ey,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
+                    MatSetValue(EyT, posR+Node_Numbers_On_Boundary_Right[j],  posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
+
+                    MatSetValue(E,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
+                    MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
+                    MatSetValue(E,  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
+                    MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j],  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
                 }
             }
             MatAssemblyBegin(GLR, MAT_FINAL_ASSEMBLY);
@@ -839,17 +921,17 @@ int main(int argc,char **args)
                         double Li = LagrangePolynomial(ri_right, r_a[q], i);
                         double Lj = LagrangePolynomial(ri_left, r_a[q], j);
                         value_e += theta*w_a[q]*Rho0_L[q]*Li*Lj*Jacobian;
-                        MatSetValue(GRL, Node_Numbers_On_Boundary_Right[i], Node_Numbers_On_Boundary_Left[j], value_e, ADD_VALUES);
-                        MatSetValue(Ex,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
-                        MatSetValue(ExT, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
-                        MatSetValue(Ey,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
-                        MatSetValue(EyT, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
-
-                        MatSetValue(E,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
-                        MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
-                        MatSetValue(E,  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
-                        MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j],  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
                     }
+                    MatSetValue(GRL, Node_Numbers_On_Boundary_Right[i], Node_Numbers_On_Boundary_Left[j], value_e, ADD_VALUES);
+                    MatSetValue(Ex,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
+                    MatSetValue(ExT, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
+                    MatSetValue(Ey,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
+                    MatSetValue(EyT, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
+
+                    MatSetValue(E,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
+                    MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
+                    MatSetValue(E,  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
+                    MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j],  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
                 }
             }
             MatAssemblyBegin(GRL, MAT_FINAL_ASSEMBLY);
@@ -872,17 +954,17 @@ int main(int argc,char **args)
                         double Li = LagrangePolynomial(ri_right, r_a[q], i);
                         double Lj = LagrangePolynomial(ri_right, r_a[q], j);
                         value_e += -theta*w_a[q]*Rho0_R[q]*Li*Lj*Jacobian;
-                        MatSetValue(GRR, Node_Numbers_On_Boundary_Right[i], Node_Numbers_On_Boundary_Right[j], value_e, ADD_VALUES);
-                        MatSetValue(Ex,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
-                        MatSetValue(ExT, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
-                        MatSetValue(Ey,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
-                        MatSetValue(EyT, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
-
-                        MatSetValue(E,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
-                        MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
-                        MatSetValue(E,  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
-                        MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
                     }
+                    MatSetValue(GRR, Node_Numbers_On_Boundary_Right[i], Node_Numbers_On_Boundary_Right[j], value_e, ADD_VALUES);
+                    MatSetValue(Ex,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
+                    MatSetValue(ExT, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
+                    MatSetValue(Ey,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
+                    MatSetValue(EyT, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
+
+                    MatSetValue(E,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
+                    MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
+                    MatSetValue(E,  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
+                    MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
                 }
             }
             MatAssemblyBegin(GRR, MAT_FINAL_ASSEMBLY);
@@ -1006,7 +1088,7 @@ int main(int argc,char **args)
 
 	//MatView(Laplacian, viewer_info);
     */
-    Mat A, B;    // factor 3 = Number of Variables
+    Mat A, B;    // factor 4 = Number of Variables
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 6*Np+1+3*Np*Np,  NULL, &A);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 6*Np+1+3*Np*Np,  NULL, &B);
     std::cout << " Global Matrices Preallocated" << std::endl;
@@ -1332,7 +1414,7 @@ int main(int argc,char **args)
     MatView(B,Bviewer);
     PetscViewerDestroy(&Bviewer);
 */
-    double Enew = calculate_Error2D(Initial_Condition, Sol, 2, DeltaX, DeltaY);
+    double Enew = calculate_Error2D(Initial_Condition, Sol, 2, DeltaX, DeltaY, Np);
     PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error new %1.3e\n",(double)Enew);
 
     /*

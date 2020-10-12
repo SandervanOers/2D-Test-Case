@@ -1446,12 +1446,10 @@ void GradSimplex2D(const Vec &a, const Vec &b, const unsigned int &id, const uns
   VecDuplicate(fa, &dmodedr);
   VecPointwiseMult(dmodedr, dfa, gb);
 
-
   // s-derivative
   // d/ds = ((1+a)/2)/((1-b)/2) d/da + d/db
   VecDuplicate(fa, &dmodeds);
   VecPointwiseMult(dmodeds, dfa, gb);
-
 
   Vec tmp;
   VecDuplicate(a, &tmp);
@@ -1479,7 +1477,7 @@ void GradSimplex2D(const Vec &a, const Vec &b, const unsigned int &id, const uns
     for (unsigned int i = 0; i < size_b; i++)
     {
         dmodedr_a[i] = dmodedr_a[i]*pow(0.5*(1.0-b_a[i]), (id-1.0));
-        dmodeds_a[i] = dmodedr_a[i]*pow(0.5*(1.0-b_a[i]), (id-1.0));
+        dmodeds_a[i] = dmodeds_a[i]*pow(0.5*(1.0-b_a[i]), (id-1.0));
         tmp_a[i] = tmp_a[i] - 0.5*double(id)*gb_a[i]*pow(0.5*(1.0-b_a[i]),id-1.0);
     }
   }
@@ -1498,7 +1496,6 @@ void GradSimplex2D(const Vec &a, const Vec &b, const unsigned int &id, const uns
   // Normalize
   VecScale(dmodedr, pow(2.0, (id+0.5)));
   VecScale(dmodeds, pow(2.0, (id+0.5)));
-
 
   VecDestroy(&fa);
   VecDestroy(&gb);
@@ -1948,6 +1945,7 @@ extern void store_DerivativeLagrangePolynomial_Cubature()
                     sk[0] += 1;
                 }
             }
+
             MatAssemblyBegin(dLdr, MAT_FINAL_ASSEMBLY);
             MatAssemblyEnd(dLdr, MAT_FINAL_ASSEMBLY);
             MatAssemblyBegin(dLds, MAT_FINAL_ASSEMBLY);

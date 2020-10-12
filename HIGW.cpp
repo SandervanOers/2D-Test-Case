@@ -231,7 +231,7 @@ extern double calculate_Error(const Vec &Exact, const Vec &Solution, const unsig
     return error;
 }
 /*--------------------------------------------------------------------------*/
-extern double calculate_Error2D(const Vec &Exact, const Vec &Solution, const unsigned int &Norm_Type, const double &DeltaX, const double &DeltaY)
+extern double calculate_Error2D(const Vec &Exact, const Vec &Solution, const unsigned int &Norm_Type, const double &DeltaX, const double &DeltaY, const unsigned int &Np)
 {
     Vec Difference;
     VecDuplicate(Exact, &Difference);
@@ -253,7 +253,8 @@ extern double calculate_Error2D(const Vec &Exact, const Vec &Solution, const uns
     }
 
     VecDestroy(&Difference);
-    error *= sqrt(DeltaX*DeltaY);
+    error /= sqrt(Np);
+    error *= sqrt(0.5*DeltaX*DeltaY);
     return error;
 
 }

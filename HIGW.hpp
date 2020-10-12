@@ -20,6 +20,6 @@ extern double calculate_Error(const Vec &Exact, const Vec &Solution, const unsig
 /*--------------------------------------------------------------------------*/
 extern double calculate_Hamiltonian2D(const Mat &M1, const Vec &Solution, const std::vector<Elements2D> &List_Of_Elements2D, const unsigned int &N_Nodes);
 /*--------------------------------------------------------------------------*/
-extern double calculate_Error2D(const Vec &Exact, const Vec &Solution, const unsigned int &Norm_Type, const double &DeltaX, const double &DeltaY);
+extern double calculate_Error2D(const Vec &Exact, const Vec &Solution, const unsigned int &Norm_Type, const double &DeltaX, const double &DeltaY, const unsigned int &Np);
 /*--------------------------------------------------------------------------*/
 #endif
