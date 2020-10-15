@@ -1573,8 +1573,8 @@ extern void DMatrices2D(const unsigned int &N, const Vec &R, const Vec &S, const
     MatConvert(Vr, MATSEQDENSE, MAT_INPLACE_MATRIX, &Vr);
     MatConvert(Vs, MATSEQDENSE, MAT_INPLACE_MATRIX, &Vs);
 
-    std::cout << "Vr = " << std::endl;
-    MatView(Vr, PETSC_VIEWER_STDOUT_SELF);
+    //std::cout << "Vr = " << std::endl;
+    //MatView(Vr, PETSC_VIEWER_STDOUT_SELF);
 
     Mat X = Inverse_Matrix(V);
     /*
@@ -1603,15 +1603,15 @@ extern void DMatrices2D(const unsigned int &N, const Vec &R, const Vec &S, const
     MatDestroy(&A);
     MatDestroy(&B);
     */
-    std::cout << "X = " << std::endl;
-    MatView(X, PETSC_VIEWER_STDOUT_SELF);
+    //std::cout << "X = " << std::endl;
+    //MatView(X, PETSC_VIEWER_STDOUT_SELF);
     // X is the inverse
 
     //Dr = Vr *inv(V)
     MatMatMult(Vr, X, MAT_INITIAL_MATRIX, 1, &Dr);
     MatMatMult(Vs, X, MAT_INITIAL_MATRIX, 1, &Ds);
 
-    MatDestroy(&Vr);
+    //MatDestroy(&Vr);
     MatDestroy(&X);
 
     MatDestroy(&Vr);
@@ -2046,5 +2046,95 @@ extern Mat VandermondeMultiply(const Mat &V2DInv, const Mat &Matrix)
     MatMatMult(Intermediate,V2DInv,MAT_INITIAL_MATRIX,1.0, &Return);
     MatDestroy(&Intermediate);
     return Return;
+}
+/*--------------------------------------------------------------------------*/
+void GeometricFactors2D(const Vec &x, const Vec &y, const Mat &Dr, const Mat &Ds, const unsigned int &Np, Vec &rx, Vec &ry, Vec &sx, Vec &sy, double &J)
+{
+    // % function [rx,sx,ry,sy,J] = GeometricFactors2D(x,y,Dr,Ds)
+    // Purpose : Compute the metric elements for the local mappings
+    // of the elements
+
+    Vec xr, xs, yr, ys;
+    VecCreateSeq(PETSC_COMM_SELF,Np, &xr);
+    VecCreateSeq(PETSC_COMM_SELF,Np, &xs);
+    VecCreateSeq(PETSC_COMM_SELF,Np, &yr);
+    VecCreateSeq(PETSC_COMM_SELF,Np, &ys);
+    MatMult(Dr, x, xr);
+    MatMult(Ds, x, xs);
+    MatMult(Dr, y, yr);
+    MatMult(Ds, y, ys);
+
+    Vec Interm, Interm2;
+    VecCreateSeq(PETSC_COMM_SELF,Np, &Interm);
+    VecCreateSeq(PETSC_COMM_SELF,Np, &Interm2);
+    //PetscScalar Interm;
+    //VecDot(xs, yr, &Interm);
+    VecPointwiseMult(Interm, xs, yr);
+    //PetscScalar Interm2;
+    //VecDot(xr, ys, &Interm2);
+    VecPointwiseMult(Interm2, xr, ys);
+
+    //J = -Interm+Interm2;
+    Vec JVec;
+    VecCreateSeq(PETSC_COMM_SELF,Np, &JVec);
+    VecWAXPY(JVec,-1.0, Interm, Interm2);
+
+    std::cout << " J = "  << std::endl;
+    VecView(JVec, PETSC_VIEWER_STDOUT_SELF);
+    //std::cout << " J = " << J << std::endl;
+    std::cout << "xr = " << std::endl;
+    VecView(xr, PETSC_VIEWER_STDOUT_SELF);
+    std::cout << "xs = " << std::endl;
+    VecView(xs, PETSC_VIEWER_STDOUT_SELF);
+    std::cout << "yr = " << std::endl;
+    VecView(yr, PETSC_VIEWER_STDOUT_SELF);
+    std::cout << "ys = " << std::endl;
+    VecView(ys, PETSC_VIEWER_STDOUT_SELF);
+
+    // rx = ys./J; sx =-yr./J; ry =-xs./J; sy = xr./J;
+    VecDuplicate(xr, &rx);
+    VecDuplicate(xr, &ry);
+    VecDuplicate(xr, &sx);
+    VecDuplicate(xr, &sy);
+    //VecCopy(ys, rx);
+    //VecCopy(xs, ry);
+    //VecCopy(yr, sx);
+    //VecCopy(xr, sy);
+    //VecScale(rx, 1.0/J);
+    //VecScale(ry, -1.0/J);
+    //VecScale(sx, -1.0/J);
+    //VecScale(sy, 1.0/J);
+
+    VecPointwiseDivide(rx, ys, JVec);
+    VecPointwiseDivide(ry, xs, JVec);
+    VecScale(ry, -1.0);
+    VecPointwiseDivide(sx, yr, JVec);
+    VecScale(ry, -1.0);
+    VecPointwiseDivide(sy, xr, JVec);
+
+    VecDestroy(&Interm);
+    VecDestroy(&Interm2);
+    VecDestroy(&JVec);
+    VecDestroy(&xr);
+    VecDestroy(&xs);
+    VecDestroy(&yr);
+    VecDestroy(&ys);
+}
+/*--------------------------------------------------------------------------*/
+extern void stdVectorToPetscVec(const std::vector<double> VecIn, Vec &PetscVec)
+{
+    unsigned int Size_Vector = VecIn.size();
+    //std::cout << "Vec Size = " << Size_Vector << std::endl;
+    double x_arr[Size_Vector];
+    std::copy(VecIn.begin(), VecIn.end(), x_arr);
+    Vec xx;
+    VecCreateSeqWithArray(PETSC_COMM_SELF, Size_Vector, Size_Vector, x_arr, &xx);
+    //std::cout << "xx = " << std::endl;
+    VecView(xx, PETSC_VIEWER_STDOUT_SELF);
+
+    VecDuplicate(xx, &PetscVec);
+    VecCopy(xx, PetscVec);
+
+    VecDestroy(&xx);
 }
 /*--------------------------------------------------------------------------*/

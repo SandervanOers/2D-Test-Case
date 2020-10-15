@@ -106,4 +106,8 @@ extern Mat load_DerivativeLagrangePolynomial_Cubature(const unsigned int &Order_
 /*--------------------------------------------------------------------------*/
 extern Mat VandermondeMultiply(const Mat &V2DInv, const Mat &Matrix);
 /*--------------------------------------------------------------------------*/
+void GeometricFactors2D(const Vec &x, const Vec &y, const Mat &Dr, const Mat &Ds, const unsigned int &Np, Vec &rx, Vec &ry, Vec &sx, Vec &sy, double &J);
+/*--------------------------------------------------------------------------*/
+extern void stdVectorToPetscVec(const std::vector<double> VecIn, Vec &PetscVec);
+/*--------------------------------------------------------------------------*/
 #endif

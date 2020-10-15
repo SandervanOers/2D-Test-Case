@@ -150,7 +150,7 @@ int main(int argc,char **args)
         std::cout << std::endl;
     }
     */
-
+/*
     {
         // Compute the nodes for a equilateral element
         Vec X, Y;
@@ -166,18 +166,140 @@ int main(int argc,char **args)
         std::cout << "V2Ds = " << std::endl;
         MatView(V2Ds, viewer);
 
+        Mat V2D;
+        V2D = Vandermonde2D(N_Petsc, R, S);
+        std::cout << "V2D = " << std::endl;
+        MatView(V2D, viewer);
+        Mat Dr, Ds;
+        DMatrices2D(N_Petsc, R, S, V2D, Dr, Ds);
+        std::cout << "Dr = " << std::endl;
+        MatView(Dr, viewer);
+        std::cout << "Ds = " << std::endl;
+        MatView(Ds, viewer);
+
+        unsigned int Order_Gaussian_Quadrature = 10;
+        // Get Quadrature Rules Reference Triangle
+        Vec cubR, cubS, cubW;
+        unsigned int Ncub;
+        Cubature2D(Order_Gaussian_Quadrature, cubR, cubS, cubW, Ncub);
+        Mat cubDr, cubDs;
+        DMatrices2D(N_Petsc, cubR, cubS, V2D, cubDr, cubDs);
+
+        std::cout << "cubDr = " << std::endl;
+        MatView(cubDr, viewer);
+        std::cout << "cubDs = " << std::endl;
+        MatView(cubDs, viewer);
+
+        Mat cV = InterpMatrix2D(N_Petsc, cubR, cubS);
+        Mat cVT ;
+        MatTranspose(cV, MAT_INITIAL_MATRIX, &cVT);
+
+        std::cout << "cV = " << std::endl;
+        MatView(cV,  viewer);
+        unsigned int Np = (N_Petsc+1)*(N_Petsc+2)/2;
+
+        // build mass matrix
+        //cMM = cV’*diag(cJ.*cW)*cV; cinfo(c).MM = cMM;
+        // build physical derivative matrices
+        //cinfo(c).Dx = cMM\(cV’*diag(cW.*cJ)*(diag(crx)*cDr+diag(csx)*cDs));
+        //cinfo(c).Dy = cMM\(cV’*diag(cW.*cJ)*(diag(cry)*cDr+diag(csy)*cDs));
+
+            Mat W;
+
+            Mat D;
+            MatCreate(PETSC_COMM_WORLD,&D);
+            MatSetType(D,MATSEQAIJ);
+            MatSetSizes(D, Ncub, Ncub, PETSC_DECIDE, PETSC_DECIDE);
+            MatSeqAIJSetPreallocation(D, 1, NULL);
+            std::cout << "cubW = " << std::endl;
+            VecView(cubW, viewer);
+
+            MatDiagonalSet(D, cubW, INSERT_VALUES);
+            std::cout << "D = " << std::endl;
+            MatView(D, viewer);
+
+            Mat Intermediate;
+            MatMatMult(cVT, D, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Intermediate);
+            MatMatMult(Intermediate, cV, MAT_INITIAL_MATRIX, PETSC_DEFAULT,  &W);
+
+            std::cout << "W = " << std::endl;
+            MatView(W, viewer);
+
+
+
+        MatDestroy(&cubDr);
+        MatDestroy(&cubDs);
+        VecDestroy(&cubR);
+        VecDestroy(&cubS);
+        VecDestroy(&cubW);
         MatDestroy(&V2Dr);
         MatDestroy(&V2Ds);
+        MatDestroy(&V2D);
+        MatDestroy(&Dr);
+        MatDestroy(&Ds);
         VecDestroy(&X);
         VecDestroy(&Y);
         VecDestroy(&R);
         VecDestroy(&S);
     }
-
+*/
     /*--------------------------------------------------------------------------*/
     /* Initial Condition / Exact Solution                                       */
     /*--------------------------------------------------------------------------*/
+    /*
+    std::cout << "Start Elemental Calculations " << std::endl;
+    for (auto e = List_Of_Elements2D.begin(); e < List_Of_Elements2D.end(); e++)
+    {
+        //unsigned int ID = (*e).getID()-1;
+        unsigned int Np = (*e).get_Number_Of_Nodes();
+        double J = (*e).getJacobian();
+        double drdx = (*e).get_rx();
+        double drdy = (*e).get_ry();
+        double dsdx = (*e).get_sx();
+        double dsdy = (*e).get_sy();
+        //std::cout << "Np = " << Np << std::endl;
+        unsigned int pos = (*e).getPosition();
 
+        unsigned int Order_Polynomials = (*e).get_Order_Of_Polynomials();
+
+        Vec X, Y;
+        Nodes2D(Order_Polynomials, X, Y);
+        // Convert nodes to a reference element
+        Vec R, S;
+        XYtoRS(X, Y, R, S);
+
+        Mat V2D;
+        V2D = Vandermonde2D(N_Petsc, R, S);
+        std::cout << "V2D = " << std::endl;
+        MatView(V2D, viewer);
+        Mat Dr, Ds;
+        DMatrices2D(N_Petsc, R, S, V2D, Dr, Ds);
+
+        std::vector<double> x = (*e).get_node_coordinates_x();
+        std::vector<double> y = (*e).get_node_coordinates_y();
+        double x_arr[Np];
+        std::copy(x.begin(), x.end(), x_arr);
+        double y_arr[Np];
+        std::copy(y.begin(), y.end(), y_arr);
+        Vec xx, yy;
+        VecCreateSeqWithArray(PETSC_COMM_SELF, Np, Np, x_arr, &xx);
+        VecCreateSeqWithArray(PETSC_COMM_SELF, Np, Np, y_arr, &yy);
+
+        Vec rx, ry, sx, sy;
+        double JJ;
+        GeometricFactors2D(xx, yy, Dr, Ds, Np, rx, ry, sx, sy, JJ);
+
+        std::cout << "rx = " << std::endl;
+        VecView(rx, viewer);
+        std::cout << "ry = " << std::endl;
+        VecView(ry, viewer);
+        std::cout << "sx = " << std::endl;
+        VecView(sx, viewer);
+        std::cout << "sy = " << std::endl;
+        VecView(sy, viewer);
+        std::cout << " old: " << std::endl;
+        std::cout << J << " " << drdx <<  " " << drdy << " " << dsdx << " " << dsdy << std::endl;
+    }*/
 
     PetscInt kxmode, kzmode;
     kxmode = 1;
@@ -238,8 +360,10 @@ int main(int argc,char **args)
         unsigned int pos = (*e).getPosition();
 
         unsigned int Order_Polynomials = (*e).get_Order_Of_Polynomials();
+
         unsigned int Order_Gaussian_Quadrature = 2*Order_Polynomials+3+N_Q;//ceil(Order_Polynomials+3+N_Q); // + higher order for rho_0 term
-        Order_Gaussian_Quadrature = 4;//std::max((uint)10, Order_Gaussian_Quadrature);
+        Order_Gaussian_Quadrature = 28;//10  ;//std::max((uint)10, Order_Gaussian_Quadrature);
+
 
         // Elemental Matrices
         Mat Ex_el, ExT_el, Ey_el, EyT_el,  M1_el, NMat_el, M2_el, NDerivMat_el; //invM_el,
@@ -274,6 +398,80 @@ int main(int argc,char **args)
             unsigned int Ncub;
             Cubature2D(Order_Gaussian_Quadrature, cubR, cubS, cubW, Ncub);
 
+
+        {
+        Mat V2D;
+        V2D = Vandermonde2D(N_Petsc, R, S);
+        Mat cubDr, cubDs;
+        DMatrices2D(N_Petsc, cubR, cubS, V2D, cubDr, cubDs);
+
+        std::cout << "cubDr = " << std::endl;
+        MatView(cubDr, viewer);
+        std::cout << "cubDs = " << std::endl;
+        MatView(cubDs, viewer);
+
+        Mat cV = InterpMatrix2D(N_Petsc, cubR, cubS);
+        Mat cVT ;
+        MatTranspose(cV, MAT_INITIAL_MATRIX, &cVT);
+
+        std::cout << "cV = " << std::endl;
+        MatView(cV,  viewer);
+        unsigned int Np = (N_Petsc+1)*(N_Petsc+2)/2;
+
+            Mat W;
+
+            Mat D;
+            MatCreate(PETSC_COMM_WORLD,&D);
+            MatSetType(D,MATSEQAIJ);
+            MatSetSizes(D, Ncub, Ncub, PETSC_DECIDE, PETSC_DECIDE);
+            MatSeqAIJSetPreallocation(D, 1, NULL);
+            std::cout << "cubW = " << std::endl;
+            VecView(cubW, viewer);
+
+            MatDiagonalSet(D, cubW, INSERT_VALUES);
+            //std::cout << "D = " << std::endl;
+            //MatView(D, viewer);
+
+            Mat Intermediate;
+            MatMatMult(cVT, D, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Intermediate);
+            MatMatMult(Intermediate, cV, MAT_INITIAL_MATRIX, PETSC_DEFAULT,  &W);
+
+            std::cout << "W = " << std::endl;
+            MatView(W, viewer);
+
+            Mat W1, W2;
+            Mat Dx, Dy;
+            MatDuplicate(cubDr, MAT_COPY_VALUES, &Dx);
+            MatScale(Dx, drdx);
+            MatAXPY(Dx,dsdx,cubDs,SAME_NONZERO_PATTERN);
+            MatMatMult(Intermediate, Dx, MAT_INITIAL_MATRIX, PETSC_DEFAULT,  &W1);
+            MatDuplicate(cubDr, MAT_COPY_VALUES, &Dy);
+            MatScale(Dy, drdy);
+            MatAXPY(Dy,dsdy,cubDs,SAME_NONZERO_PATTERN);
+            MatMatMult(Intermediate, Dy, MAT_INITIAL_MATRIX, PETSC_DEFAULT,  &W2);
+            std::cout << "W1 = " << std::endl;
+            MatView(W1, viewer);
+            std::cout << "W2 = " << std::endl;
+            MatView(W2, viewer);
+
+
+            Mat invMM = InverseMassMatrix2D(N_Petsc);
+            Mat Dx1, Dy1;
+            MatMatMult(invMM, W1, MAT_INITIAL_MATRIX, PETSC_DEFAULT,  &Dx1);
+            MatMatMult(invMM, W2, MAT_INITIAL_MATRIX, PETSC_DEFAULT,  &Dy1);
+
+            std::cout << "Dx = " << std::endl;
+            MatView(Dx1, viewer);
+            std::cout << "Dy = " << std::endl;
+            MatView(Dy1, viewer);
+
+
+
+        MatDestroy(&cubDr);
+        MatDestroy(&cubDs);
+        }
+
+
             Mat L = load_LagrangePolynomial_Cubature(Order_Polynomials, Order_Gaussian_Quadrature); // Watch Transpose // GetRow faster than GetColumn in Petsc
             Mat dLdr = load_DerivativeLagrangePolynomial_Cubature(Order_Polynomials, Order_Gaussian_Quadrature, 1);
             Mat dLds = load_DerivativeLagrangePolynomial_Cubature(Order_Polynomials, Order_Gaussian_Quadrature, 0);
@@ -283,6 +481,9 @@ int main(int argc,char **args)
             std::cout << "dsdx = " << dsdx << std::endl;
             std::cout << "dsdy = " << dsdy << std::endl;
 
+            std::cout << "J = " <<  J << std::endl;
+            std::cout << "L = " <<   std::endl;
+            MatView(L, viewer);
             std::cout << "dLdr = " << std::endl;
             MatView(dLdr, viewer);
             std::cout << "dLds = " << std::endl;
@@ -298,6 +499,7 @@ int main(int argc,char **args)
             MatScale(dLdx, drdx);
             MatAXPY(dLdx,dsdx,dLds,SAME_NONZERO_PATTERN);
             MatDuplicate(dLdr, MAT_COPY_VALUES, &dLdy);
+            ///MatDuplicate(dLds, MAT_COPY_VALUES, &dLdy);
             MatScale(dLdy, drdy);
             MatAXPY(dLdy,dsdy,dLds,SAME_NONZERO_PATTERN);
 
@@ -331,6 +533,8 @@ int main(int argc,char **args)
             std::vector<double> Rho0 = rho_0_2D_system1(Y, rho_0_Deriv);
             std::vector<double> Rho0Deriv = rho_0_deriv_2D_system1(Y, rho_0_Deriv);
             std::vector<double> N2Val = N_2_2D_system1(Y, rho_0_Deriv);
+
+
 
             //std::cout << "Y El = ";
             //for (const double& i : Y)
@@ -383,6 +587,7 @@ int main(int argc,char **args)
 
                     for (unsigned int i = 0; i < nck; i++)
                     {
+                        J = 1;
                         value += cubW_a[i]*Lk[i]*Ll[i];
                         value_m += cubW_a[i]*Lk[i]*Ll[i]/Rho0[i]*J;
                         value_n += cubW_a[i]*Lk[i]*Ll[i]*Rho0[i]*J;
@@ -447,6 +652,8 @@ int main(int argc,char **args)
 
             MatAssemblyBegin(W, MAT_FINAL_ASSEMBLY);
             MatAssemblyEnd(W, MAT_FINAL_ASSEMBLY);
+            std::cout << "W = " << std::endl;
+            MatView(W, viewer);
             std::cout << "Ex_el = " << std::endl;
             MatView(Ex_el, viewer);
             std::cout << "Ey_el = " << std::endl;
@@ -469,7 +676,31 @@ int main(int argc,char **args)
 
             Mat W_L;
             W_L = VandermondeMultiply(V2DInv, W);
+            std::cout << "W_L = " << std::endl;
+            MatView(W_L, viewer);
 
+            Mat Test;
+            Mat Vinv;
+            Vinv = load_InverseVandermondeMatrix(N_Petsc);
+            MatMatMult(Ex_el, Vinv, MAT_INITIAL_MATRIX, 1, &Test);
+            std::cout << "Test = " << std::endl;
+            MatView(Test, viewer);
+            MatDestroy(&Test);
+
+            Mat Test2;
+            //Mat Vinv;
+            //Vinv = load_InverseVandermondeMatrix(N_Petsc);
+            MatMatMult(Ex_el_L, Vinv, MAT_INITIAL_MATRIX, 1, &Test2);
+            std::cout << "Test = " << std::endl;
+            MatView(Test2, viewer);
+            MatDestroy(&Test2);
+
+
+
+
+
+
+            MatDestroy(&Vinv);
             //std::cout << "Ex_el = " << std::endl;
             //MatView(Ex_el, viewer);
             //std::cout << "Ex_el_L = " << std::endl;
@@ -487,6 +718,67 @@ int main(int argc,char **args)
             MatDestroy(&W_L);
 
             Mat invM_el = InverseMassMatrix2D(N_Petsc);
+
+
+
+            Mat Dx1, Dy1;
+            MatMatMult(invM_el, Ex_el_L, MAT_INITIAL_MATRIX, PETSC_DEFAULT,  &Dx1);
+            MatMatMult(invM_el, Ey_el_L, MAT_INITIAL_MATRIX, PETSC_DEFAULT,  &Dy1);
+
+            std::cout << "Dx = " << std::endl;
+            MatView(Dx1, viewer);
+            std::cout << "Dy = " << std::endl;
+            MatView(Dy1, viewer);
+
+
+
+            std::vector<double> x = (*e).get_node_coordinates_x();
+            std::vector<double> y = (*e).get_node_coordinates_y();
+
+            std::vector<double> FunctionVal = rho_0_2D_system1(y, 1.0);
+            std::vector<double> FunctionValDeriv = rho_0_deriv_2D_system1(y, 1.0);
+            //for (auto i = FunctionVal.begin(); i < FunctionVal.end(); i++)
+            //    std::cout << (*i) << " " ;
+            //std::cout << std::endl;
+            Vec FunctionValVec;
+            Vec FunctionValVecDeriv;
+            stdVectorToPetscVec(FunctionVal,FunctionValVec);
+            stdVectorToPetscVec(FunctionValDeriv,FunctionValVecDeriv);
+            std::cout << "Function Val = " << std::endl;
+            VecView(FunctionValVec, viewer);
+            std::cout << "FunctionDeriv Val = " << std::endl;
+            VecView(FunctionValVecDeriv, viewer);
+            std::cout << "x derivative of function = " << std::endl;
+            Vec Result;
+            VecDuplicate(FunctionValVec , &Result);
+            MatMult(Dx1, FunctionValVec , Result);
+            VecView(Result, viewer);
+
+            std::cout << "y derivative of function = " << std::endl;
+            Vec Result2;
+            VecDuplicate(FunctionValVec , &Result2);
+            MatMult(Dy1, FunctionValVec , Result2);
+            VecView(Result2, viewer);
+
+
+            Vec Difference;
+            VecDuplicate(Result2, &Difference);
+
+            VecWAXPY(Difference, 1.0, FunctionValVecDeriv, Result2);
+            //VecWAXPY(Difference, -1.0, FunctionValVecDeriv, Result2);
+            std::cout << "Difference = " << std::endl;
+            VecView(Difference, viewer);
+        PetscReal error;
+        VecNorm(Difference, NORM_2, &error);
+
+        std::cout << "L2 Error = " << error << std::endl;
+        std::cout << "L2 Error / sqrt(Np)= " << error/sqrt(Np) << std::endl;
+
+
+
+
+
+
             //std::cout << "invM_el = " << std::endl;
             //MatView(invM_el, viewer);
 
@@ -550,6 +842,7 @@ int main(int argc,char **args)
                 MatRestoreRow(ExT_el_L, i, &ncols, &cols, &vals_ExT);
                 MatRestoreRow(EyT_el_L, i, &ncols, &cols, &vals_EyT);
             }
+
             //std::cout << "Np = " << Np << std::endl;
             //std::cout << "pos = " << pos << std::endl;
             //std::cout << "N_Nodes = " << N_Nodes << std::endl;
