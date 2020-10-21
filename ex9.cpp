@@ -317,7 +317,7 @@ int main(int argc,char **args)
     Number_Of_TimeSteps_In_One_Period = 10.0 * pow(std::ceil(sqrt(sqrt(N_Elements))), N_Petsc+1.0);
     std::cout << "Number_Of_TimeSteps_In_One_Period = " <<  Number_Of_TimeSteps_In_One_Period << std::endl;
 
-    PetscScalar DeltaT=1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
+    PetscScalar DeltaT= 0.05;//1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
 
     std::cout << "DeltaX = " << DeltaX << std::endl;
     std::cout << "DeltaY = " << DeltaY << std::endl;
@@ -398,7 +398,7 @@ int main(int argc,char **args)
             unsigned int Ncub;
             Cubature2D(Order_Gaussian_Quadrature, cubR, cubS, cubW, Ncub);
 
-
+/*
         {
         Mat V2D;
         V2D = Vandermonde2D(N_Petsc, R, S);
@@ -465,17 +465,29 @@ int main(int argc,char **args)
             std::cout << "Dy = " << std::endl;
             MatView(Dy1, viewer);
 
-
+            MatDestroy(&cV);
+            MatDestroy(&W);
+            MatDestroy(&cVT);
+            MatDestroy(&D);
+            MatDestroy(&Dx);
+            MatDestroy(&Dy);
+            MatDestroy(&Dx1);
+            MatDestroy(&Dy1);
+            MatDestroy(&W1);
+            MatDestroy(&W2);
+            MatDestroy(&Intermediate);
+            MatDestroy(&invMM);
+            MatDestroy(&V2D);
 
         MatDestroy(&cubDr);
         MatDestroy(&cubDs);
         }
-
+*/
 
             Mat L = load_LagrangePolynomial_Cubature(Order_Polynomials, Order_Gaussian_Quadrature); // Watch Transpose // GetRow faster than GetColumn in Petsc
             Mat dLdr = load_DerivativeLagrangePolynomial_Cubature(Order_Polynomials, Order_Gaussian_Quadrature, 1);
             Mat dLds = load_DerivativeLagrangePolynomial_Cubature(Order_Polynomials, Order_Gaussian_Quadrature, 0);
-
+/*
             std::cout << "drdx = " << drdx << std::endl;
             std::cout << "drdy = " << drdy << std::endl;
             std::cout << "dsdx = " << dsdx << std::endl;
@@ -488,7 +500,7 @@ int main(int argc,char **args)
             MatView(dLdr, viewer);
             std::cout << "dLds = " << std::endl;
             MatView(dLds, viewer);
-
+*/
 
             /// Not Lagrange Polynomials, but Legendre Polynomials
 
@@ -505,10 +517,11 @@ int main(int argc,char **args)
 
             MatDestroy(&dLdr);
             MatDestroy(&dLds);
-            std::cout << "dLdx = " << std::endl;
-            MatView(dLdx, viewer);
-            std::cout << "dLdy = " << std::endl;
-            MatView(dLdy, viewer);
+
+            //std::cout << "dLdx = " << std::endl;
+            //MatView(dLdx, viewer);
+            //std::cout << "dLdy = " << std::endl;
+            //MatView(dLdy, viewer);
 
             PetscScalar *r_a, *s_a;
             VecGetArray(cubR, &r_a);
@@ -535,7 +548,7 @@ int main(int argc,char **args)
             std::vector<double> N2Val = N_2_2D_system1(Y, rho_0_Deriv);
 
 
-
+            std::cout << "Jacobian = " << J << std::endl;
             //std::cout << "Y El = ";
             //for (const double& i : Y)
             //{
@@ -587,7 +600,7 @@ int main(int argc,char **args)
 
                     for (unsigned int i = 0; i < nck; i++)
                     {
-                        J = 1;
+                        //J = 1;
                         value += cubW_a[i]*Lk[i]*Ll[i];
                         value_m += cubW_a[i]*Lk[i]*Ll[i]/Rho0[i]*J;
                         value_n += cubW_a[i]*Lk[i]*Ll[i]*Rho0[i]*J;
@@ -650,14 +663,15 @@ int main(int argc,char **args)
             MatAssemblyBegin(M2_el, MAT_FINAL_ASSEMBLY);
             MatAssemblyEnd(M2_el, MAT_FINAL_ASSEMBLY);
 
+
             MatAssemblyBegin(W, MAT_FINAL_ASSEMBLY);
             MatAssemblyEnd(W, MAT_FINAL_ASSEMBLY);
-            std::cout << "W = " << std::endl;
-            MatView(W, viewer);
-            std::cout << "Ex_el = " << std::endl;
-            MatView(Ex_el, viewer);
-            std::cout << "Ey_el = " << std::endl;
-            MatView(Ey_el, viewer);
+            //std::cout << "W = " << std::endl;
+            //MatView(W, viewer);
+            //std::cout << "Ex_el = " << std::endl;
+            //MatView(Ex_el, viewer);
+            //std::cout << "Ey_el = " << std::endl;
+           // MatView(Ey_el, viewer);
 
             Mat Ex_el_L, Ey_el_L, ExT_el_L, EyT_el_L, M1_el_L, NMat_el_L, NDerivMat_el_L, M2_el_L;
             Mat V2DInv = load_InverseVandermondeMatrix(N_Petsc);
@@ -669,38 +683,38 @@ int main(int argc,char **args)
             M2_el_L = VandermondeMultiply(V2DInv, M2_el);
             NMat_el_L = VandermondeMultiply(V2DInv, NMat_el);
             NDerivMat_el_L = VandermondeMultiply(V2DInv, NDerivMat_el);
-            std::cout << "Ex_el_L = " << std::endl;
-            MatView(Ex_el_L, viewer);
-            std::cout << "Ey_el_L = " << std::endl;
-            MatView(Ey_el_L, viewer);
+            //std::cout << "Ex_el_L = " << std::endl;
+            //MatView(Ex_el_L, viewer);
+            //std::cout << "Ey_el_L = " << std::endl;
+            //MatView(Ey_el_L, viewer);
 
             Mat W_L;
             W_L = VandermondeMultiply(V2DInv, W);
-            std::cout << "W_L = " << std::endl;
-            MatView(W_L, viewer);
+            //std::cout << "W_L = " << std::endl;
+            //MatView(W_L, viewer);
 
-            Mat Test;
-            Mat Vinv;
-            Vinv = load_InverseVandermondeMatrix(N_Petsc);
-            MatMatMult(Ex_el, Vinv, MAT_INITIAL_MATRIX, 1, &Test);
-            std::cout << "Test = " << std::endl;
-            MatView(Test, viewer);
-            MatDestroy(&Test);
-
-            Mat Test2;
+            //Mat Test;
             //Mat Vinv;
             //Vinv = load_InverseVandermondeMatrix(N_Petsc);
-            MatMatMult(Ex_el_L, Vinv, MAT_INITIAL_MATRIX, 1, &Test2);
-            std::cout << "Test = " << std::endl;
-            MatView(Test2, viewer);
-            MatDestroy(&Test2);
+            //MatMatMult(Ex_el, Vinv, MAT_INITIAL_MATRIX, 1, &Test);
+            //std::cout << "Test = " << std::endl;
+            //MatView(Test, viewer);
+            //MatDestroy(&Test);
+
+            //Mat Test2;
+            //Mat Vinv;
+            //Vinv = load_InverseVandermondeMatrix(N_Petsc);
+            //MatMatMult(Ex_el_L, Vinv, MAT_INITIAL_MATRIX, 1, &Test2);
+            //std::cout << "Test = " << std::endl;
+            //MatView(Test2, viewer);
+            //MatDestroy(&Test2);
 
 
 
 
 
 
-            MatDestroy(&Vinv);
+            //MatDestroy(&Vinv);
             //std::cout << "Ex_el = " << std::endl;
             //MatView(Ex_el, viewer);
             //std::cout << "Ex_el_L = " << std::endl;
@@ -720,7 +734,7 @@ int main(int argc,char **args)
             Mat invM_el = InverseMassMatrix2D(N_Petsc);
 
 
-
+/*
             Mat Dx1, Dy1;
             MatMatMult(invM_el, Ex_el_L, MAT_INITIAL_MATRIX, PETSC_DEFAULT,  &Dx1);
             MatMatMult(invM_el, Ey_el_L, MAT_INITIAL_MATRIX, PETSC_DEFAULT,  &Dy1);
@@ -775,9 +789,15 @@ int main(int argc,char **args)
         std::cout << "L2 Error / sqrt(Np)= " << error/sqrt(Np) << std::endl;
 
 
+            MatDestroy(&Dx1);
+            MatDestroy(&Dy1);
+            VecDestroy(&FunctionValVec);
+            VecDestroy(&FunctionValVecDeriv);
+            VecDestroy(&Result);
+            VecDestroy(&Result2);
+            VecDestroy(&Difference);
 
-
-
+*/
 
             //std::cout << "invM_el = " << std::endl;
             //MatView(invM_el, viewer);
@@ -1036,6 +1056,7 @@ int main(int argc,char **args)
             std::vector<unsigned int> Node_Numbers_On_Boundary_Left = List_Of_Elements2D[left].get_nodes_on_boundary(Type_Boundary);
             std::vector<unsigned int> Node_Numbers_On_Boundary_Right = List_Of_Elements2D[right].get_nodes_on_boundary(Type_Boundary);
 
+            /*
             std::cout << std::endl << "Internal Boundary " << (*f).getID() << " Type = " << Type_Boundary << std::endl;
             std::cout << "Left: " ;
             for (auto i = Node_Numbers_On_Boundary_Left.begin(); i < Node_Numbers_On_Boundary_Left.end(); i++)
@@ -1075,7 +1096,7 @@ int main(int argc,char **args)
                 std::cout << (*i) << " ";
             }
             std::cout << std::endl;
-
+*/
 
             unsigned int Np_left = List_Of_Elements2D[left].get_Number_Of_Nodes(); // Assumes Ordering
             unsigned int Np_right = List_Of_Elements2D[right].get_Number_Of_Nodes(); // Assumes Ordering
@@ -1130,7 +1151,7 @@ int main(int argc,char **args)
             MatSetType(GLL,MATSEQAIJ);
             MatSetSizes(GLL, Np_left, Np_left, PETSC_DECIDE, PETSC_DECIDE);
             MatSeqAIJSetPreallocation(GLL, Order_Polynomials_left+1, NULL);
-            std::cout << "MM 1D = " << std::endl;
+            //std::cout << "MM 1D = " << std::endl;
             for (unsigned int i = 0; i <= Order_Polynomials_left; i++) // Should be N_Left + 1, etc.
             {
                 for (unsigned int j = 0; j <= Order_Polynomials_left; j++)
@@ -1154,15 +1175,15 @@ int main(int argc,char **args)
                     MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
                     MatSetValue(E,  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
                     MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
-                    std::cout << value_e << " " ;
+                    //std::cout << value_e << " " ;
                 }
-                std::cout << std::endl;
+                //std::cout << std::endl;
             }
-                std::cout << std::endl;
+                //std::cout << std::endl;
             MatAssemblyBegin(GLL, MAT_FINAL_ASSEMBLY);
             MatAssemblyEnd(GLL, MAT_FINAL_ASSEMBLY);
-            std::cout << "GLL = " << std::endl;
-            MatView(GLL, viewer);
+            //std::cout << "GLL = " << std::endl;
+            //MatView(GLL, viewer);
             MatDestroy(&GLL);
             // GLR
             Mat GLR;
@@ -1385,7 +1406,25 @@ int main(int argc,char **args)
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 6*Np+1+3*Np*Np,  NULL, &A);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 6*Np+1+3*Np*Np,  NULL, &B);
     std::cout << " Global Matrices Preallocated" << std::endl;
-
+    for (unsigned int i = 0; i < 2*N_Nodes; i++)
+    {
+        double dummy=0;
+        const PetscInt* cols;
+        const PetscScalar* values;
+        PetscInt 	numberOfNonZeros;
+        MatGetRow(BF1, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            //if (dummy!=0.0)
+            if (abs(dummy)>1e-12)
+            {
+                MatSetValue(A, 	i,     3*N_Nodes+cols[j],    -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     3*N_Nodes+cols[j],    0.5*DeltaT*dummy, 	    ADD_VALUES);
+            }
+        }
+        MatRestoreRow(BF1, i, &numberOfNonZeros, &cols, &values);
+    }
     for (unsigned int i = 0; i < N_Nodes; i++)
     {
         double dummy=0;
@@ -1417,17 +1456,7 @@ int main(int argc,char **args)
         }
         MatRestoreRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
         */
-        MatGetRow(BF1, i, &numberOfNonZeros, &cols, &values);
-        for (int j=0;j<numberOfNonZeros;++j)
-        {
-            dummy = (values[j]);
-            if (dummy!=0.0)
-            {
-                MatSetValue(A, 	i,     3*N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     3*N_Nodes+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
-            }
-        }
-        MatRestoreRow(BF1, i, &numberOfNonZeros, &cols, &values);
+
         /*
         MatGetRow(BF2, i, &numberOfNonZeros, &cols, &values);
         for (int j=0;j<numberOfNonZeros;++j)
@@ -1503,7 +1532,8 @@ int main(int argc,char **args)
         for (int j=0;j<numberOfNonZeros;++j)
         {
             dummy = (values[j]);
-            if (dummy!=0.0)
+            //if (dummy!=0.0)
+            if (abs(dummy)>1e-12)
             {
                 MatSetValue(A, 	3*N_Nodes+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
                 MatSetValue(B, 	3*N_Nodes+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
@@ -1656,6 +1686,16 @@ int main(int argc,char **args)
     std::cout << "Start Time Stepping" << std::endl;
     double time = 0.0;
 
+
+    //std::cout << "Initial Condition = " << std::endl;
+    //VecView(Initial_Condition, viewer);
+
+    std::cout << "P = " << std::endl;
+    //MatView(A, viewer);
+    MatView(A, viewer_dense);
+    //std::cout << "Q = " << std::endl;
+    //MatView(B, viewer);
+
     double Hold = H0;
     for (unsigned int t = 0; t < Number_Of_Periods*Number_Of_TimeSteps_In_One_Period; t++) //
     {
@@ -1669,6 +1709,9 @@ int main(int argc,char **args)
 
             //std::cout << "Energy Diff= " << std::setprecision(16) << H1-Hold <<std::endl;
             Hold = H1;
+
+            //std::cout << "Solution = " << std::endl;
+            //VecView(Sol, viewer);
         /*
         PetscViewer viewer2;
         sprintf(szFileName, "solution%d.txt", t);

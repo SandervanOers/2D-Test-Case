@@ -71,7 +71,7 @@ ex7: ${OBJS7} chkopts
 	${RM} ${OBJS7}
 
 ex8.o: ex8.cpp
-OBJS8 = ex8.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o
+OBJS8 = ex8.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o Cubature2D.o CubatureData2D.o
 
 ex8: ${OBJS8} chkopts
 	-${CLINKER} -o ex8 ${OBJS8} ${PETSC_KSP_LIB} ${SLEPC_LIB}
