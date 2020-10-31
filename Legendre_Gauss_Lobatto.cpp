@@ -50,11 +50,14 @@ extern Vec JacobiGL_withWeights(const double &alpha, const double &beta, const u
     if (N==0)
     {
         VecSetValue(x, 0, 0.0, INSERT_VALUES);
+        VecSetValue(Weights, 0, 2.0, INSERT_VALUES);
     }
     else if (N==1)
     {
         VecSetValue(x, 0, -1.0, INSERT_VALUES);
         VecSetValue(x, 1, 1.0, INSERT_VALUES);
+        VecSetValue(Weights, 0, 1.0, INSERT_VALUES);
+        VecSetValue(Weights, 1, 1.0, INSERT_VALUES);
     }
     else
     {
@@ -501,6 +504,27 @@ Vec GradJacobiP(const Vec &r, const double &alpha, const double &beta, const uns
     return dP;
 }
 /*--------------------------------------------------------------------------*/
+Vec SecondDerivJacobiP(const Vec &r, const double &alpha, const double &beta, const unsigned int &N)
+{
+    PetscInt size_r;
+    VecGetSize(r, &size_r);
+    Vec d2P;
+    if (N==0 || N == 1)
+    {
+        VecCreateSeq(PETSC_COMM_WORLD, size_r, &d2P);
+        VecSet(d2P, 0.0);
+    }
+    else if (N>0)
+    {
+        d2P = JacobiP(r,alpha+2.0,beta+2.0, N-2);
+        VecScale(d2P, sqrt(N*(N+alpha+beta+1.0)*(N-1)*(N+alpha+beta+2.0)));
+    }
+    VecAssemblyBegin(d2P);
+    VecAssemblyEnd(d2P);
+    //VecView(d2P, PETSC_VIEWER_STDOUT_SELF);
+    return d2P;
+}
+/*--------------------------------------------------------------------------*/
 extern Mat Lift1D(const unsigned int &N, const Mat &V)
 {
     unsigned int Np = N + 1;
@@ -551,6 +575,56 @@ extern Mat normals1D(const unsigned int &N, const unsigned int &Number_Of_Elemen
     return nx;
 }
 /*--------------------------------------------------------------------------*/
+extern double LagrangePolynomial_Test(const Vec &r, const double &x, const unsigned int &i)
+{
+    PetscInt size_r;
+    VecGetSize(r, &size_r);
+    unsigned int N = size_r-1;
+
+    double returnvalue = 1.0;
+    if (N == 0)
+    {
+        return 1;
+    }
+    else
+    {
+
+    PetscScalar *r_a;
+    VecGetArray(r, &r_a);
+    if (abs(x-r_a[i]) < NODETOL)
+    {
+        VecRestoreArray(r, &r_a);
+        return 1;
+    }
+    else
+    {
+    Vec X, Ri;
+    VecCreateSeq(PETSC_COMM_SELF, 1, &X);
+    VecCreateSeq(PETSC_COMM_SELF, 1, &Ri);
+    VecSetValue(X,0, x, INSERT_VALUES);
+    VecSetValue(Ri,0, r_a[i], INSERT_VALUES);
+
+    Vec P = JacobiP(Ri, 0, 0, N);
+    Vec dP = GradJacobiP(X, 0, 0, N);
+
+
+    PetscScalar *P_a, *dP_a;
+    VecGetArray(P, &P_a);
+    VecGetArray(dP, &dP_a);
+    returnvalue = - 1.0/N/(N+1.0)*(1.0-x*x)/(x-r_a[i])*dP_a[0]/P_a[0];
+    VecRestoreArray(P, &P_a);
+    VecRestoreArray(dP, &dP_a);
+    VecRestoreArray(r, &r_a);
+    VecDestroy(&X);
+    VecDestroy(&Ri);
+    VecDestroy(&P);
+    VecDestroy(&dP);
+    }
+
+    }
+    return returnvalue;
+}
+/*--------------------------------------------------------------------------*/
 extern double LagrangePolynomial(const Vec &r, const double &x, const unsigned int &i)
 {
     PetscInt size_r;
@@ -563,11 +637,68 @@ extern double LagrangePolynomial(const Vec &r, const double &x, const unsigned i
         if (i!=j)
         {
             returnvalue *= (x-ra[j])/(ra[i]-ra[j]);
+            //std::cout << "(x-ra[j])/(ra[i]-ra[j]) = " << (x-ra[j])/(ra[i]-ra[j]) << std::endl;
         }
     }
     VecRestoreArray(r, &ra);
 
     return returnvalue;
+}
+/*--------------------------------------------------------------------------*/
+extern double LagrangePolynomialDeriv_Test(const Vec &r, const double &x, const unsigned int &i)
+{
+    PetscInt size_r;
+    VecGetSize(r, &size_r);
+    unsigned int N = size_r-1;
+
+    double returnvalue = 0.0;
+    if (N == 0)
+    {
+    }
+    else
+    {
+
+    PetscScalar *r_a;
+    VecGetArray(r, &r_a);
+    if (abs(x-r_a[i]) < NODETOL)
+    {
+
+    }
+    else
+    {
+    Vec X, Ri;
+    VecCreateSeq(PETSC_COMM_SELF, 1, &X);
+    VecCreateSeq(PETSC_COMM_SELF, 1, &Ri);
+    VecSetValue(X,0, x, INSERT_VALUES);
+    VecSetValue(Ri,0, r_a[i], INSERT_VALUES);
+
+    Vec P = JacobiP(Ri, 0, 0, N);
+    Vec dP = GradJacobiP(X, 0, 0, N);
+    Vec d2P = SecondDerivJacobiP(X, 0, 0, N);
+
+
+    PetscScalar *P_a, *dP_a, *d2P_a;
+    VecGetArray(P, &P_a);
+    VecGetArray(dP, &dP_a);
+    VecGetArray(d2P, &d2P_a);
+    //std::cout << "d2P_a[0] = " << d2P_a[0] << std::endl;
+    returnvalue = - 1.0/N/(N+1.0)/P_a[0]/(x-r_a[i])/(x-r_a[i])*(-2.0*x*(x-r_a[i])*dP_a[0]+(1.0-x*x)*(d2P_a[0]*(x-r_a[i])-dP_a[0]));
+    VecRestoreArray(P, &P_a);
+    VecRestoreArray(dP, &dP_a);
+    VecRestoreArray(d2P, &d2P_a);
+    VecRestoreArray(r, &r_a);
+    VecDestroy(&X);
+    VecDestroy(&Ri);
+    VecDestroy(&P);
+    VecDestroy(&dP);
+    VecDestroy(&d2P);
+    }
+
+    }
+
+    return returnvalue;
+
+
 }
 /*--------------------------------------------------------------------------*/
 extern double LagrangePolynomialDeriv(const Vec &r, const double &x, const unsigned int &i)
@@ -1127,6 +1258,87 @@ void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, s
     VecDestroy(&S);
     VecDestroy(&X);
     VecDestroy(&Y);
+}
+/*--------------------------------------------------------------------------*/
+void set_Node_Coordinates_Uniform_Square2D(std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices, const unsigned int &N)
+{
+    Vec R, S;
+    // Compute Nodes on a Reference Element (Quadrilateral)
+    NodesSquares2D(N, R, S);
+
+    PetscScalar *r_a, *s_a;
+    VecGetArray(R, &r_a);
+    VecGetArray(S, &s_a);
+    PetscInt size_r;
+    VecGetSize(R, &size_r);
+    // Compute the physical location of each node on each element
+    for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
+    {
+        double x_v1 = List_Of_Vertices[(*i).getVertex_V1()].getxCoordinate();
+        double y_v1 = List_Of_Vertices[(*i).getVertex_V1()].getyCoordinate();
+        double x_v2 = List_Of_Vertices[(*i).getVertex_V2()].getxCoordinate();
+        double y_v2 = List_Of_Vertices[(*i).getVertex_V2()].getyCoordinate();
+        double x_v3 = List_Of_Vertices[(*i).getVertex_V3()].getxCoordinate();
+        double y_v3 = List_Of_Vertices[(*i).getVertex_V3()].getyCoordinate();
+        double x_v4 = List_Of_Vertices[(*i).getVertex_V4()].getxCoordinate();
+        double y_v4 = List_Of_Vertices[(*i).getVertex_V4()].getyCoordinate();
+
+        for(unsigned int k = 0; k < size_r; k++)
+        {
+            double x = 0.25*((1.0-s_a[k]-r_a[k]+s_a[k]*r_a[k])*x_v1+(1.0-s_a[k]+r_a[k]-s_a[k]*r_a[k])*x_v2+(1.0+s_a[k]+r_a[k]+s_a[k]*r_a[k])*x_v3+(1.0+s_a[k]-r_a[k]-s_a[k]*r_a[k])*x_v4);
+            double y = 0.25*((1.0-s_a[k]-r_a[k]+s_a[k]*r_a[k])*y_v1+(1.0-s_a[k]+r_a[k]-s_a[k]*r_a[k])*y_v2+(1.0+s_a[k]+r_a[k]+s_a[k]*r_a[k])*y_v3+(1.0+s_a[k]-r_a[k]-s_a[k]*r_a[k])*y_v4);
+
+            (*i).set_node_coordinates_x(x);
+            (*i).set_node_coordinates_y(y);
+
+            unsigned int type_node = 0;
+
+            // Boundary Elements
+            if (abs(s_a[k]+1.0) < NODETOL || N == 0)
+            {
+                // face 1
+                ///unsigned int ID_B1 = (*i).getBoundary_B1();
+                ///List_Of_Boundaries2D[ID_B1].set_node_coordinates_x(x);
+                ///List_Of_Boundaries2D[ID_B1].set_node_coordinates_y(y);
+                type_node = 1;
+                (*i).set_node_on_boundary_1(k);
+            }
+            if (abs(r_a[k]+1.0) < NODETOL || N == 0)
+            {
+                // face 4
+                ///unsigned int ID_B3 = (*i).getBoundary_B3();
+                ///List_Of_Boundaries2D[ID_B3].set_node_coordinates_x(x);
+                ///List_Of_Boundaries2D[ID_B3].set_node_coordinates_y(y);
+                type_node = 4;
+                (*i).set_node_on_boundary_4(k);
+            }
+            if (abs(r_a[k]-1.0) < NODETOL || N == 0)
+            {
+                // face 2
+                ///unsigned int ID_B2 = (*i).getBoundary_B2();
+                ///List_Of_Boundaries2D[ID_B2].set_node_coordinates_x(x);
+                ///List_Of_Boundaries2D[ID_B2].set_node_coordinates_y(y);
+                type_node = 2;
+                (*i).set_node_on_boundary_2(k);
+            }
+            if (abs(s_a[k]-1.0) < NODETOL || N == 0)
+            {
+                // face 3
+                ///unsigned int ID_B2 = (*i).getBoundary_B2();
+                ///List_Of_Boundaries2D[ID_B2].set_node_coordinates_x(x);
+                ///List_Of_Boundaries2D[ID_B2].set_node_coordinates_y(y);
+                type_node = 3;
+                (*i).set_node_on_boundary_3(k);
+            }
+            (*i).set_node_on_boundary(type_node);
+
+        }
+    }
+    VecRestoreArray(R, &r_a);
+    VecRestoreArray(S, &s_a);
+
+    VecDestroy(&R);
+    VecDestroy(&S);
 }
 /*--------------------------------------------------------------------------*/
 void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
@@ -1816,6 +2028,7 @@ extern Mat MassMatrix2D_Cubature(const unsigned int &N, const Mat &cubV, const V
 /*--------------------------------------------------------------------------*/
 extern void store_LagrangePolynomial_Cubature()
 {
+    // Not Langrange, but Legendre
     for (unsigned int cubatureOrder = 1; cubatureOrder <= 28; cubatureOrder++)
     {
         Vec cubR, cubS, cubW;
@@ -1891,6 +2104,7 @@ extern void store_LagrangePolynomial_Cubature()
 /*--------------------------------------------------------------------------*/
 extern void store_DerivativeLagrangePolynomial_Cubature()
 {
+    // Not Langrange, but Legendre
     for (unsigned int cubatureOrder = 1; cubatureOrder <= 28; cubatureOrder++)
     {
         Vec cubR, cubS, cubW;
@@ -2137,4 +2351,76 @@ extern void stdVectorToPetscVec(const std::vector<double> VecIn, Vec &PetscVec)
 
     VecDestroy(&xx);
 }
+/*--------------------------------------------------------------------------*/
+extern void NodesSquares2D(unsigned int N, Vec &XX, Vec &YY)
+{
+    // function [x,y] = Nodes2D(N);
+    // Purpose  : Compute (x,y) nodes in quadrilaterals for
+    //             polynomial of order N
+    Vec X, Y;
+    if (N==0)
+    {
+        double x [1] = {0};
+        double y [1] = {0};
+        VecCreateSeqWithArray(PETSC_COMM_WORLD,1,1,x,&X);
+        VecCreateSeqWithArray(PETSC_COMM_WORLD,1,1,y,&Y);
+        VecAssemblyBegin(X);
+        VecAssemblyEnd(X);
+        VecAssemblyBegin(Y);
+        VecAssemblyEnd(Y);
+        VecDuplicate(X,&XX);
+        VecCopy(X, XX);
+
+        VecDuplicate(Y,&YY);
+        VecCopy(Y, YY);
+
+    }
+    else
+    {
+        // total number of nodes
+        unsigned int  Np = (N+1)*(N+1);
+        double x [Np] = {};
+        double y [Np] = {};
+        Vec r = JacobiGL(0, 0, N);
+        //std::cout << "r = " << std::endl;
+        //VecView(r, PETSC_VIEWER_STDOUT_SELF);
+
+        PetscScalar *r_a;
+        VecGetArray(r, &r_a);
+        for (unsigned int i = 0; i < (N+1); i++)
+        {
+            for (unsigned int j = 0; j < (N+1); j++)
+            {
+                x[i*(N+1)+j] = r_a[j];
+                y[i*(N+1)+j] = r_a[i];
+                //std::cout << x[i*(N+1)+j] << " " << y[i*(N+1)+j] << std::endl;
+            }
+        }
+        VecRestoreArray(r, &r_a);
+        VecDestroy(&r);
+        VecCreateSeqWithArray(PETSC_COMM_WORLD,1,Np,x,&X);
+        VecCreateSeqWithArray(PETSC_COMM_WORLD,1,Np,y,&Y);
+        VecAssemblyBegin(X);
+        VecAssemblyEnd(X);
+        VecAssemblyBegin(Y);
+        VecAssemblyEnd(Y);
+        //std::cout << "X = " << std::endl;
+        //VecView(X, PETSC_VIEWER_STDOUT_SELF);
+        //std::cout << "Y = " << std::endl;
+        //VecView(Y, PETSC_VIEWER_STDOUT_SELF);
+
+        VecDuplicate(X,&XX);
+        VecCopy(X, XX);
+
+        VecDuplicate(Y,&YY);
+        VecCopy(Y, YY);
+
+    }
+
+        VecDestroy(&X);
+        VecDestroy(&Y);
+
+
+}
+/*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/

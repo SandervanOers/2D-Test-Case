@@ -110,4 +110,14 @@ void GeometricFactors2D(const Vec &x, const Vec &y, const Mat &Dr, const Mat &Ds
 /*--------------------------------------------------------------------------*/
 extern void stdVectorToPetscVec(const std::vector<double> VecIn, Vec &PetscVec);
 /*--------------------------------------------------------------------------*/
+extern void NodesSquares2D(unsigned int N, Vec &XX, Vec &YY);
+/*--------------------------------------------------------------------------*/
+void set_Node_Coordinates_Uniform_Square2D(std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices, const unsigned int &N);
+/*--------------------------------------------------------------------------*/
+extern double LagrangePolynomial_Test(const Vec &r, const double &x, const unsigned int &i);
+/*--------------------------------------------------------------------------*/
+extern double LagrangePolynomialDeriv_Test(const Vec &r, const double &x, const unsigned int &i);
+/*--------------------------------------------------------------------------*/
+Vec SecondDerivJacobiP(const Vec &r, const double &alpha, const double &beta, const unsigned int &N);
+/*--------------------------------------------------------------------------*/
 #endif

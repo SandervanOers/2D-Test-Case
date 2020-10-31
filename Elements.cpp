@@ -294,6 +294,22 @@ std::vector<unsigned int> Elements2D::get_node_on_boundary_3() const
 {
     return node_on_boundary_3;
 }
+void Elements2D::setCentroidX(double setCentroidX_v)
+{
+    centroid_x = setCentroidX_v;
+}
+void Elements2D::setCentroidY(double setCentroidY_v)
+{
+    centroid_y = setCentroidY_v;
+}
+double Elements2D::get_centroid_x() const
+{
+    return centroid_x;
+}
+double Elements2D::get_centroid_y() const
+{
+    return centroid_y;
+}
 std::vector<unsigned int> Elements2D::get_nodes_on_boundary(unsigned int Type) const
 {
     if (Type == 1)
@@ -317,6 +333,252 @@ std::vector<unsigned int> Elements2D::get_nodes_on_boundary(unsigned int Type) c
 Elements2D::~Elements2D()
 {
 }
+/*--------------------------------------------------------------------------*/
+Squares2D::Squares2D(unsigned int IDg, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int ID_V4):
+    ID(IDg), ID_Vertex_V1(ID_V1), ID_Vertex_V2(ID_V2), ID_Vertex_V3(ID_V3), ID_Vertex_V4(ID_V4) {}
+unsigned int Squares2D::getID() const
+{
+    return ID;
+}
+unsigned int Squares2D::getVertex_V1() const
+{
+    return ID_Vertex_V1;
+}
+unsigned int Squares2D::getVertex_V2() const
+{
+    return ID_Vertex_V2;
+}
+unsigned int Squares2D::getVertex_V3() const
+{
+    return ID_Vertex_V3;
+}
+unsigned int Squares2D::getVertex_V4() const
+{
+    return ID_Vertex_V4;
+}
+unsigned int Squares2D::getPosition() const
+{
+    return pos;
+}
+void Squares2D::set_pos(unsigned int POS)
+{
+    pos = POS;
+}
+void Squares2D::setJacobian(double J)
+{
+    Jacobian = J;
+}
+void Squares2D::set_rx(double rx_v)
+{
+    rx = rx_v;
+}
+void Squares2D::set_ry(double ry_v)
+{
+    ry = ry_v;
+}
+void Squares2D::set_sx(double sx_v)
+{
+    sx = sx_v;
+}
+void Squares2D::set_sy(double sy_v)
+{
+    sy = sy_v;
+}
+double Squares2D::getJacobian() const
+{
+    return Jacobian;
+}
+double Squares2D::get_rx() const
+{
+    return rx;
+}
+double Squares2D::get_ry() const
+{
+    return ry;
+}
+double Squares2D::get_sx() const
+{
+    return sx;
+}
+double Squares2D::get_sy() const
+{
+    return sy;
+}
+void Squares2D::set_Order_Of_Polynomials(unsigned int N)
+{
+    Order_Of_Polynomials = N;
+    Number_Of_Nodes = (N+1)*(N+1);
+}
+unsigned int Squares2D::get_Order_Of_Polynomials() const
+{
+    return Order_Of_Polynomials;
+}
+unsigned int Squares2D::get_Number_Of_Nodes() const
+{
+    return Number_Of_Nodes;
+}
+
+void Squares2D::set_node_coordinates_x(double x)
+{
+    node_coordinates_x.push_back(x);
+}
+void Squares2D::set_node_coordinates_y(double y)
+{
+    node_coordinates_y.push_back(y);
+}
+void Squares2D::set_node_on_boundary(unsigned int type)
+{
+    node_on_boundary.push_back(type);
+}
+void Squares2D::set_node_on_boundary_1(unsigned type)
+{
+    node_on_boundary_1.push_back(type);
+}
+void Squares2D::set_node_on_boundary_2(unsigned int type)
+{
+    node_on_boundary_2.push_back(type);
+}
+void Squares2D::set_node_on_boundary_3(unsigned int type)
+{
+    node_on_boundary_3.push_back(type);
+}
+void Squares2D::set_node_on_boundary_4(unsigned int type)
+{
+    node_on_boundary_4.push_back(type);
+}
+std::vector<double> Squares2D::get_node_coordinates_x() const
+{
+    return node_coordinates_x;
+}
+std::vector<double> Squares2D::get_node_coordinates_y() const
+{
+    return node_coordinates_y;
+}
+std::vector<unsigned int> Squares2D::get_node_on_boundary() const
+{
+    return node_on_boundary;
+}
+std::vector<unsigned int> Squares2D::get_node_on_boundary_1() const
+{
+    return node_on_boundary_1;
+}
+std::vector<unsigned int> Squares2D::get_node_on_boundary_2() const
+{
+    return node_on_boundary_2;
+}
+std::vector<unsigned int> Squares2D::get_node_on_boundary_3() const
+{
+    return node_on_boundary_3;
+}
+std::vector<unsigned int> Squares2D::get_node_on_boundary_4() const
+{
+    return node_on_boundary_4;
+}
+
+std::vector<unsigned int> Squares2D::get_nodes_on_boundary(unsigned int Type) const
+{
+    if (Type == 1)
+    {
+        return node_on_boundary_1;
+    }
+    else if (Type == 2)
+    {
+        return node_on_boundary_2;
+    }
+    else if (Type == 3)
+    {
+        return node_on_boundary_3;
+    }
+    else if (Type == 4)
+    {
+        return node_on_boundary_4;
+    }
+    else
+    {
+        std::cout << "Wrong Boundary Type" << std::endl;
+        return {0};
+    }
+}
+
+Squares2D::~Squares2D()
+{
+
+}
+/*--------------------------------------------------------------------------*/
+InternalBoundariesSquares2D::InternalBoundariesSquares2D(unsigned int IDg, int ID_El_L, int ID_El_R, int Type_L, int Type_R):
+    ID(IDg), ID_Left_Element(ID_El_L), ID_Right_Element(ID_El_R), Type_Left(Type_L), Type_Right(Type_R){}
+unsigned int InternalBoundariesSquares2D::getID() const
+{
+    return ID;
+}
+int InternalBoundariesSquares2D::getLeftElementID() const
+{
+    return ID_Left_Element;
+}
+int InternalBoundariesSquares2D::getRightElementID() const
+{
+    return ID_Right_Element;
+}
+void InternalBoundariesSquares2D::set_Vertex_V1(unsigned int V1)
+{
+    ID_Vertex_V1 = V1;
+}
+void InternalBoundariesSquares2D::set_Vertex_V2(unsigned int V2)
+{
+    ID_Vertex_V2 = V2;
+}
+unsigned int InternalBoundariesSquares2D::get_Vertex_V1() const
+{
+    return ID_Vertex_V1;
+}
+unsigned int InternalBoundariesSquares2D::get_Vertex_V2() const
+{
+    return ID_Vertex_V2;
+}
+void InternalBoundariesSquares2D::setJacobian(double J)
+{
+    Jacobian = J;
+}
+double InternalBoundariesSquares2D::getJacobian() const
+{
+    return Jacobian;
+}
+void InternalBoundariesSquares2D::set_nx(double normalx)
+{
+    nx = normalx;
+}
+void InternalBoundariesSquares2D::set_ny(double normaly)
+{
+    ny = normaly;
+}
+double InternalBoundariesSquares2D::get_nx() const
+{
+    return nx;
+}
+double InternalBoundariesSquares2D::get_ny() const
+{
+    return ny;
+}
+unsigned int InternalBoundariesSquares2D::get_Type_Left() const
+{
+    return Type_Left;
+}
+unsigned int InternalBoundariesSquares2D::get_Type_Right() const
+{
+    return Type_Right;
+}
+void InternalBoundariesSquares2D::set_theta(double T)
+{
+    theta = T;
+}
+double InternalBoundariesSquares2D::get_theta() const
+{
+    return theta;
+}
+InternalBoundariesSquares2D::~InternalBoundariesSquares2D()
+{}
+
+
 /*--------------------------------------------------------------------------*/
 Boundaries2D::Boundaries2D(unsigned int IDg, bool Internal, unsigned int ID_V1, unsigned int ID_V2, int ID_El_L, int ID_El_R, int Typeg):
     ID(IDg), InternalBoundary(Internal), ID_Vertex_V1(ID_V1), ID_Vertex_V2(ID_V2), ID_Left_Element(ID_El_L), ID_Right_Element(ID_El_R), Type(Typeg) {}

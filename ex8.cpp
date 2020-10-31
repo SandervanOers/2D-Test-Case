@@ -56,17 +56,19 @@ int main(int argc,char **args)
     FILE *g = fopen("L2Errors.txt", "w");
     fprintf(g, "1/h \t N \t L2 Error \t \t \t Order \t \t time [s] \n");
     fclose(g);
-    for (unsigned int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 8; Number_Of_Polynomial_Steps++)
+    //for (unsigned int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 8; Number_Of_Polynomial_Steps++)
     {
     double Eold = 0;
     FILE *g = fopen("L2Errors.txt", "a");
     fprintf(g, "\n");
     fclose(g);
-    for (unsigned int Number_Of_Spatial_Steps = 0; Number_Of_Spatial_Steps < 11-Number_Of_Polynomial_Steps; Number_Of_Spatial_Steps++)
+    //for (unsigned int Number_Of_Spatial_Steps = 0; Number_Of_Spatial_Steps < 11-Number_Of_Polynomial_Steps; Number_Of_Spatial_Steps++)
+    //for (unsigned int Number_Of_Spatial_Steps = 0; Number_Of_Spatial_Steps < 5; Number_Of_Spatial_Steps++)
     {
+    unsigned int Number_Of_Spatial_Steps = 0;
     auto t0 = std::chrono::high_resolution_clock::now();
-    unsigned int Number_Of_Elements = pow(2, Number_Of_Spatial_Steps); //Number_Of_Elements_Petsc;
-    unsigned int N = Number_Of_Polynomial_Steps; //N_Petsc;
+    unsigned int Number_Of_Elements = Number_Of_Elements_Petsc;//pow(2, Number_Of_Spatial_Steps); //
+    unsigned int N = N_Petsc; //Number_Of_Polynomial_Steps; //
 
 
     std::cout << "**********************************************************"<< std::endl;
@@ -361,7 +363,7 @@ int main(int argc,char **args)
             double physical_x = (*f).getxCoordinate();
             double rho0 = rho_0_compressible(physical_x, N2);
             unsigned int i = Order_Polynomials_left;
-            unsigned int j = Order_Polynomials_left;
+            unsigned int j = Order_Polynomials_left; /// Should be right?
 
             double factor = 1.0;
             // GLL
@@ -386,8 +388,8 @@ int main(int argc,char **args)
     MatAssemblyEnd(E, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(ET, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(ET, MAT_FINAL_ASSEMBLY);
-    //MatView(E, viewer_dense);
-    //MatView(ET, viewer_dense);
+    MatView(E, viewer_dense);
+    MatView(ET, viewer_dense);
     std::cout << "Finished Assembly DIV Matrices" << std::endl;
     double fillBF = 1;
 
@@ -439,6 +441,19 @@ int main(int argc,char **args)
     MatMatMult(invM, D2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &D2);
     MatDestroy(&D2_TEMP1);
     MatDestroy(&D2_TEMP2);
+
+    std::cout << "invM = " << std::endl;
+    MatView(invM, viewer);
+    std::cout << "DIV = " << std::endl;
+    MatView(DIV, viewer);
+    std::cout << "BF1 = " << std::endl;
+    MatView(BF1, viewer);
+    std::cout << "D2 = " << std::endl;
+    MatView(D2, viewer);
+    std::cout << "C2 = " << std::endl;
+    MatView(C2, viewer);
+    std::cout << "C = " << std::endl;
+    MatView(C, viewer);
 
     MatDestroy(&E);
     MatDestroy(&ET);
@@ -599,6 +614,10 @@ int main(int argc,char **args)
     double H0 = calculate_Hamiltonian_comp(M1, M2, Initial_Condition, Number_Of_Elements, Np);
     std::cout << "Initial Energy      = " << std::setprecision(16) << H0 << std::endl;
 
+    std::cout << "P = " << std::endl;
+    //MatView(A, viewer);
+    MatView(A, viewer_dense);
+
     KSP ksp;
     PC pc;
     KSPCreate(PETSC_COMM_WORLD,&ksp);
@@ -718,6 +737,10 @@ int main(int argc,char **args)
     PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error %1.9e\n",(double)norm2);
     VecDestroy(&Exact_Solution);
     */
+    std::cout << "Initial Condition = " << std::endl;
+    VecView(Initial_Condition, viewer);
+    std::cout << "Sol = " << std::endl;
+    VecView(Sol, viewer);
 
     VecDestroy(&Sol);
     MatDestroy(&V);
