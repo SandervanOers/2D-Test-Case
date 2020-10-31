@@ -58,14 +58,14 @@ int main(int argc,char **args)
     {
 
     //std::string mesh_name = "Mesh/square_2x2.msh";
-    std::string mesh_name = "Mesh/square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh";
+    std::string mesh_name = "Mesh/square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh"; //2*
     std::vector<Squares2D> List_Of_Elements;
     std::vector<InternalBoundariesSquares2D> List_Of_Boundaries;
     std::vector<VertexCoordinates2D> List_Of_Vertices;
 
     PetscInt kxmode, kzmode;
     kxmode = 1;
-    kzmode = 0;
+    kzmode = 1;
     unsigned int rho_0_Deriv = N2 + 1.0; // = beta
     /// Estimate the required time step
     PetscScalar   sigma;

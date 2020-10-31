@@ -73,6 +73,7 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
                 double value_ex = 0.0;
                 double value_ey = 0.0;
                 double value_m = 0.0;
+                double value_m1 = 0.0;
                 double value_n = 0.0;
                 double value_m2 = 0.0;
                 double value_n_deriv = 0.0;
@@ -86,6 +87,9 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
                         double L_delta = LagrangePolynomial(ri, qp[q], delta);
                         //w_q rho_0(r_q) l_i(r_q) dl_j(r_q)/dr
                         value_m += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J;
+
+                        // value_ey += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J * rho0deriv;
+                        // value_m1 += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J / rho0 ;
                         if (Np > 1)
                         {
                             double dL_gamma = LagrangePolynomialDeriv(ri, qp[p], gamma);
@@ -189,12 +193,12 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
 
     for (auto f = List_Of_Boundaries.begin(); f < List_Of_Boundaries.end(); f++)
     {
-            //double Jacobian = (*f).getJacobian();
+            double Jacobian = (*f).getJacobian();
             unsigned int Type_Boundary_Left = (*f).get_Type_Left();
             unsigned int Type_Boundary_Right = (*f).get_Type_Right();
             double theta = (*f).get_theta();
             double nx = (*f).get_nx();
-            double ny = 0;//(*f).get_ny();
+            double ny = (*f).get_ny();
 
             int left = (*f).getLeftElementID();
             int right = (*f).getRightElementID();
@@ -212,7 +216,15 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
             std::vector<unsigned int> Node_Numbers_On_Boundary_Right = List_Of_Elements[right].get_nodes_on_boundary(Type_Boundary_Right);
 
 
-            double Jacobian = List_Of_Elements[left].getJacobian();
+            //double Jacobian = List_Of_Elements[left].getJacobian();
+
+            //std::cout << "Element Jacobian = " << List_Of_Elements[left].getJacobian() << std::endl;
+            //std::cout << "Face Jacobian = " << (*f).getJacobian() << std::endl;
+            //std::cout << "Element rx = " << List_Of_Elements[left].get_rx() << std::endl;
+            //std::cout << "Element sy = " << List_Of_Elements[left].get_sy() << std::endl;
+
+            nx = nx / List_Of_Elements[left].get_rx();
+            ny = ny / List_Of_Elements[left].get_sy();
 
 
             //std::cout << " Type_Boundary_Left = " << Type_Boundary_Left << std::endl;
