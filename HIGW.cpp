@@ -96,7 +96,7 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
                             double dL_delta = LagrangePolynomialDeriv(ri, qp[q], delta);
                             // w_q drho_0(r_q)/dr l_i(r_q) l_j(r_q)
                             value_ex += w[p]*L_alpha*L_beta * w[q] * (drdx * dL_gamma * L_delta + dsdx * L_gamma* dL_delta) * J;
-                            value_ey += w[p]*L_alpha*L_beta * w[q] * (drdy * dL_gamma * L_delta + dsdy * L_gamma* dL_delta) * J;
+                            value_ey += 0;//w[p]*L_alpha*L_beta * w[q] * (drdy * dL_gamma * L_delta + dsdy * L_gamma* dL_delta) * J;
                         }
                     }
                 }
@@ -198,7 +198,7 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
             unsigned int Type_Boundary_Right = (*f).get_Type_Right();
             double theta = (*f).get_theta();
             double nx = (*f).get_nx();
-            double ny = (*f).get_ny();
+            double ny = 0;//(*f).get_ny();
 
             int left = (*f).getLeftElementID();
             int right = (*f).getRightElementID();
@@ -223,8 +223,8 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
             //std::cout << "Element rx = " << List_Of_Elements[left].get_rx() << std::endl;
             //std::cout << "Element sy = " << List_Of_Elements[left].get_sy() << std::endl;
 
-            nx = nx / List_Of_Elements[left].get_rx();
-            ny = ny / List_Of_Elements[left].get_sy();
+            //nx = nx / List_Of_Elements[left].get_rx();
+            //ny = ny / List_Of_Elements[left].get_sy();
 
 
             //std::cout << " Type_Boundary_Left = " << Type_Boundary_Left << std::endl;
@@ -271,6 +271,10 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
 
             //std::cout << "Jacobian = " << Jacobian << std::endl;
             // GLL
+            //std::cout << " *---* " << std::endl;
+            //std::cout << "Boundary ID = " << (*f).getID() << " Boundary Types: " << Type_Boundary_Left << ", " << Type_Boundary_Right << ". Left El = " << left << ", Right El = " << right << std::endl;
+            //std::cout << " *---* " << std::endl;
+            //std::cout << "GLL: " << std::endl;
             for (unsigned int i = 0; i <= Order_Polynomials_left; i++) // Should be N_Left + 1, etc.
             {
                 for (unsigned int j = 0; j <= Order_Polynomials_left; j++)
@@ -287,8 +291,8 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
                     //std::cout << "value_e = " << value_e << std::endl;
                     //if (abs(ny) > 1e-5)
                     {
-                    //std::cout << "Boundary ID = " << (*f).getID() << " Boundary Types: " << Type_Boundary_Left << ", " << Type_Boundary_Right << ". Left El = " << left << ", Right El = " << right << std::endl;
-                    //std::cout << "value_e = " << value_e << ", nx = " << nx << ", ny = " << ny << ". posL = " << posL << ". Node Numbers =  " << Node_Numbers_On_Boundary_Left[i] << ", " << Node_Numbers_On_Boundary_Left[j] << std::endl;
+                    //std::cout << "value_e = " << value_e << ", nx = " << nx << ", ny = " << ny << ". posL = " << posL << ". Node Numbers Local =  " << Node_Numbers_On_Boundary_Left[i] << ", " << Node_Numbers_On_Boundary_Left[j] << std::endl;
+                    //std::cout << ". Node Numbers Global =  " << posL+Node_Numbers_On_Boundary_Left[i] << ", " << posL+Node_Numbers_On_Boundary_Left[j] << std::endl;
                     }
                     MatSetValue(E,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
                     MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
@@ -297,6 +301,7 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
                     MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
                 }
             }
+            //std::cout << "GLR: " << std::endl;
             // GLR
             for (unsigned int i = 0; i <= Order_Polynomials_left; i++)
             {
@@ -312,8 +317,8 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
                     }
                     //if (abs(nx) > 1e-5)
                     //{
-                    //std::cout << "Boundary ID = " << (*f).getID() << " Boundary Types: " << Type_Boundary_Left << ", " << Type_Boundary_Right << ". Left El = " << left << ", Right El = " << right << std::endl;
-                    //std::cout << "value_e = " << value_e << ", nx = " << nx << ". posL = " << posL << ", posR = " << posL <<  ". Node Numbers =  " << Node_Numbers_On_Boundary_Left[i] << ", " << Node_Numbers_On_Boundary_Right[j] << std::endl;
+                    //std::cout << "value_e = " << value_e << ", nx = " << nx << ", ny = " << ny << ". posL = " << posL << ". Node Numbers Local =  " << Node_Numbers_On_Boundary_Left[i] << ", " << Node_Numbers_On_Boundary_Right[j] << std::endl;
+                    //std::cout << ". Node Numbers Global =  " << posL+Node_Numbers_On_Boundary_Left[i] << ", " << posR+Node_Numbers_On_Boundary_Right[j] << std::endl;
                     MatSetValue(E,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
                     MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
                     //}
@@ -323,6 +328,7 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
                     //std::cout << posL+Node_Numbers_On_Boundary_Left[i] << " " << posR+Node_Numbers_On_Boundary_Right[j] << std::endl;
                 }
             }
+            //std::cout << "GRL: " << std::endl;
             // GRL
             for (unsigned int i = 0; i <= Order_Polynomials_right; i++)
             {
@@ -336,6 +342,8 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
                         double Lj = LagrangePolynomial(ri_left, r_a[q], j);
                         value_e += theta*w_a[q]*Li*Lj*Jacobian*factor;
                     }
+                    //std::cout << "value_e = " << value_e << ", nx = " << nx << ", ny = " << ny << ". posL = " << posL << ". Node Numbers Local =  " << Node_Numbers_On_Boundary_Left[i] << ", " << Node_Numbers_On_Boundary_Right[j] << std::endl;
+                    //std::cout << ". Node Numbers Global =  " << posR+Node_Numbers_On_Boundary_Right[i] << ", " << posL+Node_Numbers_On_Boundary_Left[j] << std::endl;
                     MatSetValue(E,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
                     MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
                     MatSetValue(E,  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
@@ -344,6 +352,7 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
                     //std::cout << posR+Node_Numbers_On_Boundary_Right[i] << " " << posL+Node_Numbers_On_Boundary_Left[j] << std::endl;
                 }
             }
+            //std::cout << "GRR: " << std::endl;
             // GRR
             for (unsigned int i = 0; i <= Order_Polynomials_right; i++)
             {
@@ -357,6 +366,8 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
                         double Lj = LagrangePolynomial(ri_right, r_a[q], j);
                         value_e += -theta*w_a[q]*Li*Lj*Jacobian*factor;
                     }
+                    //std::cout << "value_e = " << value_e << ", nx = " << nx << ", ny = " << ny << ". posL = " << posL << ". Node Numbers Local =  " << Node_Numbers_On_Boundary_Left[i] << ", " << Node_Numbers_On_Boundary_Right[j] << std::endl;
+                    //std::cout << ". Node Numbers Global =  " << posR+Node_Numbers_On_Boundary_Right[i] << ", " << posR+Node_Numbers_On_Boundary_Right[j] << std::endl;
                     MatSetValue(E,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
                     MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
                     MatSetValue(E,  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
@@ -623,6 +634,7 @@ extern void compute_InitialCondition(const std::vector<Squares2D> &List_Of_Eleme
     for (auto k = List_Of_Elements.begin(); k < List_Of_Elements.end(); k++)
     {
         unsigned int Np = (*k).get_Number_Of_Nodes();
+        unsigned int ID = (*k).getID();
         unsigned int pos = (*k).getPosition();
         std::vector<double> xCoor, zCoor;
         xCoor = (*k).get_node_coordinates_x();
@@ -645,7 +657,7 @@ extern void compute_InitialCondition(const std::vector<Squares2D> &List_Of_Eleme
             value = Exact_Solution_p_2D_system1(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode);
             VecSetValue(VecP, pos + n, value, INSERT_VALUES);
             VecSetValue(Initial_Condition, 3*N_Nodes+ pos + n, value, INSERT_VALUES);
-            //std::cout << "n = " << n << ", pos = " << pos << ", xCoor[n] = " << xCoor[n] << ", zCoor[n] = " << zCoor[n] << ", p = " << value << std::endl;
+            //std::cout << "ID = " << ID << ", n = " << n << ", pos = " << pos << ", xCoor[n] = " << xCoor[n] << ", zCoor[n] = " << zCoor[n] << ", p = " << value << std::endl;
         }
 
     }

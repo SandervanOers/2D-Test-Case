@@ -65,13 +65,13 @@ int main(int argc,char **args)
 
     PetscInt kxmode, kzmode;
     kxmode = 1;
-    kzmode = 1;
+    kzmode = 0;
     unsigned int rho_0_Deriv = N2 + 1.0; // = beta
     /// Estimate the required time step
     PetscScalar   sigma;
     sigma = calculate_sigma_2D_system1(rho_0_Deriv, kxmode, kzmode);
 
-    Number_Of_TimeSteps_In_One_Period = 100;
+    Number_Of_TimeSteps_In_One_Period = 1000;
     PetscScalar DeltaT = 1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
 
     unsigned int Number_Of_TimeSteps = Number_Of_TimeSteps_In_One_Period*Number_Of_Periods;
@@ -80,6 +80,7 @@ int main(int argc,char **args)
     Mat EToV;
     int element_num, node_num;
     load_msh_mesh2D(mesh_name, VX, VY, EToV, List_Of_Vertices, List_Of_Elements, element_num, node_num);
+
 
     /*
     std::cout << "List of Vertices "  << std::endl;
@@ -127,6 +128,7 @@ int main(int argc,char **args)
     std::cout << "Total Number of Nodes = " << N_Nodes << std::endl;
     unsigned int N_Elements = List_Of_Elements.size();
     std::cout << "Total Number of Elements = " << N_Elements << std::endl;
+    std::cout << "Number_Of_TimeSteps_In_One_Period  =  " << Number_Of_TimeSteps_In_One_Period << " => Delta T =" << DeltaT << std::endl;
 
     Mat E, ET, invM, M1, M2, NMat, NDerivMat, invM_small, M1_small;
     create_Matrices(List_Of_Vertices, List_Of_Boundaries, List_Of_Elements, N_Nodes, N_Petsc, N_Q, E, ET, invM, invM_small, M1, M1_small, M2, NMat, NDerivMat);

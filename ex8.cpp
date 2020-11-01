@@ -172,7 +172,7 @@ int main(int argc,char **args)
     sigma = calculate_sigma_system1dcom(N2, kmode);
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
     PetscScalar   DeltaX = 1.0/(double)Number_Of_Elements;
-    Number_Of_TimeSteps_In_One_Period = 10*pow(Number_Of_Elements, (Np+1)/2);//Number_Of_Elements*Number_Of_Elements;
+    Number_Of_TimeSteps_In_One_Period = 10;//10*pow(Number_Of_Elements, (Np+1)/2);//Number_Of_Elements*Number_Of_Elements;
     PetscScalar DeltaT=1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
     std::cout << Number_Of_Elements << " => " << DeltaX << std::endl;
     std::cout << Number_Of_TimeSteps_In_One_Period << " => " << DeltaT << std::endl;
@@ -343,6 +343,11 @@ int main(int argc,char **args)
     MatAssemblyEnd(NDerivMat, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(invM, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(invM, MAT_FINAL_ASSEMBLY);
+
+    //std::cout << "M1 = " << std::endl;
+    //MatView(M1, viewer);
+    //std::cout << "invM = " << std::endl;
+    //MatView(invM, viewer);
 
     MatDestroy(&invM_Elemental);
 
