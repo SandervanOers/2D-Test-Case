@@ -90,6 +90,20 @@ ex10: ${OBJS10} chkopts
 	-${CLINKER} -o ex10 ${OBJS10} ${PETSC_KSP_LIB} ${SLEPC_LIB}
 	${RM} ${OBJS10}
 
+ex11.o: ex11.cpp
+OBJS11 = ex11.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o Cubature2D.o CubatureData2D.o gmsh_io.o
+
+ex11: ${OBJS11} chkopts
+	-${CLINKER} -o ex11 ${OBJS11} ${PETSC_KSP_LIB} ${SLEPC_LIB}
+	${RM} ${OBJS11}
+	
+
+ex12.o: ex12.cpp
+OBJS12 = ex12.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o Cubature2D.o CubatureData2D.o gmsh_io.o
+
+ex12: ${OBJS12} chkopts
+	-${CLINKER} -o ex12 ${OBJS12} ${PETSC_KSP_LIB} ${SLEPC_LIB}
+	${RM} ${OBJS12}	
 #----------------------------------------------------------------------------
 runex1:
 	-@${MPIEXEC} -n 1 ./ex1 -ksp_monitor_short -ksp_gmres_cgs_refinement_type refine_always > ex1_1.tmp 2>&1;	  \

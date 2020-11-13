@@ -81,6 +81,7 @@ extern Vec JacobiGL_withWeights(const double &alpha, const double &beta, const u
         }
         VecRestoreArray(xint, &array);
         VecRestoreArray(ww,&warray);
+        VecDestroy(&ww);
         VecSetValue(x, N, 1.0, INSERT_VALUES);
         VecSetValue(Weights, N, 2.0/N/(N+1.0), INSERT_VALUES);
         VecDestroy(&xint);

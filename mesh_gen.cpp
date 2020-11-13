@@ -20,7 +20,7 @@ void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, 
     //
       std::cout << "\n";
       std::cout << "  Node data read from file \"" << gmsh_filename << "\"\n";
-      std::cout << "  Number of nodes = " << node_num << "\n";
+      std::cout << "  Number of vertices = " << node_num << "\n";
       std::cout << "  Spatial dimension = " << m << "\n";
       std::cout << "  Number of elements = " << element_num << "\n";
       //std::cout << "  Element order = " << element_order << "\n";
@@ -49,7 +49,6 @@ void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, 
     Vec VXT, VYT;
     for (unsigned int i = 0; i < node_num; i++)
     {
-        //std::cout << node_x[2*i] << " " << node_x[2*i+1]  << std::endl;
         vx[i] = node_x[2*i];
         vy[i] = node_x[2*i+1];
         VertexCoordinates2D V(ID_Vertices, node_x[2*i], node_x[2*i+1], 1);
@@ -74,6 +73,54 @@ void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, 
     for (unsigned int i = 0; i < element_num; i++)
     {
         //std::cout << element_node[4*i] << " " << element_node[4*i+1] << " " << element_node[4*i+2] << " "<< element_node[4*i+3] << " " << std::endl;
+        //std::cout << element_node[4*i+3] << " " << element_node[4*i] << " " << element_node[4*i+1] << " "<< element_node[4*i+2] << " " << std::endl;
+
+        double x1 = List_Of_Vertices[element_node[4*i]-1].getxCoordinate();
+        double y1 = List_Of_Vertices[element_node[4*i]-1].getyCoordinate();
+        double x2 = List_Of_Vertices[element_node[4*i+1]-1].getxCoordinate();
+        double y2 = List_Of_Vertices[element_node[4*i+1]-1].getyCoordinate();
+        double x3 = List_Of_Vertices[element_node[4*i+2]-1].getxCoordinate();
+        double y3 = List_Of_Vertices[element_node[4*i+2]-1].getyCoordinate();
+        double x4 = List_Of_Vertices[element_node[4*i+3]-1].getxCoordinate();
+        double y4 = List_Of_Vertices[element_node[4*i+3]-1].getyCoordinate();
+
+        // Bottom left is origin (0,0).
+        double dist_1 = sqrt(x1*x1+y1*y1);
+        double dist_2 = sqrt(x2*x2+y2*y2);
+        double dist_3 = sqrt(x3*x3+y3*y3);
+        double dist_4 = sqrt(x4*x4+y4*y4);
+
+        double min = dist_1;
+        int flag = 0;
+
+        if(dist_2 < min)
+        {
+            min = dist_2;
+            flag = 1;
+        }
+        if(dist_3 < min)
+        {
+            min = dist_3;
+            flag = 2;
+        }
+        if(dist_4 < min)
+        {
+            min = dist_4;
+            flag = 3;
+        }
+
+       //std::cout << element_node[4*i+flag]-1 << " " << element_node[4*i+(flag+1)%4]-1 << " " << element_node[4*i+(flag+2)%4]-1 << " " << element_node[4*i+(flag+3)%4]-1 << std::endl;
+        Squares2D S(ID_Elements, element_node[4*i+flag]-1, element_node[4*i+(flag+1)%4]-1, element_node[4*i+(flag+2)%4]-1, element_node[4*i+(flag+3)%4]-1);
+        ID_Elements++;
+        List_Of_Elements.push_back(S);
+
+        etov[4*i+1] = (PetscScalar)element_node[4*i+(flag+1)%4]-1;
+        etov[4*i+2] = (PetscScalar)element_node[4*i+(flag+2)%4]-1;
+        etov[4*i+3] = (PetscScalar)element_node[4*i+(flag+3)%4]-1;
+        etov[4*i] = (PetscScalar)element_node[4*i+flag]-1;
+
+
+       /* Assumes Ordering
         Squares2D S(ID_Elements, element_node[4*i+3]-1, element_node[4*i]-1, element_node[4*i+1]-1, element_node[4*i+2]-1);
         ID_Elements++;
         List_Of_Elements.push_back(S);
@@ -82,11 +129,12 @@ void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, 
         etov[4*i+2] = (PetscScalar)element_node[4*i+1]-1;
         etov[4*i+3] = (PetscScalar)element_node[4*i+2]-1;
         etov[4*i] = (PetscScalar)element_node[4*i+3]-1;
+        */
 
         // Msh native Format
-        //  4 -- 3
+        //  3 -- 2
         //  |    |
-        //  1 -- 2
+        //  4 -- 1
         //
         // We want a counterclockwise ordering
         //
@@ -517,8 +565,8 @@ void Calculate_Jacobian_Square(std::vector<Squares2D> &List_Of_Elements, const s
         double Area = 0.5*abs(x1*y2+x2*y3+x3*y4-x2*y1-x3*y2-x4*y3-x1*y4);
 
         double dxdr = (x2+x3-x1-x4)/4.0;
-        double dydr = 0;
-        double dxds = 0;
+        double dxds = (x3+x4-x2-x1)/4.0;
+        double dydr = (y2+y3-y1-y4)/4.0;
         double dyds = (y3+y4-y2-y1)/4.0;
 
         double Jacobian = dxdr*dyds-dxds*dydr;
@@ -534,6 +582,35 @@ void Calculate_Jacobian_Square(std::vector<Squares2D> &List_Of_Elements, const s
         (*i).set_sy(dsdy);
     }
 }
+/*--------------------------------------------------------------------------*/
+/*void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<VertexCoordinates2D> &List_Of_Vertices, const double &r_p, const double &s_p, double &Jacobian, double &drdx, double &drdy, double &dsdx, double &dsdy)
+{
+    //unsigned int Element_ID = Quad.getID();
+
+    double x1 = List_Of_Vertices[Quad.getVertex_V1()].getxCoordinate();
+    double y1 = List_Of_Vertices[Quad.getVertex_V1()].getyCoordinate();
+    double x2 = List_Of_Vertices[Quad.getVertex_V2()].getxCoordinate();
+    double y2 = List_Of_Vertices[Quad.getVertex_V2()].getyCoordinate();
+    double x3 = List_Of_Vertices[Quad.getVertex_V3()].getxCoordinate();
+    double y3 = List_Of_Vertices[Quad.getVertex_V3()].getyCoordinate();
+    double x4 = List_Of_Vertices[Quad.getVertex_V4()].getxCoordinate();
+    double y4 = List_Of_Vertices[Quad.getVertex_V4()].getyCoordinate();
+
+    //double Area = 0.5*abs(x1*y2+x2*y3+x3*y4-x2*y1-x3*y2-x4*y3-x1*y4);
+
+    double dxdr = (x2+x3-x1-x4)/4.0 + (x1-x2+x3-x4)*s_p;
+    double dxds = (x3+x4-x2-x1)/4.0 + (x1-x2+x3-x4)*r_p;
+    double dydr = (y2+y3-y1-y4)/4.0 + (y1-y2+y3-y4)*s_p;
+    double dyds = (y3+y4-y2-y1)/4.0 + (y1-y2+y3-y4)*r_p;
+
+    Jacobian = dxdr*dyds-dxds*dydr;
+
+    drdx = dyds/Jacobian;
+    drdy = -dxds/Jacobian;
+    dsdx = -dydr/Jacobian;
+    dsdy = dxdr/Jacobian;
+
+}*/
 /*--------------------------------------------------------------------------*/
 void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_Elements, std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
 {
@@ -627,7 +704,7 @@ void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_
         (*f).set_ny(-dx/Length);
 
         //std::cout << "Boundary ID = " << (*f).getID() << ". Left El = " << left << ", Right El = " << right << std::endl;
-        //std::cout << "x[1] = " << x[1] << ", x[0] = " << x[0] << std::endl;
+        //std::cout << "x[1] = " << x[1] << ", x[0] = " << x[0] << "y[1] = " << y[1] << ", y[0] = " << y[0] << std::endl;
         //std::cout << "J = " << Jacobian << ". nx = " << dy/Length << ", ny = " << -dx/Length << std::endl;
         //std::cout << "Length = " << Length << std::endl;
     }

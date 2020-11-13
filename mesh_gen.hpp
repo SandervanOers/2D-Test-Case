@@ -13,7 +13,7 @@
 #define NODETOL 1e-12
 /*--------------------------------------------------------------------------*/
 typedef std::pair<int, int> pairs;
-auto compare = [](pairs lhs, pairs rhs) //custom compare lambda function
+inline auto compare = [](pairs lhs, pairs rhs) //custom compare lambda function
    {
       if(lhs.first > lhs.second ) lhs = pairs{lhs.second, lhs.first };
       if(rhs.first > rhs.second ) rhs = pairs{rhs.second, rhs.first };
@@ -27,7 +27,7 @@ struct BoundaryInfo {
     PetscInt faceright;
     BoundaryInfo(PetscInt left_v, PetscInt right_v, PetscInt faceleft_v, PetscInt faceright_v) : left(left_v), right(right_v), faceleft(faceleft_v), faceright(faceright_v) {}
 };
-auto compare_BoundaryInfo = [](BoundaryInfo lhs, BoundaryInfo rhs)
+inline auto compare_BoundaryInfo = [](BoundaryInfo lhs, BoundaryInfo rhs)
 {
       if(lhs.left > lhs.right ) lhs = BoundaryInfo(lhs.right, lhs.left, lhs.faceright, lhs.faceleft );
       if(rhs.left > rhs.right ) rhs = BoundaryInfo(rhs.right, rhs.left, rhs.faceright, rhs.faceleft );
@@ -63,6 +63,8 @@ void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, 
 void Connect2D(const Mat &EToV, const unsigned int &Number_Of_Elements, const unsigned int &Number_Of_Vertices, Mat &EToE, Mat &EToF, std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries);
 /*--------------------------------------------------------------------------*/
 void Calculate_Jacobian_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
+/*--------------------------------------------------------------------------*/
+//void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<VertexCoordinates2D> &List_Of_Vertices, const double &r_p, const double &s_p, double &Jacobian, double &drdx, double &drdy, double &dsdx, double &dsdy);
 /*--------------------------------------------------------------------------*/
 void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_Elements, std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
 /*--------------------------------------------------------------------------*/

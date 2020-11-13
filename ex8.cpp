@@ -56,19 +56,20 @@ int main(int argc,char **args)
     FILE *g = fopen("L2Errors.txt", "w");
     fprintf(g, "1/h \t N \t L2 Error \t \t \t Order \t \t time [s] \n");
     fclose(g);
-    //for (unsigned int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 8; Number_Of_Polynomial_Steps++)
+
+    for ( int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 16; Number_Of_Polynomial_Steps++)
     {
     double Eold = 0;
     FILE *g = fopen("L2Errors.txt", "a");
     fprintf(g, "\n");
     fclose(g);
-    //for (unsigned int Number_Of_Spatial_Steps = 0; Number_Of_Spatial_Steps < 11-Number_Of_Polynomial_Steps; Number_Of_Spatial_Steps++)
     //for (unsigned int Number_Of_Spatial_Steps = 0; Number_Of_Spatial_Steps < 5; Number_Of_Spatial_Steps++)
+    for ( int Number_Of_Spatial_Steps = 0; Number_Of_Spatial_Steps < std::max(1,13-Number_Of_Polynomial_Steps); Number_Of_Spatial_Steps++)
     {
-    unsigned int Number_Of_Spatial_Steps = 0;
+    //unsigned int Number_Of_Spatial_Steps = 0;
     auto t0 = std::chrono::high_resolution_clock::now();
-    unsigned int Number_Of_Elements = Number_Of_Elements_Petsc;//pow(2, Number_Of_Spatial_Steps); //
-    unsigned int N = N_Petsc; //Number_Of_Polynomial_Steps; //
+    unsigned int Number_Of_Elements = pow(2, Number_Of_Spatial_Steps); // Number_Of_Elements_Petsc;//
+    unsigned int N = Number_Of_Polynomial_Steps; // N_Petsc; //
 
 
     std::cout << "**********************************************************"<< std::endl;
@@ -172,7 +173,7 @@ int main(int argc,char **args)
     sigma = calculate_sigma_system1dcom(N2, kmode);
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
     PetscScalar   DeltaX = 1.0/(double)Number_Of_Elements;
-    Number_Of_TimeSteps_In_One_Period = 10;//10*pow(Number_Of_Elements, (Np+1)/2);//Number_Of_Elements*Number_Of_Elements;
+    Number_Of_TimeSteps_In_One_Period = 10000;//10*pow(Number_Of_Elements, (Np+1)/2);//Number_Of_Elements*Number_Of_Elements;
     PetscScalar DeltaT=1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
     std::cout << Number_Of_Elements << " => " << DeltaX << std::endl;
     std::cout << Number_Of_TimeSteps_In_One_Period << " => " << DeltaT << std::endl;
@@ -393,8 +394,8 @@ int main(int argc,char **args)
     MatAssemblyEnd(E, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(ET, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(ET, MAT_FINAL_ASSEMBLY);
-    MatView(E, viewer_dense);
-    MatView(ET, viewer_dense);
+    //MatView(E, viewer_dense);
+    //MatView(ET, viewer_dense);
     std::cout << "Finished Assembly DIV Matrices" << std::endl;
     double fillBF = 1;
 
@@ -447,6 +448,7 @@ int main(int argc,char **args)
     MatDestroy(&D2_TEMP1);
     MatDestroy(&D2_TEMP2);
 
+    /*
     std::cout << "invM = " << std::endl;
     MatView(invM, viewer);
     std::cout << "DIV = " << std::endl;
@@ -459,6 +461,7 @@ int main(int argc,char **args)
     MatView(C2, viewer);
     std::cout << "C = " << std::endl;
     MatView(C, viewer);
+    */
 
     MatDestroy(&E);
     MatDestroy(&ET);
@@ -619,9 +622,9 @@ int main(int argc,char **args)
     double H0 = calculate_Hamiltonian_comp(M1, M2, Initial_Condition, Number_Of_Elements, Np);
     std::cout << "Initial Energy      = " << std::setprecision(16) << H0 << std::endl;
 
-    std::cout << "P = " << std::endl;
+    //std::cout << "P = " << std::endl;
     //MatView(A, viewer);
-    MatView(A, viewer_dense);
+    //MatView(A, viewer_dense);
 
     KSP ksp;
     PC pc;
@@ -632,15 +635,15 @@ int main(int argc,char **args)
     //KSPSetTolerances(ksp, 1e-12, 1e-12, 1e-12, PETSC_DEFAULT);
     KSPSetTolerances(ksp, 1e-12, 1e-12, 1e30, PETSC_DEFAULT);
 
-    KSPSetType(ksp,KSPPREONLY);
+    //KSPSetType(ksp,KSPPREONLY);
     //KSPSetType(ksp,KSPCG);
-    //KSPSetType(ksp,KSPGMRES);
+    KSPSetType(ksp,KSPGMRES);
     //KSPSetType(ksp,KSPBCGS);
-    //KSPSetInitialGuessNonzero(ksp,PETSC_TRUE);
+    KSPSetInitialGuessNonzero(ksp,PETSC_TRUE);
 
     KSPGetPC(ksp,&pc);
-    PCSetType(pc,PCLU);
-    //PCSetType(pc,PCILU);
+    //PCSetType(pc,PCLU);
+    PCSetType(pc,PCILU);
     //PCSetType(pc,PCNONE);
     //PCSetType(pc,PCSOR);
 
@@ -742,10 +745,11 @@ int main(int argc,char **args)
     PetscPrintf(PETSC_COMM_WORLD,"L2-Norm of error %1.9e\n",(double)norm2);
     VecDestroy(&Exact_Solution);
     */
-    std::cout << "Initial Condition = " << std::endl;
-    VecView(Initial_Condition, viewer);
-    std::cout << "Sol = " << std::endl;
-    VecView(Sol, viewer);
+
+    //std::cout << "Initial Condition = " << std::endl;
+    //VecView(Initial_Condition, viewer);
+    //std::cout << "Sol = " << std::endl;
+    //VecView(Sol, viewer);
 
     VecDestroy(&Sol);
     MatDestroy(&V);
@@ -783,6 +787,14 @@ int main(int argc,char **args)
     fclose(g);
 
     Eold = Enew;
+    std::cout << "**********************************************************"<< std::endl;
+    std::cout << "L2 Errors " << std::endl;
+    std::cout << "h N Er Order t " << std::endl;
+    for (auto i = L2Errors.begin(); i != L2Errors.end(); ++i)
+    {
+        std::cout << std::setw(5) << std::setprecision(4) << (*i)[0] << "    " << std::setw(4) << (*i)[1] << "    " << std::setw(10) << std::setprecision(4) << (*i)[2] << "    " << std::setw(5) << std::setprecision(2) << (*i)[3] << "    " << std::setw(5) << std::setprecision(4) << (*i)[4] << std::endl;
+    }
+    std::cout << "**********************************************************"<< std::endl;
     }
     }
 
