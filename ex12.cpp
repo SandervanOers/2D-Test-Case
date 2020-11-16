@@ -99,10 +99,10 @@ int main(int argc,char **args)
     PetscViewerPushFormat(viewer_info, PETSC_VIEWER_ASCII_INFO);
 
     double Eold = 0;
-    for (int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 9; Number_Of_Polynomial_Steps++)
+    for (int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 1; Number_Of_Polynomial_Steps++)
     {
         Eold = 0.0;
-    for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < std::max(1,8-Number_Of_Polynomial_Steps); Number_Of_Spatial_Steps++)
+    for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < 12; Number_Of_Spatial_Steps++) //std::max(5,7-Number_Of_Polynomial_Steps)
     {
 
     //int Number_Of_Spatial_Steps = 0;
@@ -121,7 +121,7 @@ int main(int argc,char **args)
     }
     /**************************************************************** /
     // square_tilted_quads and manual_square (+ square) have opposite sign for E
-    /****************************************************************/
+    / ****************************************************************/
     else if (Method == 1)
     {
         mesh_name = "Mesh/manual_square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh"; //2* switched/
@@ -215,13 +215,15 @@ int main(int argc,char **args)
 
     //PetscLogStageRegister("Assembly", &stage);
     //PetscLogStagePush(stage);
-    Mat E, ET, invM, M1, M2, NMat, NDerivMat, invM_small, M1_small;
-    create_Matrices_Quads_Full(List_Of_Vertices, List_Of_Boundaries, List_Of_Elements, N_Nodes, N_Petsc, N_Q, rho_0_Deriv, E, ET, invM, invM_small, M1, M1_small, M2, NMat, NDerivMat);
+    Mat E, ET, invM, M1, M2, M2_small, NMat, NDerivMat, invM_small, M1_small;
+    create_Matrices_Quads_Full(List_Of_Vertices, List_Of_Boundaries, List_Of_Elements, N_Nodes, N_Petsc, N_Q, rho_0_Deriv, E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat);
 
     //std::cout <<"E = " << std::endl;
     //MatView(E, viewer_dense);
     //std::cout <<"M1_small = " << std::endl;
     //MatView(M1_small, viewer_dense);
+    //std::cout <<"M2_small = " << std::endl;
+    //MatView(M2_small, viewer_dense);
     //std::cout <<"invM_small = " << std::endl;
     //MatView(invM_small, viewer_dense);
     //std::cout <<"invM = " << std::endl;
@@ -229,7 +231,7 @@ int main(int argc,char **args)
 
     Mat A, B;
     // Send List of Elements -> Get Np per Element for preallocation
-    create_Compressible_System_MidPoint_Full(E, ET, invM, invM_small, M1, M1_small, M2, NMat, NDerivMat, N_Nodes, N_Petsc, DeltaT, A, B);
+    create_Compressible_System_MidPoint_Full(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, N_Nodes, N_Petsc, DeltaT, A, B);
 
     //std::cout << "Store Global Matrices" << std::endl;
     /// TO DO
@@ -250,6 +252,7 @@ int main(int argc,char **args)
     MatDestroy(&invM);
     MatDestroy(&invM_small);
     MatDestroy(&M2);
+    MatDestroy(&M2_small);
     MatDestroy(&NMat);
     MatDestroy(&NDerivMat);
 

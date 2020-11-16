@@ -47,7 +47,7 @@ void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, 
     PetscScalar vx[node_num];
     PetscScalar vy[node_num];
     Vec VXT, VYT;
-    for (unsigned int i = 0; i < node_num; i++)
+    for (int i = 0; i < node_num; i++)
     {
         vx[i] = node_x[2*i];
         vy[i] = node_x[2*i+1];

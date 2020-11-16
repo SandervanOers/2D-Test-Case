@@ -1098,7 +1098,7 @@ void create_Matrices_Quads(const std::vector<VertexCoordinates2D> &List_Of_Verti
     MatAssemblyEnd(ET, MAT_FINAL_ASSEMBLY);
 
 }/*--------------------------------------------------------------------------*//*--------------------------------------------------------------------------*/
-void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &NMat, Mat &NDerivMat)
+void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
 {
     double Np = (N+1)*(N+1);
     //Mat Ex, ExT, Ey, EyT;
@@ -1108,8 +1108,9 @@ void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &invM_small);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, 2*N_Nodes, 2*Np, NULL, &M1);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &M1_small);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &M2_small);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &NMat);
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &M2);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, 2*N_Nodes, 2*Np, NULL, &M2);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 2*Np, NULL, &NDerivMat);
 
     std::cout << "Start Elemental Calculations " << std::endl;
@@ -1173,12 +1174,21 @@ void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_
                         //std::cout << "ID = " << (*e).getID() << ", x = " << x << ", y = " << y << ", rho_0 = " << rho_0_2D_system2(y, rho_0_Deriv) << std::endl;
                         double rho0 = rho_0_2D_system2(y, rho_0_Deriv);
                         double rho0deriv = rho_0_deriv_2D_system2(y, rho_0_Deriv);
+                        double N2 = N_2_2D_system2(y, rho_0_Deriv);
 
                         double L_beta = LagrangePolynomial(ri, qp[q], beta);
                         double L_delta = LagrangePolynomial(ri, qp[q], delta);
 
                         value_m += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J;
                         value_m1 += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J / rho0;
+                        //if (N2 == 0)
+                        //{
+                        //    std::cout << "N2 is zero " << std::endl;
+                        //}
+                        value_m2 += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J / rho0 / N2;
+
+                        value_n += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J * rho0;
+                        value_n_deriv += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J * rho0deriv;
                         value_area += w[p]*w[q]*J;
 
                         // w_q drho_0(r_q)/dr l_i(r_q) l_j(r_q)
@@ -1201,7 +1211,9 @@ void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_
                 MatSetValue(M_Elemental, (k-1), (l-1), value_m, ADD_VALUES);
                 MatSetValue(M1_small, pos+(k-1), pos+(l-1), value_m1, ADD_VALUES);
                 MatSetValue(NMat, pos+(k-1), pos+(l-1), value_n, ADD_VALUES);
+                MatSetValue(M2_small, pos+(k-1), pos+(l-1), value_m2, ADD_VALUES);
                 MatSetValue(M2, pos+(k-1), pos+(l-1), value_m2, ADD_VALUES);
+                MatSetValue(M2, N_Nodes+pos+(k-1), N_Nodes+pos+(l-1), value_m2, ADD_VALUES);
                 MatSetValue(NDerivMat, pos+(k-1), pos+(l-1), value_n_deriv, ADD_VALUES);
                 MatSetValue(M1, pos+(k-1), pos+(l-1), value_m1, ADD_VALUES);
                 MatSetValue(M1, N_Nodes+pos+(k-1), N_Nodes+pos+(l-1), value_m1, ADD_VALUES);
@@ -1280,6 +1292,8 @@ void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_
     MatAssemblyEnd(M1, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(M2, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(M2, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(M2_small, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(M2_small, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(NMat, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(NMat, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(NDerivMat, MAT_FINAL_ASSEMBLY);
@@ -1342,20 +1356,8 @@ void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_
             double dx = (x2-x1);
             double dy = (y2-y1);
 
-
-
-
-
             double factor = 1.0;
-            //double physical_x = (*e).get_xCoordinateLeft()+0.5*(1.0+qp[q])*((*e).get_xCoordinateRight()-(*e).get_xCoordinateLeft());
-
-            //std::cout << "Jacobian = " << Jacobian << std::endl;
             // GLL
-            //std::cout << " *---* " << std::endl;
-            //std::cout << "Boundary ID = " << (*f).getID() << " Boundary Types: " << Type_Boundary_Left << ", " << Type_Boundary_Right << ". Left El = " << left << ", Right El = " << right << std::endl;
-            //std::cout << " *---* " << std::endl;
-            //std::cout << "GLL: " << std::endl;
-
             for (unsigned int i = 0; i <= Order_Polynomials_left; i++) // Should be N_Left + 1, etc.
             {
                 for (unsigned int j = 0; j <= Order_Polynomials_left; j++)
@@ -1401,7 +1403,6 @@ void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_
                         double Li = LagrangePolynomial(ri_left, r_a[q], i);
                         double Lj = LagrangePolynomial(ri_right, r_a[q], j);
                         value_e += -(1.0-theta)*w_a[q]*Li*Lj*Jacobian*factor*rho0;
-                        //value_e += (1.0-theta)*w_a[q]*Li*Lj*Jacobian*factor;
                     }
                     //if (abs(nx) > 1e-5)
                     //{
@@ -1416,8 +1417,6 @@ void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_
                     //MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[i],   posR+Node_Numbers_On_Boundary_Right[j], -nx*value_e, ADD_VALUES);
                     //MatSetValue(E,  N_Nodes+posR+Node_Numbers_On_Boundary_Right[j], posL+Node_Numbers_On_Boundary_Left[i],  ny*value_e, ADD_VALUES);
                     //MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[i], N_Nodes+posR+Node_Numbers_On_Boundary_Right[j],  -ny*value_e, ADD_VALUES);
-
-                    //std::cout << posL+Node_Numbers_On_Boundary_Left[i] << " " << posR+Node_Numbers_On_Boundary_Right[j] << std::endl;
                 }
             }
             // GRL
@@ -1434,7 +1433,6 @@ void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_
                         double Li = LagrangePolynomial(ri_right, r_a[q], i);
                         double Lj = LagrangePolynomial(ri_left, r_a[q], j);
                         value_e += theta*w_a[q]*Li*Lj*Jacobian*factor*rho0;
-                        //value_e += -theta*w_a[q]*Li*Lj*Jacobian*factor;
                     }
                     //std::cout << "value_e = " << value_e << ", nx = " << nx << ", ny = " << ny << ". posL = " << posL << ". Node Numbers Local =  " << Node_Numbers_On_Boundary_Left[i] << ", " << Node_Numbers_On_Boundary_Right[j] << std::endl;
                     //std::cout << ". Node Numbers Global =  " << posR+Node_Numbers_On_Boundary_Right[i] << ", " << posL+Node_Numbers_On_Boundary_Left[j] << std::endl;
@@ -1446,7 +1444,6 @@ void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_
                     //MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j],   -nx*value_e, ADD_VALUES);
                     //MatSetValue(E,  N_Nodes+posL+Node_Numbers_On_Boundary_Left[j], posR+Node_Numbers_On_Boundary_Right[i], ny*value_e, ADD_VALUES);
                     //MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[i],  N_Nodes+posL+Node_Numbers_On_Boundary_Left[j], -ny*value_e, ADD_VALUES);
-                    //std::cout << posR+Node_Numbers_On_Boundary_Right[i] << " " << posL+Node_Numbers_On_Boundary_Left[j] << std::endl;
                 }
             }
             //std::cout << "GRR: " << std::endl;
@@ -1473,8 +1470,6 @@ void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_
                     MatSetValue(E,  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
                     MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
                     ///MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[i], N_Nodes+posR+Node_Numbers_On_Boundary_Right[j], -ny*value_e, ADD_VALUES);
-
-                    //std::cout << posR+Node_Numbers_On_Boundary_Right[i] << " " << posR+Node_Numbers_On_Boundary_Right[j] << std::endl;
                 }
             }
 
@@ -1723,7 +1718,7 @@ extern void create_Compressible_System_MidPoint(const Mat &E, const Mat &ET, con
     MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY);
 }/*--------------------------------------------------------------------------*/
-extern void create_Compressible_System_MidPoint_Full(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &NMat, const Mat &NDerivMat, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, Mat &A, Mat &B)
+extern void create_Compressible_System_MidPoint_Full(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &M2_small, const Mat &NMat, const Mat &NDerivMat, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, Mat &A, Mat &B)
 {
     double Np = (N+1)*(N+1);
     std::cout << "Start Global Matrices Construction" << std::endl;
@@ -1736,35 +1731,35 @@ extern void create_Compressible_System_MidPoint_Full(const Mat &E, const Mat &ET
     MatMatMult(invM, BF1_TEMP2, MAT_INITIAL_MATRIX, fillBF, &BF1);
     MatDestroy(&BF1_TEMP1);
     MatDestroy(&BF1_TEMP2);
-/*
+
     Mat BF2, BF2_TEMP1, BF2_TEMP2;
-    MatMatMult(E, invM, MAT_INITIAL_MATRIX, fillBF, &BF2_TEMP1);
-    MatMatMult(BF2_TEMP1, M2, MAT_INITIAL_MATRIX, fillBF, &BF2_TEMP2);
+    MatMatMult(E, invM_small, MAT_INITIAL_MATRIX, fillBF, &BF2_TEMP1);
+    MatMatMult(BF2_TEMP1, M2_small, MAT_INITIAL_MATRIX, fillBF, &BF2_TEMP2);
     MatMatMult(invM, BF2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &BF2);
     MatDestroy(&BF2_TEMP1);
     MatDestroy(&BF2_TEMP2);
-*/
+
     Mat DIV, DIV_TEMP1, DIV_TEMP2;
     MatMatMult(ET, invM, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP1);
     MatMatMult(DIV_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP2);
     MatMatMult(invM_small, DIV_TEMP2, MAT_INITIAL_MATRIX, fillBF, &DIV);
     MatDestroy(&DIV_TEMP1);
     MatDestroy(&DIV_TEMP2);
-/*
+
     Mat C, C_TEMP1, C_TEMP2;
-    MatMatMult(NMat, invM, MAT_INITIAL_MATRIX, fillBF, &C_TEMP1);
-    MatMatMult(C_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &C_TEMP2);
-    MatMatMult(invM, C_TEMP2, MAT_INITIAL_MATRIX, fillBF, &C);
+    MatMatMult(NMat, invM_small, MAT_INITIAL_MATRIX, fillBF, &C_TEMP1);
+    MatMatMult(C_TEMP1, M1_small, MAT_INITIAL_MATRIX, fillBF, &C_TEMP2);
+    MatMatMult(invM_small, C_TEMP2, MAT_INITIAL_MATRIX, fillBF, &C);
     MatDestroy(&C_TEMP1);
     MatDestroy(&C_TEMP2);
 
     Mat C2, C2_TEMP1, C2_TEMP2;
-    MatMatMult(NMat, invM, MAT_INITIAL_MATRIX, fillBF, &C2_TEMP1);
-    MatMatMult(C2_TEMP1, M2, MAT_INITIAL_MATRIX, fillBF, &C2_TEMP2);
-    MatMatMult(invM, C2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &C2);
+    MatMatMult(NMat, invM_small, MAT_INITIAL_MATRIX, fillBF, &C2_TEMP1);
+    MatMatMult(C2_TEMP1, M2_small, MAT_INITIAL_MATRIX, fillBF, &C2_TEMP2);
+    MatMatMult(invM_small, C2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &C2);
     MatDestroy(&C2_TEMP1);
     MatDestroy(&C2_TEMP2);
-
+/*
     Mat D1, D1_TEMP1, D1_TEMP2;
     MatMatMult(NDerivMat, invM, MAT_INITIAL_MATRIX, fillBF, &D1_TEMP1);
     MatMatMult(D1_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &D1_TEMP2);
@@ -1778,12 +1773,6 @@ extern void create_Compressible_System_MidPoint_Full(const Mat &E, const Mat &ET
     MatMatMult(invM, D2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &D2);
     MatDestroy(&D2_TEMP1);
     MatDestroy(&D2_TEMP2);
-
-    MatDestroy(&E);
-    MatDestroy(&ET);
-    MatDestroy(&invM);
-    MatDestroy(&NMat);
-    MatDestroy(&NDerivMat);
 
     Mat Laplacian;
 	MatMatMult(BF1, DIV, MAT_INITIAL_MATRIX, 1, &Laplacian);
@@ -1813,12 +1802,22 @@ extern void create_Compressible_System_MidPoint_Full(const Mat &E, const Mat &ET
             if (abs(dummy)>1e-10)
             {
                 MatSetValue(A, 	i,     3*N_Nodes+cols[j],    -0.5*DeltaT*dummy, 	ADD_VALUES);
-                //MatSetValue(A, 	i,     2*N_Nodes+cols[j],    -0.5*DeltaT*dummy, 	ADD_VALUES);
                 MatSetValue(B, 	i,     3*N_Nodes+cols[j],    0.5*DeltaT*dummy, 	    ADD_VALUES);
-                //MatSetValue(B, 	i,     2*N_Nodes+cols[j],    0.5*DeltaT*dummy, 	    ADD_VALUES);
             }
         }
         MatRestoreRow(BF1, i, &numberOfNonZeros, &cols, &values);
+
+        MatGetRow(BF2, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     3*N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,    3*N_Nodes+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(BF2, i, &numberOfNonZeros, &cols, &values);
     }
     for (unsigned int i = 0; i < N_Nodes; i++)
     {
@@ -1852,33 +1851,17 @@ extern void create_Compressible_System_MidPoint_Full(const Mat &E, const Mat &ET
         MatRestoreRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
         */
 
-        /*
-        MatGetRow(BF2, i, &numberOfNonZeros, &cols, &values);
-        for (int j=0;j<numberOfNonZeros;++j)
-        {
-            dummy = (values[j]);
-            if (dummy!=0.0)
-            {
-                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
-
-                MatSetValue(A, 	i,     Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     Np*Number_Of_Elements+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
-            }
-        }
-        MatRestoreRow(BF2, i, &numberOfNonZeros, &cols, &values);
-        * /
         MatGetRow(C, i, &numberOfNonZeros, &cols, &values);
         for (int j=0;j<numberOfNonZeros;++j)
         {
             dummy = (values[j]);
             if (dummy!=0.0)
             {
-                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(A, 	N_Nodes+i,     3*N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	N_Nodes+i,     3*N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
 
-                MatSetValue(A, 	2*Np*Number_Of_Elements+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	2*Np*Number_Of_Elements+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(A, 	3*N_Nodes+i,     N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	3*N_Nodes+i,     N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
             }
         }
         MatRestoreRow(C, i, &numberOfNonZeros, &cols, &values);
@@ -1888,15 +1871,15 @@ extern void create_Compressible_System_MidPoint_Full(const Mat &E, const Mat &ET
             dummy = (values[j]);
             if (dummy!=0.0)
             {
-                MatSetValue(A, 	i,     Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(A, 	N_Nodes+i,     3*N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	N_Nodes+i,     3*N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
 
-                MatSetValue(A, 	i,     2*Np*Number_Of_Elements+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	i,     2*Np*Number_Of_Elements+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                //MatSetValue(A, 	3*N_Nodes+i,     N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                //MatSetValue(B, 	3*N_Nodes+i,     N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
             }
         }
         MatRestoreRow(C2, i, &numberOfNonZeros, &cols, &values);
-
+/*
         MatGetRow(D1, i, &numberOfNonZeros, &cols, &values);
         for (int j=0;j<numberOfNonZeros;++j)
         {
@@ -1931,12 +1914,7 @@ extern void create_Compressible_System_MidPoint_Full(const Mat &E, const Mat &ET
             if (abs(dummy)>1e-10)
             {
                 MatSetValue(A, 	3*N_Nodes+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                //MatSetValue(A, 	2*N_Nodes+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
                 MatSetValue(B, 	3*N_Nodes+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-                //MatSetValue(B, 	2*N_Nodes+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-
-                //MatSetValue(A, 	Np*Number_Of_Elements+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                //MatSetValue(B, 	Np*Number_Of_Elements+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
             }
         }
         MatRestoreRow(DIV, i, &numberOfNonZeros, &cols, &values);

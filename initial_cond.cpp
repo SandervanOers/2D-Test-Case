@@ -273,17 +273,24 @@ extern std::vector<double> N_2_2D_system1(const std::vector<double> &z, const do
 /*--------------------------------------------------------------------------*/
 extern double calculate_sigma_2D_system2(const double &beta, const unsigned int &kx, const unsigned int &kz)
 {
-    return sqrt(beta*beta/16.0/PETSC_PI/PETSC_PI+kx*kx+kz*kz);
+    //return sqrt(beta*beta/16.0/PETSC_PI/PETSC_PI+kx*kx+kz*kz);
+    double N2 = beta - 1;
+    //return sqrt(beta*beta*beta/N2/16.0/PETSC_PI/PETSC_PI+beta/N2*(kx*kx+kz*kz));
+    //return sqrt((beta-2.0)*(beta-2.0)/16.0/PETSC_PI/PETSC_PI + kx*kx + kz * kz);
+    return sqrt((N2+1.0)/N2*(kx*kx+kz*kz+(N2-1.0)*(N2-1.0)/16.0/PETSC_PI/PETSC_PI));
 }
 /*--------------------------------------------------------------------------*/
 extern double Exact_Solution_mx_2D_system2(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
 {
-    return exp(-0.5*beta*z)*kx/(pow(sigma,2.0)-pow(kx,2.0))*(beta/4.0/PETSC_PI*sin(2.0*PETSC_PI*kz*z)+kz*cos(2.0*PETSC_PI*kz*z))*sin(2.0*PETSC_PI*kx*x)*sin(2*PETSC_PI*sigma*t);
+    //return exp(-0.5*beta*z)*kx/(pow(sigma,2.0)-pow(kx,2.0))*(beta/4.0/PETSC_PI*sin(2.0*PETSC_PI*kz*z)+kz*cos(2.0*PETSC_PI*kz*z))*sin(2.0*PETSC_PI*kx*x)*sin(2*PETSC_PI*sigma*t);
+    //return exp(-0.5*beta*z)*(4.0*PETSC_PI*kx)/(16.0*PETSC_PI*PETSC_PI*kz*kz+beta*beta)*(beta*sin(2.0*PETSC_PI*kz*z)+4.0*PETSC_PI*kz*cos(2.0*PETSC_PI*kz*z))*sin(2.0*PETSC_PI*kx*x)*sin(2*PETSC_PI*sigma*t);
+    //return exp(-0.5*beta*z)*(4.0*PETSC_PI*kx)/(16.0*PETSC_PI*PETSC_PI*kz*kz+(beta-2.0)*(beta-2.0))*((beta-2.0)*sin(2.0*PETSC_PI*kz*z)+4.0*PETSC_PI*kz*cos(2.0*PETSC_PI*kz*z))*sin(2.0*PETSC_PI*kx*x)*sin(2*PETSC_PI*sigma*t);
+    return 0.0;
 }
 /*--------------------------------------------------------------------------*/
 extern double Exact_Solution_mz_2D_system2(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
 {
-    return sin(2.0*PETSC_PI*kz*z)*cos(2.0*PETSC_PI*kx*x)*sin(2*PETSC_PI*sigma*t);
+    return exp(-0.5*beta*z)*sin(2.0*PETSC_PI*kz*z)*cos(2.0*PETSC_PI*kx*x)*sin(2*PETSC_PI*sigma*t);
 }
 /*--------------------------------------------------------------------------*/
 extern double Exact_Solution_r_2D_system2(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
@@ -293,7 +300,14 @@ extern double Exact_Solution_r_2D_system2(const double &x, const double &z, cons
 /*--------------------------------------------------------------------------*/
 extern double Exact_Solution_p_2D_system2(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
 {
-    return exp(-0.5*beta*z)*sigma/(pow(sigma,2.0)-pow(kx,2.0))*(beta/4.0/PETSC_PI*sin(2.0*PETSC_PI*kz*z)+kz*cos(2.0*PETSC_PI*kz*z))*cos(2.0*PETSC_PI*kx*x)*cos(2*PETSC_PI*sigma*t);
+    double N2 = beta - 1;
+    //return exp(-0.5*beta*z)*sigma/(pow(sigma,2.0)-pow(kx,2.0))*(beta/4.0/PETSC_PI*sin(2.0*PETSC_PI*kz*z)+kz*cos(2.0*PETSC_PI*kz*z))*cos(2.0*PETSC_PI*kx*x)*cos(2*PETSC_PI*sigma*t);
+    //return exp(-0.5*beta*z)*(4.0*PETSC_PI*sigma*N2)/(beta*(16.0*PETSC_PI*PETSC_PI*kz*kz+beta*beta))*(beta*sin(2.0*PETSC_PI*kz*z)+4.0*PETSC_PI*kz*cos(2.0*PETSC_PI*kz*z))*cos(2.0*PETSC_PI*kx*x)*cos(2*PETSC_PI*sigma*t);
+    //return exp(-0.5*beta*z)*(1.0)/(beta*(16.0*PETSC_PI*PETSC_PI*kz*kz+(beta-2.0)*(beta-2.0)))*(4.0*PETSC_PI*sigma*(beta-2.0)*sin(2.0*PETSC_PI*kz*z)+16.0*PETSC_PI*PETSC_PI*sigma*kz*cos(2.0*PETSC_PI*kz*z))*cos(2.0*PETSC_PI*kx*x)*cos(2*PETSC_PI*sigma*t);
+
+    ///return exp(-0.5*beta*z)*(4.0*PETSC_PI*sigma*sqrt(beta))/(16.0*PETSC_PI*PETSC_PI*kz*kz+(beta-2.0)*(beta-2.0))*N2/sqrt(N2+1.0)*((beta-2.0)*sin(2.0*PETSC_PI*kz*z)+4.0*PETSC_PI*kz*cos(2.0*PETSC_PI*kz*z))*cos(2.0*PETSC_PI*kx*x)*cos(2*PETSC_PI*sigma*t);
+    return exp(-0.5*beta*z)*1.0/(4.0*sigma*PETSC_PI*(16.0*PETSC_PI*PETSC_PI*kz*kz+(beta-2.0)*(beta-2.0))) *((16.0*PETSC_PI*PETSC_PI*(kx*kx+kz*kz)+(beta-2.0)*(beta-2.0))*(beta-2.0)*sin(2.0*PETSC_PI*kz*z)+(16.0*PETSC_PI*PETSC_PI*(kx*kx+kz*kz)+(beta-2.0)*(beta-2.0))* 4.0*PETSC_PI*kz*cos(2.0*PETSC_PI*kz*z))*cos(2.0*PETSC_PI*kx*x)*cos(2*PETSC_PI*sigma*t);
+
 }
 /*--------------------------------------------------------------------------*/
 extern double rho_0_2D_system2(const double &z, const double &beta)
