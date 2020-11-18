@@ -1,6 +1,7 @@
 #ifndef INITIAL_CONDITION
 #define INITIAL_CONDITION
 
+#include <iostream>
 #include <petscksp.h>
 #include <vector>
 /*--------------------------------------------------------------------------*/
@@ -132,5 +133,31 @@ extern double N_2_2D_system2(const double &z, const double &beta);
 /*--------------------------------------------------------------------------*/
 extern std::vector<double> N_2_2D_system2(const std::vector<double> &z, const double &beta);
 /*--------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
+//  Incompresisble Test Case
+/*--------------------------------------------------------------------------*/
+extern double calculate_sigma_2DIC(const double &beta, const unsigned int &kx, const unsigned int &kz);
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_mx_2DIC(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz);
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_mz_2DIC(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz);
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_r_2DIC(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz);
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_p_2DIC(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz);
+/*--------------------------------------------------------------------------*/
+extern double rho_0_2DIC(const double &z, const double &beta);
+/*--------------------------------------------------------------------------*/
+//extern std::vector<double> rho_0_2DIC(const std::vector<double> &z, const double &beta);
+/*--------------------------------------------------------------------------*/
+extern double rho_0_deriv_2DIC(const double &z, const double &beta);
+/*--------------------------------------------------------------------------*/
+//extern std::vector<double> rho_0_deriv_2DIC(const std::vector<double> &z, const double &beta);
+/*--------------------------------------------------------------------------*/
+extern double N_2_2DIC(const double &z, const double &beta);
+/*--------------------------------------------------------------------------*/
+//extern std::vector<double> N_2_2DIC(const std::vector<double> &z, const double &beta);
+/*--------------------------------------------------------------------------*/
+
 
 #endif

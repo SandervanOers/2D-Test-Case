@@ -64,7 +64,7 @@ int main(int argc,char **args)
     // Read in options from command line
     PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=10, Method=1;
     PetscInt   Number_Of_Periods=1, kmode=1;
-    PetscScalar N2 = -1.0;//1.0; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
+    PetscScalar N2 = 0.0;//1.0; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 0, N_Q=0;
     PetscScalar nu = 0.0;
@@ -102,13 +102,13 @@ int main(int argc,char **args)
     //for (int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 10; Number_Of_Polynomial_Steps++)
     {
         Eold = 0.0;
-    //for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < std::max(5,9-Number_Of_Polynomial_Steps); Number_Of_Spatial_Steps++) //std::max(5,7-Number_Of_Polynomial_Steps)
+    int Number_Of_Polynomial_Steps = N_Petsc    ;
+    for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < std::max(5,9-Number_Of_Polynomial_Steps); Number_Of_Spatial_Steps++) //std::max(5,7-Number_Of_Polynomial_Steps)
     {
 
-    int Number_Of_Spatial_Steps = 0;
-    int Number_Of_Polynomial_Steps = N_Petsc    ;
+    //int Number_Of_Spatial_Steps = 0;
     auto t0 = std::chrono::high_resolution_clock::now();
-    //Number_Of_Elements_Petsc = pow(2.0, (double)Number_Of_Spatial_Steps);
+    Number_Of_Elements_Petsc = pow(2.0, (double)Number_Of_Spatial_Steps);
     N_Petsc = Number_Of_Polynomial_Steps;
 
     //std::string mesh_name = "Mesh/square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(2*Number_Of_Elements_Petsc)+".msh"; //2* switched/
@@ -198,12 +198,12 @@ int main(int argc,char **args)
     unsigned int N_Elements = List_Of_Elements.size();
     std::cout << "Total Number of Elements = " << N_Elements << std::endl;
     PetscInt kxmode, kzmode;
-    kxmode = 1;//1;
-    kzmode = 1;//1;
-    unsigned int rho_0_Deriv = N2 + 1.0; // = beta
+    kxmode = 1;
+    kzmode = 1;
+    unsigned int rho_0_Deriv = N2;// + 1.0; // = beta
     /// Estimate the required time step
     PetscScalar   sigma;
-    sigma = calculate_sigma_2D_system2(rho_0_Deriv, kxmode, kzmode);
+    sigma = calculate_sigma_2DIC(rho_0_Deriv, kxmode, kzmode);
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
 
     Number_Of_TimeSteps_In_One_Period = 100;//10*10*pow((double)N_Elements, (N_Petsc+1.0)/2.0);
@@ -216,7 +216,7 @@ int main(int argc,char **args)
     //PetscLogStageRegister("Assembly", &stage);
     //PetscLogStagePush(stage);
     Mat E, ET, invM, M1, M2, M2_small, NMat, NDerivMat, invM_small, M1_small;
-    create_Matrices_Quads_Full(List_Of_Vertices, List_Of_Boundaries, List_Of_Elements, N_Nodes, N_Petsc, N_Q, rho_0_Deriv, E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat);
+    create_Matrices_Quads_Full_IC(List_Of_Vertices, List_Of_Boundaries, List_Of_Elements, N_Nodes, N_Petsc, N_Q, rho_0_Deriv, E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat);
 
     //std::cout <<"E = " << std::endl;
     //MatView(E, viewer_dense);
@@ -230,13 +230,17 @@ int main(int argc,char **args)
     //MatView(invM, viewer);
 
     Mat A, B;
+    Mat ALaplacian, ALaplacian_h;
+    Mat DIV;
     // Send List of Elements -> Get Np per Element for preallocation
-    create_Compressible_System_MidPoint_Full(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, N_Nodes, N_Petsc, DeltaT, nu, A, B);
+    create_Incompressible_System_MidPoint_Full(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, N_Nodes, N_Petsc, DeltaT, nu, A, B, ALaplacian, ALaplacian_h, DIV);
 
     //std::cout << "Store Global Matrices" << std::endl;
     /// TO DO
     //std::cout << "A = " << std::endl;
     //MatView(A, viewer_dense);
+    //std::cout << "B = " << std::endl;
+    //MatView(B, viewer_dense);
            // PetscViewer    viewerstore;
             //PetscViewerPushFormat(viewerstore,PETSC_VIEWER_ASCII_MATLAB);
            // std::string name = "A_N2_h16x16.dat";
@@ -255,27 +259,17 @@ int main(int argc,char **args)
     MatDestroy(&NMat);
     MatDestroy(&NDerivMat);
 
-    Vec Initial_Condition, VecU, VecW, VecR, VecP;
-    compute_InitialCondition_system2(List_Of_Elements, N_Nodes, rho_0_Deriv, kxmode, kzmode, Initial_Condition, VecU, VecW, VecR, VecP, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc);
-    //PetscLogStagePop();
+    Vec Initial_Condition;
+    compute_InitialCondition_Incompressible(List_Of_Elements, N_Nodes, rho_0_Deriv, kxmode, kzmode, Initial_Condition, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, ALaplacian, ALaplacian_h, DIV);
 
-    //std::cout << "Initial Condition = " << std::endl;
-    //VecView(Initial_Condition, viewer);
+    MatDestroy(&ALaplacian);
+    MatDestroy(&ALaplacian_h);
 
-    //PetscLogStageRegister("Solve", &stage);
-    //PetscLogStagePush(stage);
     Vec Sol;
-    Simulate(A, B, M1_small, M2_small, Initial_Condition, List_Of_Elements, N_Nodes, Number_Of_TimeSteps, DeltaT, Sol, 4);
-    //PetscLogStagePop();
+    Simulate_IC(A, B, M1_small, M2_small, DIV, Initial_Condition, List_Of_Elements, N_Nodes, Number_Of_TimeSteps, DeltaT, Sol, 4);
+    MatDestroy(&DIV);
 
-    //std::cout << "Sol = " << std::endl;
-    //VecView(Sol, viewer);
-
-    double Error2 = calculate_Error2D_Quad(Initial_Condition, Sol, 2, List_Of_Elements, List_Of_Vertices, N_Nodes);
     double Error = calculate_Error2D(Initial_Condition, Sol, 2, 1.0/Number_Of_Elements_Petsc, 1.0/Number_Of_Elements_Petsc, (N_Petsc+1)*(N_Petsc+1));
-    //std::cout << "Error = " << Error << std::endl;
-    //std::cout << "Error2 = " << Error2 << std::endl;
-
 
         char szFileName[255] = {0};
         std::string store_solution = "Solution/Solutions/Sol_n"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+"N"+std::to_string(N_Petsc)+"Ts"+std::to_string(Number_Of_TimeSteps_In_One_Period)+".txt";
@@ -294,13 +288,9 @@ int main(int argc,char **args)
         PetscViewerDestroy(&viewer3);
 
 
-    VecDestroy(&Initial_Condition);
     VecDestroy(&Sol);
-    VecDestroy(&VecU);
-    VecDestroy(&VecW);
-    VecDestroy(&VecR);
-    VecDestroy(&VecP);
 
+    VecDestroy(&Initial_Condition);
     MatDestroy(&A);
     MatDestroy(&B);
 

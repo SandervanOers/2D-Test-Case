@@ -1704,7 +1704,7 @@ void GradSimplex2D(const Vec &a, const Vec &b, const unsigned int &id, const uns
   VecRestoreArray(tmp, &tmp_a);
 
   VecPointwiseMult(tmp, fa, tmp);
-  VecAXPY(dmodeds,1.0,tmp);
+  VecAXPY(dmodeds,1.0,tmp); /// Check this
 
   // Normalize
   VecScale(dmodedr, pow(2.0, (id+0.5)));
