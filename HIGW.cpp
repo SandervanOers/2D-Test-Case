@@ -2369,12 +2369,14 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
     MatDestroy(&BF2);
     */
 
+    // Not needed since we scale both sides of the equation (= constructed incompressibility)
     Mat DIV_TEMP1, DIV_TEMP2;
     MatMatMult(ET, invM, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP1);
-    MatMatMult(DIV_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP2);
-    MatMatMult(invM_small, DIV_TEMP2, MAT_INITIAL_MATRIX, fillBF, &DIV);
+    //MatMatMult(DIV_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP2);
+    //MatMatMult(invM_small, DIV_TEMP2, MAT_INITIAL_MATRIX, fillBF, &DIV);
+    MatMatMult(DIV_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &DIV);
     MatDestroy(&DIV_TEMP1);
-    MatDestroy(&DIV_TEMP2);
+    //MatDestroy(&DIV_TEMP2);
 
     Mat C, C_TEMP1, C_TEMP2;
     MatMatMult(NMat, invM_small, MAT_INITIAL_MATRIX, fillBF, &C_TEMP1);
@@ -2434,9 +2436,7 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
 	MatMatMult(DIV, BF1, MAT_INITIAL_MATRIX, 1, &ALaplacian);
 	MatMatMult(DIV, Identity3, MAT_INITIAL_MATRIX, 1, &ALaplacian_h);
 
-
-
-       // factor 4 = Number of Variables
+    // factor 4 = Number of Variables
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 10*6*Np+1+3*Np*Np,  NULL, &A); // Check Factor 10 // Change from Triangles to Quadrilaterals
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 10*6*Np+1+3*Np*Np,  NULL, &B);
     std::cout << " Global Matrices Preallocated" << std::endl;
@@ -2450,8 +2450,8 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
         for (int j=0;j<numberOfNonZeros;++j)
         {
             dummy = (values[j]);
-            //if (dummy!=0.0)
-            if (abs(dummy)>1e-10)
+            //if (abs(dummy)>1e-10)
+            if (dummy!=0.0)
             {
                 MatSetValue(A, 	i,     3*N_Nodes+cols[j],    -DeltaT*dummy, 	ADD_VALUES);
                 //MatSetValue(B, 	i,     3*N_Nodes+cols[j],    0.5*DeltaT*dummy, 	    ADD_VALUES);
@@ -2544,8 +2544,7 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
             dummy = (values[j]);
             if (dummy!=0.0)
             {
-                //dummy = -dummy;
-                MatSetValue(A, 	2*N_Nodes+i,     N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(A, 	2*N_Nodes+i,     N_Nodes+cols[j],    0.5*DeltaT*dummy, 	ADD_VALUES);
                 MatSetValue(B, 	2*N_Nodes+i,     N_Nodes+cols[j],    -0.5*DeltaT*dummy, 	ADD_VALUES);
             }
         }
@@ -2556,7 +2555,6 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
             dummy = (values[j]);
             if (dummy!=0.0)
             {
-                //dummy = -dummy;
                 MatSetValue(A, 	N_Nodes+i,     2*N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
                 MatSetValue(B, 	N_Nodes+i,     2*N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
 
@@ -2566,6 +2564,7 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
         }
         MatRestoreRow(D2, i, &numberOfNonZeros, &cols, &values);
 
+        /*
         MatGetRow(DIV, i, &numberOfNonZeros, &cols, &values);
         for (int j=0;j<numberOfNonZeros;++j)
         {
@@ -2581,15 +2580,15 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
             }
         }
         MatRestoreRow(DIV, i, &numberOfNonZeros, &cols, &values);
-
+        */
         MatGetRow(ALaplacian_h, i, &numberOfNonZeros, &cols, &values);
         for (int j=0;j<numberOfNonZeros;++j)
         {
             dummy = (values[j]);
             if (dummy!=0)
             {
-                MatSetValue(A, 	3*N_Nodes+i,     2*N_Nodes+cols[j],     -0.5*dummy, 	ADD_VALUES);
-                MatSetValue(B, 	3*N_Nodes+i,     2*N_Nodes+cols[j],     0.5*dummy, 	ADD_VALUES);
+                MatSetValue(A, 	3*N_Nodes+i,     2*N_Nodes+cols[j],     0.5*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	3*N_Nodes+i,     2*N_Nodes+cols[j],     -0.5*dummy, 	ADD_VALUES);
             }
         }
         MatRestoreRow(ALaplacian_h, i, &numberOfNonZeros, &cols, &values);
@@ -2598,7 +2597,6 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
         for (int j=0;j<numberOfNonZeros;++j)
         {
             dummy = (values[j]);
-
             if (dummy!=0)
             {
                 MatSetValue(A, 	3*N_Nodes+i,     	3*N_Nodes+cols[j],     dummy, 		ADD_VALUES);

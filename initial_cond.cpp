@@ -379,24 +379,32 @@ extern double calculate_sigma_2DIC(const double &beta, const unsigned int &kx, c
 extern double Exact_Solution_mx_2DIC(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
 {
     double N2 = beta;
-    return -exp(-0.5*beta*z)*kx*(N2-4.0*PETSC_PI*PETSC_PI*sigma*sigma)/(sigma*sigma*PETSC_PI*(16.0*PETSC_PI*PETSC_PI*kz*kz+N2*N2))*(N2*sin(2.0*PETSC_PI*kz*z)+4.0*PETSC_PI*kz*cos(2.0*PETSC_PI*kz*z))*sin(2.0*PETSC_PI*kx*x)*sin(2*PETSC_PI*sigma*t+0.1);
+    double kxd = (double)kx;
+    double kzd = (double)kz;
+    return exp(-0.5*beta*z)*(-N2/(2.0*2.0*PETSC_PI*kxd)*sin(2.0*PETSC_PI*kzd*z)-kzd/kxd*cos(2.0*PETSC_PI*kzd*z))*sin(2.0*PETSC_PI*kxd*x)*sin(sigma*t+0.1);
 }
 /*--------------------------------------------------------------------------*/
 extern double Exact_Solution_mz_2DIC(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
 {
-    return exp(-0.5*beta*z)*sin(2.0*PETSC_PI*kz*z)*cos(2.0*PETSC_PI*kx*x)*sin(2*PETSC_PI*sigma*t+0.1);
+    double kxd = (double)kx;
+    double kzd = (double)kz;
+    return exp(-0.5*beta*z)*sin(2.0*PETSC_PI*kzd*z)*cos(2.0*PETSC_PI*kxd*x)*sin(2*PETSC_PI*sigma*t+0.1);
 }
 /*--------------------------------------------------------------------------*/
 extern double Exact_Solution_r_2DIC(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
 {
     double N2 = beta;
-    return -N2/(2.0*PETSC_PI*sigma)*exp(-0.5*beta*z)*sin(2.0*PETSC_PI*kz*z)*cos(2.0*PETSC_PI*kx*x)*cos(2*PETSC_PI*sigma*t+0.1);
+    double kxd = (double)kx;
+    double kzd = (double)kz;
+    return -N2/(2.0*PETSC_PI*sigma)*exp(-0.5*beta*z)*sin(2.0*PETSC_PI*kzd*z)*cos(2.0*PETSC_PI*kxd*x)*cos(2*PETSC_PI*sigma*t+0.1);
 }
 /*--------------------------------------------------------------------------*/
 extern double Exact_Solution_p_2DIC(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
 {
     double N2 = beta;
-    return -exp(-0.5*beta*z)*(N2-4.0*PETSC_PI*PETSC_PI*sigma*sigma)/(sigma*sigma*PETSC_PI*(16.0*PETSC_PI*PETSC_PI*kz*kz+N2*N2))*(N2*sin(2.0*PETSC_PI*kz*z)+4.0*PETSC_PI*kz*cos(2.0*PETSC_PI*kz*z))*cos(2.0*PETSC_PI*kx*x)*cos(2*PETSC_PI*sigma*t+0.1);
+    double kxd = (double)kx;
+    double kzd = (double)kz;
+    return exp(-0.5*beta*z)*(-N2*sigma/(2.0*2.0*PETSC_PI*kxd*kxd)*sin(2.0*PETSC_PI*kzd*z)-kz*sigma/kxd/kxd*cos(2.0*PETSC_PI*kzd*z))*cos(2.0*PETSC_PI*kxd*x)*cos(2*PETSC_PI*sigma*t+0.1);
 }
 /*--------------------------------------------------------------------------*/
 extern double rho_0_2DIC(const double &z, const double &beta)
