@@ -2345,7 +2345,7 @@ extern void create_Compressible_System_MidPoint_Full(const Mat &E, const Mat &ET
     MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY);
 }
 /*--------------------------------------------------------------------------*/
-extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &M2_small, const Mat &NMat, const Mat &NDerivMat, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, const double &nu, Mat &A, Mat &B, Mat &ALaplacian, Mat &ALaplacian_h, Mat &DIV)
+extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &M2_small, const Mat &NMat, const Mat &NDerivMat, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, const double &nu, Mat &A, Mat &B, Mat &DIV)
 {
     double Np = (N+1)*(N+1);
     std::cout << "Start Global Matrices Construction" << std::endl;
@@ -2372,11 +2372,9 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
     // Not needed since we scale both sides of the equation (= constructed incompressibility)
     Mat DIV_TEMP1, DIV_TEMP2;
     MatMatMult(ET, invM, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP1);
-    //MatMatMult(DIV_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP2);
-    //MatMatMult(invM_small, DIV_TEMP2, MAT_INITIAL_MATRIX, fillBF, &DIV);
-    MatMatMult(DIV_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &DIV);
+    MatMatMult(DIV_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP2);
+    MatMatMult(invM_small, DIV_TEMP2, MAT_INITIAL_MATRIX, fillBF, &DIV);
     MatDestroy(&DIV_TEMP1);
-    //MatDestroy(&DIV_TEMP2);
 
     Mat C, C_TEMP1, C_TEMP2;
     MatMatMult(NMat, invM_small, MAT_INITIAL_MATRIX, fillBF, &C_TEMP1);
@@ -2406,10 +2404,6 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
     MatDestroy(&D2_TEMP1);
     MatDestroy(&D2_TEMP2);
 
-    Mat Laplacian;
-	MatMatMult(BF1, DIV, MAT_INITIAL_MATRIX, 1, &Laplacian);
-	MatScale(Laplacian, nu);
-
     Mat Identity3;
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, N_Nodes, Np, NULL, &Identity3);
     for (unsigned int i = 0; i < N_Nodes; i++)
@@ -2433,12 +2427,56 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
     MatAssemblyEnd(Identity3,MAT_FINAL_ASSEMBLY);
 
 
-	MatMatMult(DIV, BF1, MAT_INITIAL_MATRIX, 1, &ALaplacian);
-	MatMatMult(DIV, Identity3, MAT_INITIAL_MATRIX, 1, &ALaplacian_h);
+    Mat Laplacian;
+	MatMatMult(DIV, BF1, MAT_INITIAL_MATRIX, 1, &Laplacian);
+	MatScale(Laplacian, nu);
+
+    //std::cout << "Laplacian = " << std::endl;
+    //MatView(Laplacian, PETSC_VIEWER_STDOUT_SELF);
+
+    Mat VectorLaplacian;
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, 2*N_Nodes, 10*6*Np+1+3*Np*Np, NULL, &VectorLaplacian);
+    for (unsigned int i = 0; i < N_Nodes; i++)
+    {
+        double dummy=0;
+        const PetscInt* cols;
+        const PetscScalar* values;
+        PetscInt 	numberOfNonZeros;
+        MatGetRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(VectorLaplacian, 	i,     cols[j],     dummy, 	ADD_VALUES);
+                MatSetValue(VectorLaplacian, 	N_Nodes+i,     N_Nodes+cols[j],     dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
+    }
+    MatAssemblyBegin(VectorLaplacian,MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(VectorLaplacian,MAT_FINAL_ASSEMBLY);
+
+    //std::cout << "VectorLaplacian = " << std::endl;
+    //MatView(VectorLaplacian, PETSC_VIEWER_STDOUT_SELF);
+
+    // invM_small Not needed since we scale both sides of the equation (= constructed incompressibility)
+    Mat ALaplacian, ALaplacian_h, ADivLaplacian;
+	MatMatMult(DIV_TEMP2, VectorLaplacian, MAT_INITIAL_MATRIX, 1, &ADivLaplacian);
+	MatMatMult(DIV_TEMP2, BF1, MAT_INITIAL_MATRIX, 1, &ALaplacian);
+	MatMatMult(DIV_TEMP2, Identity3, MAT_INITIAL_MATRIX, 1, &ALaplacian_h);
+    MatDestroy(&DIV_TEMP2);
+    MatDestroy(&Identity3);
+    MatDestroy(&VectorLaplacian);
+
+    //std::cout << "ADivLaplacian = " << std::endl;
+    //MatView(ADivLaplacian, PETSC_VIEWER_STDOUT_SELF);
+
+    /// Pass DIV_TEMP2 instead of DIV to compute L infinity norm of divergence
 
     // factor 4 = Number of Variables
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 10*6*Np+1+3*Np*Np,  NULL, &A); // Check Factor 10 // Change from Triangles to Quadrilaterals
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 10*6*Np+1+3*Np*Np,  NULL, &B);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 10*6*Np+1+9*Np*Np,  NULL, &A); // Check Factor 10 // Change from Triangles to Quadrilaterals
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 10*6*Np+1+9*Np*Np,  NULL, &B);
     std::cout << " Global Matrices Preallocated" << std::endl;
     for (unsigned int i = 0; i < 2*N_Nodes; i++)
     {
@@ -2454,7 +2492,6 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
             if (dummy!=0.0)
             {
                 MatSetValue(A, 	i,     3*N_Nodes+cols[j],    -DeltaT*dummy, 	ADD_VALUES);
-                //MatSetValue(B, 	i,     3*N_Nodes+cols[j],    0.5*DeltaT*dummy, 	    ADD_VALUES);
             }
         }
         MatRestoreRow(BF1, i, &numberOfNonZeros, &cols, &values);
@@ -2486,14 +2523,12 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
         MatSetValue(A, i, i, 1.0, ADD_VALUES);
         MatSetValue(A, N_Nodes+i, N_Nodes+i, 1.0, ADD_VALUES);
         MatSetValue(A, 2*N_Nodes+i, 2*N_Nodes+i, 1.0, ADD_VALUES);
-        //MatSetValue(A, 3*N_Nodes+i, 3*N_Nodes+i, 1.0, ADD_VALUES);
 
         MatSetValue(B, i, i, 1.0, ADD_VALUES);
         MatSetValue(B, N_Nodes+i, N_Nodes+i, 1.0, ADD_VALUES);
         MatSetValue(B, 2*N_Nodes+i, 2*N_Nodes+i, 1.0, ADD_VALUES);
-        //MatSetValue(B, 3*N_Nodes+i, 3*N_Nodes+i, 1.0, ADD_VALUES);
 
-        /*
+
         MatGetRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
         for (int j=0;j<numberOfNonZeros;++j)
         {
@@ -2507,19 +2542,19 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
             }
         }
         MatRestoreRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
-        */
 
+        /*
         MatGetRow(C, i, &numberOfNonZeros, &cols, &values);
         for (int j=0;j<numberOfNonZeros;++j)
         {
             dummy = (values[j]);
             if (dummy!=0.0)
             {
-                //MatSetValue(A, 	N_Nodes+i,     3*N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-                //MatSetValue(B, 	N_Nodes+i,     3*N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(A, 	N_Nodes+i,     3*N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	N_Nodes+i,     3*N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
 
-                //MatSetValue(A, 	3*N_Nodes+i,     N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                //MatSetValue(B, 	3*N_Nodes+i,     N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(A, 	3*N_Nodes+i,     N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	3*N_Nodes+i,     N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
             }
         }
         MatRestoreRow(C, i, &numberOfNonZeros, &cols, &values);
@@ -2529,15 +2564,15 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
             dummy = (values[j]);
             if (dummy!=0.0)
             {
-                //MatSetValue(A, 	N_Nodes+i,     2*N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
-                //MatSetValue(B, 	N_Nodes+i,     2*N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(A, 	N_Nodes+i,     2*N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	N_Nodes+i,     2*N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
 
-                //MatSetValue(A, 	N_Nodes+i,     3*N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
-                //MatSetValue(B, 	N_Nodes+i,     3*N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(A, 	N_Nodes+i,     3*N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	N_Nodes+i,     3*N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
             }
         }
         MatRestoreRow(C2, i, &numberOfNonZeros, &cols, &values);
-
+        */
         MatGetRow(D1, i, &numberOfNonZeros, &cols, &values);
         for (int j=0;j<numberOfNonZeros;++j)
         {
@@ -2604,6 +2639,18 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
         }
         MatRestoreRow(ALaplacian, i, &numberOfNonZeros, &cols, &values);
 
+        MatGetRow(ADivLaplacian, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0)
+            {
+                MatSetValue(A, 	3*N_Nodes+i,     	cols[j],     0.5*dummy, 		ADD_VALUES);
+                MatSetValue(B, 	3*N_Nodes+i,     	cols[j],     -0.5*dummy, 		ADD_VALUES);
+            }
+        }
+        MatRestoreRow(ADivLaplacian, i, &numberOfNonZeros, &cols, &values);
+
     }
     MatDestroy(&BF1);
     MatDestroy(&C);
@@ -2611,7 +2658,9 @@ extern void create_Incompressible_System_MidPoint_Full(const Mat &E, const Mat &
     MatDestroy(&D1);
     MatDestroy(&D2);
     MatDestroy(&Laplacian);
-    MatDestroy(&Identity3);
+    MatDestroy(&ADivLaplacian);
+    MatDestroy(&ALaplacian);
+    MatDestroy(&ALaplacian_h);
 
     std::cout << " Global Matrices Constructed" << std::endl;
     MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
@@ -2751,7 +2800,7 @@ extern void compute_InitialCondition_system2(const std::vector<Squares2D> &List_
     VecAssemblyEnd(VecP);
 }
 /*--------------------------------------------------------------------------*//*--------------------------------------------------------------------------*/
-extern void compute_InitialCondition_Incompressible(const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const double &rho_0_Deriv, const double &kxmode, const double &kzmode, Vec &Initial_Condition, const unsigned int &Number_Of_Elements_Petsc, const unsigned int &Number_Of_TimeSteps_In_One_Period, const unsigned int &N_Petsc, const Mat &ALaplacian, const Mat &ALaplacian_h, const Mat &DIV)
+extern void compute_InitialCondition_Incompressible(const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const double &rho_0_Deriv, const double &kxmode, const double &kzmode, Vec &Initial_Condition, const unsigned int &Number_Of_Elements_Petsc, const unsigned int &Number_Of_TimeSteps_In_One_Period, const unsigned int &N_Petsc, const Mat &DIV)
 {
     PetscScalar   sigma;
     sigma = calculate_sigma_2DIC(rho_0_Deriv, kxmode, kzmode);
@@ -2808,7 +2857,7 @@ extern void compute_InitialCondition_Incompressible(const std::vector<Squares2D>
     VecAssemblyEnd(Velocity);
 
     compute_Divergence_Velocity(Initial_Condition, N_Nodes, DIV);
-    correctInitialProjectionOfVelocity(N_Nodes, Velocity, ALaplacian, ALaplacian_h, DIV);
+    correctInitialProjectionOfVelocity(N_Nodes, Velocity, DIV);
 
 	PetscScalar* XTEMP;
 	VecGetArray(Velocity, &XTEMP);
@@ -2828,7 +2877,7 @@ extern void compute_InitialCondition_Incompressible(const std::vector<Squares2D>
     VecDestroy(&Velocity);
 }
 /*--------------------------------------------------------------------------*/
-extern void correctInitialProjectionOfVelocity(const unsigned int &N_Nodes, Vec &UInit, const Mat &ALaplacian, const Mat &ALaplacian_h, const Mat &DIV)
+extern void correctInitialProjectionOfVelocity(const unsigned int &N_Nodes, Vec &UInit, const Mat &DIV)
 {
 	double reltol = 1.e-16;
 	double abstol = 1.e-16;

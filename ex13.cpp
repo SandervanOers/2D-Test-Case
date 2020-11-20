@@ -103,12 +103,12 @@ int main(int argc,char **args)
     {
         Eold = 0.0;
     int Number_Of_Polynomial_Steps = N_Petsc    ;
-    for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < std::max(5,9-Number_Of_Polynomial_Steps); Number_Of_Spatial_Steps++) //std::max(5,7-Number_Of_Polynomial_Steps)
+    //for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < std::max(5,9-Number_Of_Polynomial_Steps); Number_Of_Spatial_Steps++) //std::max(5,7-Number_Of_Polynomial_Steps)
     {
 
-    //int Number_Of_Spatial_Steps = 0;
+    int Number_Of_Spatial_Steps = 0;
     auto t0 = std::chrono::high_resolution_clock::now();
-    Number_Of_Elements_Petsc = pow(2.0, (double)Number_Of_Spatial_Steps);
+    //Number_Of_Elements_Petsc = pow(2.0, (double)Number_Of_Spatial_Steps);
     N_Petsc = Number_Of_Polynomial_Steps;
 
     //std::string mesh_name = "Mesh/square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(2*Number_Of_Elements_Petsc)+".msh"; //2* switched/
@@ -230,10 +230,9 @@ int main(int argc,char **args)
     //MatView(invM, viewer);
 
     Mat A, B;
-    Mat ALaplacian, ALaplacian_h;
     Mat DIV;
     // Send List of Elements -> Get Np per Element for preallocation
-    create_Incompressible_System_MidPoint_Full(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, N_Nodes, N_Petsc, DeltaT, nu, A, B, ALaplacian, ALaplacian_h, DIV);
+    create_Incompressible_System_MidPoint_Full(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, N_Nodes, N_Petsc, DeltaT, nu, A, B, DIV);
 
     //std::cout << "Store Global Matrices" << std::endl;
     /// TO DO
@@ -260,10 +259,7 @@ int main(int argc,char **args)
     MatDestroy(&NDerivMat);
 
     Vec Initial_Condition;
-    compute_InitialCondition_Incompressible(List_Of_Elements, N_Nodes, rho_0_Deriv, kxmode, kzmode, Initial_Condition, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, ALaplacian, ALaplacian_h, DIV);
-
-    MatDestroy(&ALaplacian);
-    MatDestroy(&ALaplacian_h);
+    compute_InitialCondition_Incompressible(List_Of_Elements, N_Nodes, rho_0_Deriv, kxmode, kzmode, Initial_Condition, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, DIV);
 
     Vec Sol;
     Simulate_IC(A, B, M1_small, M2_small, DIV, Initial_Condition, List_Of_Elements, N_Nodes, Number_Of_TimeSteps, DeltaT, Sol, 4);
