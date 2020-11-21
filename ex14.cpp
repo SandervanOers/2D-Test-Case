@@ -115,33 +115,9 @@ int main(int argc,char **args)
     //Number_Of_Elements_Petsc = pow(2.0, (double)Number_Of_Spatial_Steps);
     N_Petsc = Number_Of_Polynomial_Steps;
 
-    //std::string mesh_name = "Mesh/square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(2*Number_Of_Elements_Petsc)+".msh"; //2* switched/
-    //std::string mesh_name = "Mesh/square_unstructured_"+std::to_string(Number_Of_Elements_Petsc)+".msh"; //2* switched/
-    //std::string mesh_name = "Mesh/square_tilted_quads_"+std::to_string(2*Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh"; //2* switched/
     std::string mesh_name;
-    if (Method == 0)
-    {
-        mesh_name = "Mesh/square_tilted_quads_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh"; //2* switched/
-    }
-    /**************************************************************** /
-    // square_tilted_quads and manual_square (+ square) have opposite sign for E
-    / ****************************************************************/
-    else if (Method == 1)
-    {
-        mesh_name = "Mesh/manual_square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh"; //2* switched/
-    }
-    else if (Method == 2)
-    {
-        mesh_name = "Mesh/square_unstructured_"+std::to_string(Number_Of_Elements_Petsc)+".msh"; //2* switched/
-    }
-    else if (Method == 3)
-    {
-        mesh_name = "Mesh/manual_square_tilted_quads_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh"; //2* switched/
-    }
-    else if (Method == 4)
-    {
-        mesh_name = "Mesh/square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh"; //2* switched/
-    }
+    mesh_name = mesh_name_trapezoid(Number_Of_Elements_Petsc);
+
     std::vector<Squares2D> List_Of_Elements;
     std::vector<InternalBoundariesSquares2D> List_Of_Boundaries;
     std::vector<VertexCoordinates2D> List_Of_Vertices;
@@ -235,8 +211,10 @@ int main(int argc,char **args)
 
     Mat A, B;
     Mat DIV;
+    double Re = 65.0/2.0;
+    double Fr = 1.0/sqrt(9.81*65.0/2.0);
     // Send List of Elements -> Get Np per Element for preallocation
-    create_Incompressible_System_MidPoint_Full(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, N_Nodes, N_Petsc, DeltaT, nu, A, B, DIV);
+    create_WA_System_MidPoint(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, N_Nodes, N_Petsc, DeltaT, nu, A, B, DIV, Re, Fr);
 
     //std::cout << "Store Global Matrices" << std::endl;
     /// TO DO

@@ -110,7 +110,14 @@ OBJS13 = ex13.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elemen
 
 ex13: ${OBJS13} chkopts
 	-${CLINKER} -o ex13 ${OBJS13} ${PETSC_KSP_LIB} ${SLEPC_LIB}
-	${RM} ${OBJS13}	
+	${RM} ${OBJS13}			
+
+ex14.o: ex14.cpp
+OBJS14 = ex14.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o Cubature2D.o CubatureData2D.o gmsh_io.o
+
+ex14: ${OBJS14} chkopts
+	-${CLINKER} -o ex14 ${OBJS14} ${PETSC_KSP_LIB} ${SLEPC_LIB}
+	${RM} ${OBJS14}	
 #----------------------------------------------------------------------------
 runex1:
 	-@${MPIEXEC} -n 1 ./ex1 -ksp_monitor_short -ksp_gmres_cgs_refinement_type refine_always > ex1_1.tmp 2>&1;	  \

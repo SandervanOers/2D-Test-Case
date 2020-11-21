@@ -793,3 +793,29 @@ void set_theta_Uniform(std::vector<InternalBoundariesSquares2D> &List_Of_Boundar
     }
 }
 /*--------------------------------------------------------------------------*/
+extern std::string mesh_name_trapezoid(const unsigned int n)
+{
+    std::string mesh_name;
+    switch(n) {
+    case 2: mesh_name = "Mesh/trapezoid_2x6.msh"; break;
+    case 3: mesh_name = "Mesh/trapezoid_3x8.msh"; break;
+    case 4: mesh_name = "Mesh/trapezoid_4x12.msh"; break;
+    case 5: mesh_name = "Mesh/trapezoid_5x14.msh"; break;
+    case 6: mesh_name = "Mesh/trapezoid_6x16.msh"; break;
+    case 7: mesh_name = "Mesh/trapezoid_7x20.msh"; break;
+    case 8: mesh_name = "Mesh/trapezoid_8x22.msh"; break;
+    case 9: mesh_name = "Mesh/trapezoid_9x26.msh"; break;
+    case 10: mesh_name = "Mesh/trapezoid_10x28.msh"; break;
+    case 11: mesh_name = "Mesh/trapezoid_11x30.msh"; break;
+    case 12: mesh_name = "Mesh/trapezoid_12x34.msh"; break;
+    case 15: mesh_name = "Mesh/trapezoid_15x40.msh"; break;
+    case 18: mesh_name = "Mesh/trapezoid_18x50.msh"; break;
+    case 27: mesh_name = "Mesh/trapezoid_27x72.msh"; break;
+    case 33: mesh_name = "Mesh/trapezoid_33x88.msh"; break;
+    case 39: mesh_name = "Mesh/trapezoid_39x104.msh"; break;
+    default: std::cout << "***********************\n* Mesh does not exist *\n* Defaulting to 2x6   *\n***********************"; mesh_name = "Mesh/trapezoid_2x6.msh"; break;
+    }
+
+    return mesh_name;
+}
+/*--------------------------------------------------------------------------*/
