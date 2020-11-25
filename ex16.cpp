@@ -1,43 +1,56 @@
-    static char help[] = "Solves the 2D Nonviscous Full System. Creates Convergence Tables\n \n\n";
+    static char help[] = "Solves the 2D EB WA Viscous Forced System. Creates Convergence Tables\n \n\n";
 /*
 **********************************************************
 Number_Of_TimeSteps_In_One_Period = 100
-    2       0             0     -nan        0
-    4       0        0.4713     -inf        0
-    8       0        0.3898     0.27        0
-   16       0        0.1199      1.7        0
-   32       0       0.05411      1.1        2
-   64       0       0.02501      1.1       10
-  128       0        0.0125        1       40
-  256       0      0.006911     0.85      170
-    2       1        0.5607     -inf        0
-    4       1        0.3954      0.5        0
-    8       1        0.2336     0.76        0
-   16       1        0.1962     0.25        1
-   32       1        0.1981    -0.014        5
-   64       1        0.2015    -0.024       22
-  128       1        0.2009    0.0042      106
-    2       2        0.2787     -inf        0
-    4       2        0.2244     0.31        0
-    8       2       0.04207      2.4        0
-   16       2       0.01208      1.8        3
-   32       2      0.003305      1.9       13
-   64       2      0.001362      1.3       65
-    2       3       0.04634     -inf        0
-    4       3        0.1066     -1.2        0
-    8       3       0.08104      0.4        1
-   16       3       0.04919     0.72        7
-   32       3        0.0604     -0.3       34
-    2       4       0.00442     -inf        0
-    4       4        0.1257     -4.8        1
-    8       4       0.02534      2.3        4
-   16       4      0.007179      1.8       17
-    2       5     0.0007959     -inf        0
-    4       5       0.09166     -6.8        3
-    8       5       0.06724     0.45       13
-    2       6     0.0005679     -inf        0
-    4       6        0.1036     -7.5        5
-    2       7     0.0005509     -inf        1
+**********************************************************
+L2 Errors
+	 h 	 N 	 Er 	 Order 	 t
+    2       0           inf     -inf        0
+    4       0        0.0359      inf        0
+    8       0      0.005258      2.8        0
+   16       0      0.001843      1.5        1
+   32       0      0.001481     0.32        4
+   64       0      0.001461    0.019       18
+    2       2         1.039     -inf        0
+    4       2       0.06389        4        0
+    8       2      0.004784      3.7        1
+   16       2      0.001469      1.7        7
+    2       4       0.06501     -inf        0
+    4       4      0.001525      5.4        1
+    8       4      0.001462    0.061        8
+    2       6      0.002005     -inf        1
+    4       6      0.001462     0.46        6
+    8       6      0.001462    2.9e-06       37
+    2       8      0.001372     -inf        3
+    4       8      0.001462    -0.091       20
+    8       8      0.001462    -6e-06      126
+
+**********************************************************
+Number_Of_TimeSteps_In_One_Period = 1000
+**********************************************************
+L2 Errors
+	 h 	 N 	 Er 	 Order 	 t
+    2       0           inf     -inf        0
+    4       0       0.03597      inf        0
+    8       0      0.005105      2.8        2
+   16       0      0.001172      2.1        8
+   32       0     0.0002899        2       35
+   64       0     7.295e-05        2      151
+    2       2         1.039     -inf        0
+    4       2       0.06411        4        1
+    8       2      0.004903      3.7        8
+   16       2      0.000498      3.3       59
+    2       4       0.06497     -inf        1
+    4       4     0.0004083      7.3        7
+    8       4     1.669e-05      4.6       51
+    2       6      0.001478     -inf        3
+    4       6      1.47e-05      6.7       29
+    8       6     1.462e-05    0.0077      207
+    2       8     2.198e-05     -inf       10
+    4       8     1.462e-05     0.59       79
+    8       8     1.462e-05    -6.3e-06      613
+**********************************************************
+
 **********************************************************
     */
 #include <petscksp.h>
@@ -63,14 +76,15 @@ int main(int argc,char **args)
     auto t1 = std::chrono::high_resolution_clock::now();
     // Read in options from command line
     PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=10, Method=1;
-    PetscInt   Number_Of_Periods=10, kmode=1;
-    PetscScalar N2 = 0.0;//1.0; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
+    PetscInt   Number_Of_Periods=20, kmode=1;
+    PetscScalar N2 = 0.1625; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 0, N_Q=0;
     PetscScalar nu = 0.0;
     PetscInt    Dimensions = 2;
-    PetscScalar F0 = 0.01;
-    PetscScalar omega = 0.16;
+    PetscScalar F0 = 0.1;
+    PetscScalar omega = 0.052;
+    PetscScalar Fr = 0.56;
 
     PetscOptionsGetInt(NULL, NULL, "-n", &Number_Of_Elements_Petsc, NULL);
     PetscOptionsGetInt(NULL, NULL, "-k", &kmode, NULL);
@@ -85,6 +99,7 @@ int main(int argc,char **args)
     PetscOptionsGetInt(NULL, NULL, "-QuadratureAdded", &N_Q, NULL);
     PetscOptionsGetScalar(NULL, NULL, "-nu", &nu, NULL);
     PetscOptionsGetInt(NULL, NULL, "-dim", &Dimensions, NULL);
+    PetscOptionsGetScalar(NULL, NULL, "-Fr", &Fr, NULL);
 
     PetscLogStage stage;
 
@@ -103,11 +118,11 @@ int main(int argc,char **args)
     PetscViewerPushFormat(viewer_info, PETSC_VIEWER_ASCII_INFO);
 
     double Eold = 0;
-    //for (int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 10; Number_Of_Polynomial_Steps++)
+    //for (int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 10; Number_Of_Polynomial_Steps += 2)
     {
         Eold = 0.0;
     int Number_Of_Polynomial_Steps = N_Petsc    ;
-    //for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < std::max(5,9-Number_Of_Polynomial_Steps); Number_Of_Spatial_Steps++) //std::max(5,7-Number_Of_Polynomial_Steps)
+    //for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < std::max(4,7-Number_Of_Polynomial_Steps); Number_Of_Spatial_Steps++) //std::max(5,7-Number_Of_Polynomial_Steps)
     {
 
     int Number_Of_Spatial_Steps = 0;
@@ -180,10 +195,11 @@ int main(int argc,char **args)
     PetscInt kxmode, kzmode;
     kxmode = 1;
     kzmode = 1;
-    unsigned int rho_0_Deriv = 0.025;//N2;// + 1.0; // = beta
+    double rho_0_Deriv = N2;// + 1.0; // = beta
     /// Estimate the required time step
     PetscScalar   sigma;
-    sigma = omega; //calculate_sigma_2DIC(rho_0_Deriv, kxmode, kzmode);
+    //sigma = calculate_sigma_2DEB(rho_0_Deriv, kxmode, kzmode, Fr);
+    sigma = omega;
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
     PetscPrintf(PETSC_COMM_SELF,"Period %6.4e\n",2.0*PETSC_PI/(double)sigma);
     PetscPrintf(PETSC_COMM_SELF,"Number of Periods %6.4e\n",(double)Number_Of_Periods);
@@ -199,7 +215,7 @@ int main(int argc,char **args)
     //PetscLogStageRegister("Assembly", &stage);
     //PetscLogStagePush(stage);
     Mat E, ET, invM, M1, M2, M2_small, NMat, NDerivMat, invM_small, M1_small;
-    create_Matrices_Quads_Full_WA(List_Of_Vertices, List_Of_Boundaries, List_Of_Elements, N_Nodes, N_Petsc, N_Q, rho_0_Deriv, E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat);
+    create_Matrices_Quads_EB(List_Of_Vertices, List_Of_Boundaries, List_Of_Elements, N_Nodes, N_Petsc, N_Q, rho_0_Deriv, Fr, E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat);
 
     //std::cout <<"E = " << std::endl;
     //MatView(E, viewer_dense);
@@ -214,10 +230,9 @@ int main(int argc,char **args)
 
     Mat A, B;
     Mat DIV;
-    double Re = 65.0/2.0;
-    double Fr = 1.0/sqrt(9.81*65.0/2.0);
+    double Re = 3.25*100000;
     // Send List of Elements -> Get Np per Element for preallocation
-    create_WA_System_MidPoint(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, N_Nodes, N_Petsc, DeltaT, 1.0, A, B, DIV, Re, Fr);
+    create_EB_System_MidPoint(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, N_Nodes, N_Petsc, DeltaT, 0.0, A, B, DIV, Re, Fr);
 
     //std::cout << "Store Global Matrices" << std::endl;
     /// TO DO
@@ -244,10 +259,11 @@ int main(int argc,char **args)
     MatDestroy(&NDerivMat);
 
     Vec Initial_Condition, VecNodes;
+    //compute_InitialCondition_EB(List_Of_Elements, N_Nodes, rho_0_Deriv, Fr, kxmode, kzmode, Initial_Condition, VecNodes, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, DIV);
     compute_InitialCondition_WA(List_Of_Elements, N_Nodes, rho_0_Deriv, kxmode, kzmode, Initial_Condition, VecNodes, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, DIV);
 
     Vec Sol;
-    Simulate_WA(A, B, M1_small, M2_small, DIV, Initial_Condition, VecNodes, List_Of_Elements, N_Nodes, Number_Of_TimeSteps, DeltaT, Sol, 4, F0, omega);
+    Simulate_EB(A, B, M1_small, M2_small, DIV, Initial_Condition, VecNodes, List_Of_Elements, N_Nodes, Number_Of_TimeSteps, DeltaT, Sol, 4, F0, omega);
     MatDestroy(&DIV);
 
     double Error = calculate_Error2D(Initial_Condition, Sol, 2, 1.0/Number_Of_Elements_Petsc, 1.0/Number_Of_Elements_Petsc, (N_Petsc+1)*(N_Petsc+1));

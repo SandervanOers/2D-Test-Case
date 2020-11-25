@@ -159,5 +159,28 @@ extern double N_2_2DIC(const double &z, const double &beta);
 //extern std::vector<double> N_2_2DIC(const std::vector<double> &z, const double &beta);
 /*--------------------------------------------------------------------------*/
 
+/*--------------------------------------------------------------------------*/
+//  WA Case - Experiments
+/*--------------------------------------------------------------------------*/
+extern double calculate_sigma_2DWA(const double &beta, const unsigned int &kx, const unsigned int &kz);
+extern double Exact_Solution_mx_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz);
+extern double Exact_Solution_mz_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz);
+extern double Exact_Solution_r_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz);
+extern double Exact_Solution_p_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz);
+extern double rho_0_2DWA(const double &z, const double &beta);
+extern double rho_0_deriv_2DWA(const double &z, const double &beta);
+extern double N_2_2DWA(const double &z, const double &beta);
+/*--------------------------------------------------------------------------*/
+//  EB Case - Experiments
+/*--------------------------------------------------------------------------*/
+extern double calculate_sigma_2DEB(const double &beta, const unsigned int &kx, const unsigned int &kz, const double &Fr);
+extern double Exact_Solution_mx_2DEB(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz, const double &Fr);
+extern double Exact_Solution_mz_2DEB(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz, const double &Fr);
+extern double Exact_Solution_r_2DEB(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz, const double &Fr);
+extern double Exact_Solution_p_2DEB(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz, const double &Fr);
+extern double rho_0_2DEB(const double &z, const double &beta, const double &Fr);
+extern double rho_0_deriv_2DEB(const double &z, const double &beta, const double &Fr);
+extern double N_2_2DEB(const double &z, const double &beta, const double &Fr);
+/*--------------------------------------------------------------------------*/
 
 #endif

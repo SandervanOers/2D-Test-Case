@@ -452,3 +452,96 @@ extern double N_2_2DIC(const double &z, const double &beta)
     return returnvector;
 }*/
 /*--------------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------------*/
+//  WA Case - Experiments
+/*--------------------------------------------------------------------------*/
+extern double calculate_sigma_2DWA(const double &beta, const unsigned int &kx, const unsigned int &kz)
+{
+    return 0.0;
+}
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_mx_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
+{
+    return 0.0;
+}
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_mz_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
+{
+    return 0.0;
+}
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_r_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
+{
+    return 0.0;
+}
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_p_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
+{
+    return 0.0;
+}
+/*--------------------------------------------------------------------------*/
+extern double rho_0_2DWA(const double &z, const double &beta)
+{
+    double alpha = 1.027;
+    return alpha*exp(-beta*z);
+}
+extern double rho_0_deriv_2DWA(const double &z, const double &beta)
+{
+    double alpha = 1.027;
+    return -alpha*beta*exp(-beta*z);
+}
+extern double N_2_2DWA(const double &z, const double &beta)
+{
+    return 0.5;
+}
+/*--------------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------------*/
+//  EB Case - Experiments
+/*--------------------------------------------------------------------------*/
+extern double calculate_sigma_2DEB(const double &beta, const unsigned int &kx, const unsigned int &kz, const double &Fr)
+{
+    double kxd = (double)kx;
+    double kzd = (double)kz;
+    double N2 = N_2_2DEB(0.0, beta, Fr);
+    return sqrt(Fr*Fr*N2*kxd/(4.0*PETSC_PI*PETSC_PI*(kxd*kxd+kzd*kzd)));
+}
+extern double Exact_Solution_mx_2DEB(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz, const double &Fr)
+{
+    double kxd = (double)kx;
+    double kzd = (double)kz;
+    return -kzd/kxd*cos(2.0*PETSC_PI*kzd*z)*sin(2.0*PETSC_PI*kxd*x)*sin(2.0*PETSC_PI*sigma*t);
+}
+extern double Exact_Solution_mz_2DEB(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz, const double &Fr)
+{
+    double kxd = (double)kx;
+    double kzd = (double)kz;
+    return sin(2.0*PETSC_PI*kzd*z)*cos(2.0*PETSC_PI*kxd*x)*sin(2.0*PETSC_PI*sigma*t);
+}
+extern double Exact_Solution_r_2DEB(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz, const double &Fr)
+{
+    double kxd = (double)kx;
+    double kzd = (double)kz;
+    double N2 = N_2_2DEB(z, beta, Fr);
+    return -Fr*Fr*N2/sigma/2.0/PETSC_PI*sin(2.0*PETSC_PI*kzd*z)*cos(2.0*PETSC_PI*kxd*x)*cos(2.0*PETSC_PI*sigma*t);
+}
+extern double Exact_Solution_p_2DEB(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz, const double &Fr)
+{
+    double kxd = (double)kx;
+    double kzd = (double)kz;
+    return -kzd*sigma/kxd/kxd*cos(2.0*PETSC_PI*kzd*z)*cos(2.0*PETSC_PI*kxd*x)*cos(2.0*PETSC_PI*sigma*t);
+}
+extern double rho_0_2DEB(const double &z, const double &beta, const double &Fr)
+{
+    return 1.0;
+}
+extern double rho_0_deriv_2DEB(const double &z, const double &beta, const double &Fr)
+{
+    return Fr*Fr*(-beta);
+}
+extern double N_2_2DEB(const double &z, const double &beta, const double &Fr)
+{
+    return beta;
+}
+/*--------------------------------------------------------------------------*/
