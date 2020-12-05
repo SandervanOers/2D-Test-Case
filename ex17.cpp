@@ -23,15 +23,15 @@ int main(int argc,char **args)
     auto t1 = std::chrono::high_resolution_clock::now();
     // Read in options from command line
     PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=10, Method=1;
-    PetscInt   Number_Of_Periods=30, kmode=1;
-    PetscScalar N2 = 0.1625; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
+    PetscInt   Number_Of_Periods=50, kmode=1;
+    PetscScalar N2 = 1;//0.13*0.13;     //0.1625*0.1625; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 0, N_Q=0;
     PetscScalar nu = 0.0;
     PetscInt    Dimensions = 2;
-    PetscScalar F0 = 0.1;
-    PetscScalar omega = 0.06825;//0.052;
-    PetscScalar Fr = 0.56;
+    PetscScalar F0 = 0.0001;
+    PetscScalar omega = 0.17;//0.06139;//0.05518;        //0.052; //0.06825;//
+    PetscScalar Fr = 1;//0.56;
 
     PetscOptionsGetInt(NULL, NULL, "-n", &Number_Of_Elements_Petsc, NULL);
     PetscOptionsGetInt(NULL, NULL, "-k", &kmode, NULL);
@@ -69,19 +69,24 @@ int main(int argc,char **args)
     {
         Eold = 0.0;
     int Number_Of_Polynomial_Steps = N_Petsc    ;
-    //for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < std::max(4,7-Number_Of_Polynomial_Steps); Number_Of_Spatial_Steps++) //std::max(5,7-Number_Of_Polynomial_Steps)
+    for (int Number_Of_Spatial_Steps = 6; Number_Of_Spatial_Steps < 7; Number_Of_Spatial_Steps++) //std::max(4,7-Number_Of_Polynomial_Steps)
     {
 
-    int Number_Of_Spatial_Steps = 0;
+    //int Number_Of_Spatial_Steps = 0;
     auto t0 = std::chrono::high_resolution_clock::now();
-    //Number_Of_Elements_Petsc = pow(2.0, (double)Number_Of_Spatial_Steps);
+    Number_Of_Elements_Petsc = pow(2.0, (double)Number_Of_Spatial_Steps);
     N_Petsc = Number_Of_Polynomial_Steps;
 
     std::string mesh_name;
-    //mesh_name = "Mesh/square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh";
+    mesh_name = "Mesh/rectangle_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh";
     //mesh_name = "Mesh/square_tilted_quads_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh";
 
-    mesh_name = mesh_name_trapezoid(Number_Of_Elements_Petsc);
+    //mesh_name = mesh_name_trapezoid(Number_Of_Elements_Petsc);
+    //mesh_name = "Mesh/square_unstructured_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
+
+    //mesh_name = "Mesh/square_4x3.msh";
+    //mesh_name = "Mesh/square_tilted_quads_4x3.msh";
+    //mesh_name = "Mesh/square_unstructured_12.msh";
 
     std::vector<Squares2D> List_Of_Elements;
     std::vector<InternalBoundariesSquares2D> List_Of_Boundaries;
@@ -131,7 +136,7 @@ int main(int argc,char **args)
         std::cout << (*i).getID() <<  " : " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << std::endl;
     }
     */
-    Calculate_Jacobian_Square(List_Of_Elements, List_Of_Vertices);
+    //Calculate_Jacobian_Square(List_Of_Elements, List_Of_Vertices);
     Calculate_Jacobian_Boundaries_Square(List_Of_Elements, List_Of_Boundaries, List_Of_Vertices);
     set_Order_Polynomials_Uniform(List_Of_Elements, N_Petsc);
     set_theta_Uniform(List_Of_Boundaries, theta);
@@ -148,8 +153,8 @@ int main(int argc,char **args)
     double rho_0_Deriv = N2;// + 1.0; // = beta
     /// Estimate the required time step
     PetscScalar   sigma;
-    //sigma = calculate_sigma_2DEB(rho_0_Deriv, kxmode, kzmode, Fr);
-    sigma = omega;
+    sigma = calculate_sigma_2DEB(rho_0_Deriv, kxmode, kzmode, Fr);
+    //sigma = omega;
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
     PetscPrintf(PETSC_COMM_SELF,"Period %6.4e\n",2.0*PETSC_PI/(double)sigma);
     PetscPrintf(PETSC_COMM_SELF,"Number of Periods %6.4e\n",(double)Number_Of_Periods);
@@ -178,11 +183,15 @@ int main(int argc,char **args)
     //std::cout <<"invM = " << std::endl;
     //MatView(invM, viewer);
 
+    Vec Forcing_a;
+    ComputeForcing(List_Of_Elements, N_Nodes, Forcing_a);
+
     Mat A, B;
     Mat DIV;
     double Re = 3.25*100000;
     // Send List of Elements -> Get Np per Element for preallocation
-    create_WA_System_MidPoint(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, N_Nodes, N_Petsc, DeltaT, 0.0, A, B, DIV, Re, Fr);
+    create_WA_System_Forced_MidPoint(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, Forcing_a, N_Nodes, N_Petsc, DeltaT, 0.0, A, B, DIV, Re, Fr);
+    VecDestroy(&Forcing_a);
 
     //std::cout << "Store Global Matrices" << std::endl;
     /// TO DO
@@ -208,11 +217,13 @@ int main(int argc,char **args)
     MatDestroy(&NMat);
     MatDestroy(&NDerivMat);
 
+
     Vec Initial_Condition, VecNodes;
-    compute_InitialCondition_WA(List_Of_Elements, N_Nodes, rho_0_Deriv, Fr, kxmode, kzmode, Initial_Condition, VecNodes, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, DIV);
+    //compute_InitialCondition_WA(List_Of_Elements, N_Nodes, rho_0_Deriv, Fr, kxmode, kzmode, Initial_Condition, VecNodes, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, DIV);
+    compute_InitialCondition_EB(List_Of_Elements, N_Nodes, rho_0_Deriv, Fr, kxmode, kzmode, Initial_Condition, VecNodes, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, DIV);
 
     Vec Sol;
-    Simulate_WA(A, B, M1_small, M2_small, DIV, Initial_Condition, VecNodes, List_Of_Elements, N_Nodes, Number_Of_TimeSteps, DeltaT, Sol, 4, F0, omega);
+    Simulate_WA_Forced(A, B, M1_small, M2_small, DIV, Initial_Condition, List_Of_Elements, N_Nodes, Number_Of_TimeSteps, DeltaT, Sol, 4, F0, omega);
     MatDestroy(&DIV);
 
     double Error = calculate_Error2D(Initial_Condition, Sol, 2, 1.0/Number_Of_Elements_Petsc, 1.0/Number_Of_Elements_Petsc, (N_Petsc+1)*(N_Petsc+1));

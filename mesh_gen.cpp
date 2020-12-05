@@ -813,6 +813,8 @@ extern std::string mesh_name_trapezoid(const unsigned int n)
     case 27: mesh_name = "Mesh/trapezoid_27x72.msh"; break;
     case 33: mesh_name = "Mesh/trapezoid_33x88.msh"; break;
     case 39: mesh_name = "Mesh/trapezoid_39x104.msh"; break;
+    case 54: mesh_name = "Mesh/trapezoid_54x140.msh"; break;
+    case 105: mesh_name = "Mesh/trapezoid_105x280.msh"; break;
     default: std::cout << "***********************\n* Mesh does not exist *\n* Defaulting to 2x6   *\n***********************"; mesh_name = "Mesh/trapezoid_2x6.msh"; break;
     }
 

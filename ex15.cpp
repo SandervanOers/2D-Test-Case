@@ -77,14 +77,14 @@ int main(int argc,char **args)
     // Read in options from command line
     PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=10, Method=1;
     PetscInt   Number_Of_Periods=1, kmode=1;
-    PetscScalar N2 = 0.0;//1.0; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
+    PetscScalar N2 = 1.0; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 0, N_Q=0;
     PetscScalar nu = 0.0;
     PetscInt    Dimensions = 2;
     PetscScalar F0 = 0.0;
     PetscScalar omega = 0.16;
-    PetscScalar Fr = 1;//1.0/sqrt(9.81*65.0/2.0);
+    PetscScalar Fr = 0.56;//1.0/sqrt(9.81*65.0/2.0);
 
     PetscOptionsGetInt(NULL, NULL, "-n", &Number_Of_Elements_Petsc, NULL);
     PetscOptionsGetInt(NULL, NULL, "-k", &kmode, NULL);
@@ -122,7 +122,7 @@ int main(int argc,char **args)
     {
         Eold = 0.0;
     //int Number_Of_Polynomial_Steps = N_Petsc    ;
-    for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < std::max(4,7-Number_Of_Polynomial_Steps); Number_Of_Spatial_Steps++) //std::max(5,7-Number_Of_Polynomial_Steps)
+    for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < std::max(4,9-Number_Of_Polynomial_Steps); Number_Of_Spatial_Steps++) //
     {
 
     //int Number_Of_Spatial_Steps = 0;
@@ -201,9 +201,9 @@ int main(int argc,char **args)
     sigma = calculate_sigma_2DEB(rho_0_Deriv, kxmode, kzmode, Fr);
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
     PetscPrintf(PETSC_COMM_SELF,"Period %6.4e\n",2.0*PETSC_PI/(double)sigma);
-    PetscPrintf(PETSC_COMM_SELF,"Number of Periods %6.4e\n",(double)Number_Of_Periods);
+    PetscPrintf(PETSC_COMM_SELF,"Number of Periods %2.0e\n",(double)Number_Of_Periods);
 
-    Number_Of_TimeSteps_In_One_Period = 10000;//10*10*pow((double)N_Elements, (N_Petsc+1.0)/2.0);
+    Number_Of_TimeSteps_In_One_Period = 1000;//10*10*pow((double)N_Elements, (N_Petsc+1.0)/2.0);
     PetscScalar DeltaT = 1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
     //PetscScalar DeltaT = 2.0*PETSC_PI/(double)Number_Of_TimeSteps_In_One_Period/sigma;
 

@@ -456,49 +456,47 @@ extern double N_2_2DIC(const double &z, const double &beta)
 /*--------------------------------------------------------------------------*/
 //  WA Case - Experiments
 /*--------------------------------------------------------------------------*/
-extern double calculate_sigma_2DWA(const double &beta, const unsigned int &kx, const unsigned int &kz)
+extern double calculate_sigma_2DWA(const double &beta, const unsigned int &kx, const unsigned int &kz, const double &Fr)
 {
     return 0.0;
 }
 /*--------------------------------------------------------------------------*/
-extern double Exact_Solution_mx_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
+extern double Exact_Solution_mx_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz, const double &Fr)
+{
+    return -PETSC_PI*sin(PETSC_PI*x)*cos(PETSC_PI*z);
+}
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_mz_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz, const double &Fr)
+{
+    return PETSC_PI*cos(PETSC_PI*x)*sin(PETSC_PI*z);
+}
+/*--------------------------------------------------------------------------*/
+extern double Exact_Solution_r_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz, const double &Fr)
 {
     return 0.0;
 }
 /*--------------------------------------------------------------------------*/
-extern double Exact_Solution_mz_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
+extern double Exact_Solution_p_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz, const double &Fr)
 {
     return 0.0;
 }
 /*--------------------------------------------------------------------------*/
-extern double Exact_Solution_r_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
+extern double rho_0_2DWA(const double &z, const double &beta, const double &Fr)
 {
-    return 0.0;
+    return 1.0;
 }
-/*--------------------------------------------------------------------------*/
-extern double Exact_Solution_p_2DWA(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz)
+extern double rho_0_deriv_2DWA(const double &z, const double &beta, const double &Fr)
 {
-    return 0.0;
+    return Fr*Fr*(-beta);
 }
-/*--------------------------------------------------------------------------*/
-extern double rho_0_2DWA(const double &z, const double &beta)
+extern double N_2_2DWA(const double &z, const double &beta, const double &Fr)
 {
-    double alpha = 1.027;
-    return alpha*exp(-beta*z);
-}
-extern double rho_0_deriv_2DWA(const double &z, const double &beta)
-{
-    double alpha = 1.027;
-    return -alpha*beta*exp(-beta*z);
-}
-extern double N_2_2DWA(const double &z, const double &beta)
-{
-    return 0.5;
+    return beta;
 }
 /*--------------------------------------------------------------------------*/
 
 /*--------------------------------------------------------------------------*/
-//  EB Case - Experiments
+//  EB Case - Test Case
 /*--------------------------------------------------------------------------*/
 extern double calculate_sigma_2DEB(const double &beta, const unsigned int &kx, const unsigned int &kz, const double &Fr)
 {
