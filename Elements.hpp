@@ -184,6 +184,7 @@ class Squares2D
     double ry;
     double sx;
     double sy;
+    double Area;
     unsigned int ID_Boundary_V1V2;
     unsigned int ID_Boundary_V2V3;
     unsigned int ID_Boundary_V3V4;
@@ -216,11 +217,13 @@ class Squares2D
     unsigned int getVertex_V4() const;
     unsigned int getPosition() const;
     void setJacobian(double J);
+    void setArea(double A);
     void set_rx(double rx_v);
     void set_ry(double ry_v);
     void set_sx(double sx_v);
     void set_sy(double sy_v);
     double getJacobian() const;
+    double getArea() const;
     double get_rx() const;
     double get_ry() const;
     double get_sx() const;

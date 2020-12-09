@@ -64,7 +64,7 @@ int main(int argc,char **args)
     // Read in options from command line
     PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=10, Method=1;
     PetscInt   Number_Of_Periods=1, kmode=1;
-    PetscScalar N2 = 0.0;//1.0; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
+    PetscScalar N2 = 1.0; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 0, N_Q=0;
     PetscScalar nu = 0.0;
@@ -210,7 +210,7 @@ int main(int argc,char **args)
     sigma = calculate_sigma_2DIC(rho_0_Deriv, kxmode, kzmode);
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
 
-    Number_Of_TimeSteps_In_One_Period = 100;//10*10*pow((double)N_Elements, (N_Petsc+1.0)/2.0);
+    Number_Of_TimeSteps_In_One_Period = 1000;//10*10*pow((double)N_Elements, (N_Petsc+1.0)/2.0);
     PetscScalar DeltaT = 1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
 
     unsigned int Number_Of_TimeSteps = Number_Of_TimeSteps_In_One_Period*Number_Of_Periods;

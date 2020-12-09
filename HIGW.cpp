@@ -2305,7 +2305,7 @@ void create_Matrices_Quads_EB(const std::vector<VertexCoordinates2D> &List_Of_Ve
         unsigned int Order_Polynomials = (*e).get_Order_Of_Polynomials();
 
         unsigned int Order_Gaussian_Quadrature = 2*Order_Polynomials+3+N_Q;//ceil(Order_Polynomials+3+N_Q); // + higher order for rho_0 term
-        Order_Gaussian_Quadrature = 1;// 28;//std::max((uint)10, Order_Gaussian_Quadrature);
+        Order_Gaussian_Quadrature = 3;// 28;//std::max((uint)10, Order_Gaussian_Quadrature);
 
         PetscInt in[Np];
         for (unsigned int n=0;n<Np; n++)
@@ -4884,9 +4884,8 @@ extern void compute_InitialCondition_EB(const std::vector<Squares2D> &List_Of_El
     char szFileName[255] = {0};
 
 
-    std::string store_solution = "Solution/Coordinates_n"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+"N"+std::to_string(N_Petsc)+"Ts"+std::to_string(Number_Of_TimeSteps_In_One_Period)+".txt";
+    std::string store_solution = "Solution/Solutions/Coordinates_n"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+"N"+std::to_string(N_Petsc)+"Ts"+std::to_string(Number_Of_TimeSteps_In_One_Period)+".txt";
     const char *store_solution_char = store_solution.c_str();
-    //FILE *f = fopen("Solution/Coordinates.txt", "w");
     FILE *f = fopen(store_solution_char, "w");
     fprintf(f, "n \t pos \t xCoor \t zCoor \t p value \n");
     for (auto k = List_Of_Elements.begin(); k < List_Of_Elements.end(); k++)
@@ -5099,12 +5098,20 @@ extern void Simulate(const Mat &A, const Mat &B, const Mat &M1_small, const Mat 
     VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &Sol);
     VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &QX);
     VecCopy(Initial_Condition, Sol);
+
+
+    char szFileName[255] = {0};
+        PetscViewer viewer2;
+        sprintf(szFileName, "Solution/solution%d.txt", 0);
+        PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
+        VecView(Sol, viewer2);
+        PetscViewerDestroy(&viewer2);
+
     double H1 = 0.0;
 
     //PetscPrintf(PETSC_COMM_SELF,"Size Global Matrices %6.4e\n",(double)sigma);
     // MatView(A, viewer_info);
 
-    char szFileName[255] = {0};
     FILE *f = fopen("Solution/Energy.txt", "w");
     // Solve Linear System
     std::cout << "Start Time Stepping" << std::endl;
@@ -5130,7 +5137,7 @@ extern void Simulate(const Mat &A, const Mat &B, const Mat &M1_small, const Mat 
             //VecView(Sol, PETSC_VIEWER_STDOUT_SELF);
 
         PetscViewer viewer2;
-        sprintf(szFileName, "Solution/solution%d.txt", t);
+        sprintf(szFileName, "Solution/solution%d.txt", t+1);
         PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
         VecView(Sol, viewer2);
         PetscViewerDestroy(&viewer2);
@@ -5203,13 +5210,19 @@ extern void Simulate_IC(const Mat &A, const Mat &B, const Mat &M1_small, const M
     VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &Sol);
     VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &QX);
     VecCopy(Initial_Condition, Sol);
+
+    char szFileName[255] = {0};
+        PetscViewer viewer2;
+        sprintf(szFileName, "Solution/solution%d.txt", 0);
+        PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
+        VecView(Sol, viewer2);
+        PetscViewerDestroy(&viewer2);
     double H1 = H0;
     double M1 = M0;
 
     //PetscPrintf(PETSC_COMM_SELF,"Size Global Matrices %6.4e\n",(double)sigma);
     // MatView(A, viewer_info);
 
-    char szFileName[255] = {0};
     FILE *f = fopen("Solution/Energy.txt", "w");
     // Solve Linear System
     std::cout << "Start Time Stepping" << std::endl;
@@ -5241,7 +5254,7 @@ extern void Simulate_IC(const Mat &A, const Mat &B, const Mat &M1_small, const M
             //VecView(Sol, PETSC_VIEWER_STDOUT_SELF);
 
         PetscViewer viewer2;
-        sprintf(szFileName, "Solution/solution%d.txt", t);
+        sprintf(szFileName, "Solution/solution%d.txt", t+1);
         PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
         VecView(Sol, viewer2);
         PetscViewerDestroy(&viewer2);
@@ -5297,6 +5310,13 @@ extern void Simulate_WA(const Mat &A, const Mat &B, const Mat &M1_small, const M
     VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &Sol);
     VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &QX);
     VecCopy(Initial_Condition, Sol);
+
+    char szFileName[255] = {0};
+        PetscViewer viewer2;
+        sprintf(szFileName, "Solution/solution%d.txt", 0);
+        PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
+        VecView(Sol, viewer2);
+        PetscViewerDestroy(&viewer2);
     double H1 = H0;
     double M1 = M0;
 
@@ -5304,7 +5324,6 @@ extern void Simulate_WA(const Mat &A, const Mat &B, const Mat &M1_small, const M
     // MatView(A, viewer_info);
 
     //VecView(VecNodes, PETSC_VIEWER_STDOUT_SELF);
-    char szFileName[255] = {0};
     FILE *f = fopen("Solution/Energy.txt", "w");
     // Solve Linear System
     std::cout << "Start Time Stepping" << std::endl;
@@ -5340,7 +5359,7 @@ extern void Simulate_WA(const Mat &A, const Mat &B, const Mat &M1_small, const M
             //VecView(Sol, PETSC_VIEWER_STDOUT_SELF);
 
         PetscViewer viewer2;
-        sprintf(szFileName, "Solution/solution%d.txt", t);
+        sprintf(szFileName, "Solution/solution%d.txt", t+1);
         PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
         VecView(Sol, viewer2);
         PetscViewerDestroy(&viewer2);
@@ -5394,6 +5413,13 @@ extern void Simulate_WA_Forced(const Mat &A, const Mat &B, const Mat &M1_small, 
     VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &Sol);
     VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &QX);
     VecCopy(Initial_Condition, Sol);
+
+    char szFileName[255] = {0};
+        PetscViewer viewer2;
+        sprintf(szFileName, "Solution/solution%d.txt", 0);
+        PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
+        VecView(Sol, viewer2);
+        PetscViewerDestroy(&viewer2);
     double H1 = H0;
     double M1 = M0;
 
@@ -5401,7 +5427,6 @@ extern void Simulate_WA_Forced(const Mat &A, const Mat &B, const Mat &M1_small, 
     // MatView(A, viewer_info);
 
     //VecView(VecNodes, PETSC_VIEWER_STDOUT_SELF);
-    char szFileName[255] = {0};
     FILE *f = fopen("Solution/Energy.txt", "w");
     //fprintf(f, "%1.16e \t %1.16e \t %1.16e\n", 0.0, H0, M0);
     // Solve Linear System
@@ -5453,7 +5478,7 @@ extern void Simulate_WA_Forced(const Mat &A, const Mat &B, const Mat &M1_small, 
         //std::cout << "Solution = " << std::endl;
         //VecView(Sol, PETSC_VIEWER_STDOUT_SELF);
         PetscViewer viewer2;
-        sprintf(szFileName, "Solution/solution%d.txt", t);
+        sprintf(szFileName, "Solution/solution%d.txt", t+1);
         PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
         VecView(Sol, viewer2);
         PetscViewerDestroy(&viewer2);
@@ -5480,7 +5505,7 @@ extern void Simulate_EB(const Mat &A, const Mat &B, const Mat &M1_small, const M
     std::cout << "Initial Energy = " << std::setprecision(16) << H0 << std::endl;
 
 
-
+//, const bool &store_solution
 
     std::cout << "Start Simulations " << std::endl;
 
@@ -5510,6 +5535,13 @@ extern void Simulate_EB(const Mat &A, const Mat &B, const Mat &M1_small, const M
     VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &Sol);
     VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &QX);
     VecCopy(Initial_Condition, Sol);
+
+    char szFileName[255] = {0};
+        PetscViewer viewer2;
+        sprintf(szFileName, "Solution/solution%d.txt", 0);
+        PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
+        VecView(Sol, viewer2);
+        PetscViewerDestroy(&viewer2);
     double H1 = H0;
     double M1 = M0;
 
@@ -5517,7 +5549,6 @@ extern void Simulate_EB(const Mat &A, const Mat &B, const Mat &M1_small, const M
     // MatView(A, viewer_info);
 
     //VecView(VecNodes, PETSC_VIEWER_STDOUT_SELF);
-    char szFileName[255] = {0};
     FILE *f = fopen("Solution/Energy.txt", "w");
     // Solve Linear System
     std::cout << "Start Time Stepping" << std::endl;
@@ -5551,7 +5582,7 @@ extern void Simulate_EB(const Mat &A, const Mat &B, const Mat &M1_small, const M
             //VecView(Sol, PETSC_VIEWER_STDOUT_SELF);
 
         PetscViewer viewer2;
-        sprintf(szFileName, "Solution/solution%d.txt", t);
+        sprintf(szFileName, "Solution/solution%d.txt", t+1);
         PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
         VecView(Sol, viewer2);
         PetscViewerDestroy(&viewer2);
@@ -5567,6 +5598,9 @@ extern void Simulate_EB(const Mat &A, const Mat &B, const Mat &M1_small, const M
     std::cout << "Initial Energy    = " << std::setprecision(16) << H0 << std::endl;
     std::cout << "Final Energy      = " << std::setprecision(16) << H1 << std::endl;
     std::cout << "Difference Energy = " << std::setprecision(16) << H1-H0 << std::endl;
+    std::cout << "Initial Mass      = " << std::setprecision(16) << M0 << std::endl;
+    std::cout << "Final Mass        = " << std::setprecision(16) << M1 << std::endl;
+    std::cout << "Difference Mass   = " << std::setprecision(16) << M1-M0 << std::endl;
     std::cout << "Initial " ; compute_Divergence_Velocity(Initial_Condition, N_Nodes, DIV);
     std::cout << "Final   "  ; compute_Divergence_Velocity(Sol, N_Nodes, DIV);
 }
@@ -5965,8 +5999,9 @@ extern double calculate_Error2D(const Vec &Exact, const Vec &Solution, const uns
     for (auto e = List_Of_Elements.begin(); e < List_Of_Elements.end(); e++)
     {
         unsigned int Np = (*e).get_Number_Of_Nodes();
-        //std::cout << "ID = " << (*e).getID() << std::endl;
         double J = (*e).getJacobian();
+        double Area = (*e).getArea();
+        //std::cout << "ID = " << (*e).getID() << " " << (*e).getArea() << std::endl;
         double drdx = (*e).get_rx();
         double drdy = (*e).get_ry();
         double dsdx = (*e).get_sx();
@@ -6055,10 +6090,10 @@ extern double calculate_Error2D(const Vec &Exact, const Vec &Solution, const uns
         //error_r += sqrt(diff_r/exact_r);
         //error_p += sqrt(diff_p/exact_p);
 
-        error_u += sqrt(diff_u);
-        error_w += sqrt(diff_w);
-        error_r += sqrt(diff_r);
-        error_p += sqrt(diff_p);
+        error_u += sqrt(diff_u*Area);
+        error_w += sqrt(diff_w*Area);
+        error_r += sqrt(diff_r*Area);
+        error_p += sqrt(diff_p);//*Area);
 
 
         VecRestoreArray(Weights, &w);
@@ -6075,7 +6110,7 @@ extern double calculate_Error2D(const Vec &Exact, const Vec &Solution, const uns
 
     //return sqrt(error_u+error_w+error_r+error_p);
     //return error_p;
-    return error_w;
+    return error_p;
 
 }
 /*--------------------------------------------------------------------------*/

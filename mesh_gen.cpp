@@ -84,11 +84,14 @@ void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, 
         double x4 = List_Of_Vertices[element_node[4*i+3]-1].getxCoordinate();
         double y4 = List_Of_Vertices[element_node[4*i+3]-1].getyCoordinate();
 
+
+        double xorigin = std::min({ x1, x2, x3, x4 });
+        double yorigin = std::min({ y1, y2, y3, y4 });
         // Bottom left is origin (0,0).
-        double dist_1 = sqrt(x1*x1+y1*y1);
-        double dist_2 = sqrt(x2*x2+y2*y2);
-        double dist_3 = sqrt(x3*x3+y3*y3);
-        double dist_4 = sqrt(x4*x4+y4*y4);
+        double dist_1 = sqrt((x1-xorigin)*(x1-xorigin)+(y1-yorigin)*(y1-yorigin));
+        double dist_2 = sqrt((x2-xorigin)*(x2-xorigin)+(y2-yorigin)*(y2-yorigin));
+        double dist_3 = sqrt((x3-xorigin)*(x3-xorigin)+(y3-yorigin)*(y3-yorigin));
+        double dist_4 = sqrt((x4-xorigin)*(x4-xorigin)+(y4-yorigin)*(y4-yorigin));
 
         double min = dist_1;
         int flag = 0;
@@ -108,6 +111,9 @@ void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, 
             min = dist_4;
             flag = 3;
         }
+
+
+
 
        //std::cout << element_node[4*i+flag]-1 << " " << element_node[4*i+(flag+1)%4]-1 << " " << element_node[4*i+(flag+2)%4]-1 << " " << element_node[4*i+(flag+3)%4]-1 << std::endl;
         Squares2D S(ID_Elements, element_node[4*i+flag]-1, element_node[4*i+(flag+1)%4]-1, element_node[4*i+(flag+2)%4]-1, element_node[4*i+(flag+3)%4]-1);
@@ -580,6 +586,28 @@ void Calculate_Jacobian_Square(std::vector<Squares2D> &List_Of_Elements, const s
         (*i).set_ry(drdy);
         (*i).set_sx(dsdx);
         (*i).set_sy(dsdy);
+    }
+}
+/*--------------------------------------------------------------------------*/
+void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
+{
+
+    // Assumes Square Quadrilaterals => J is constant
+    for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
+    {
+        double x1 = List_Of_Vertices[(*i).getVertex_V1()].getxCoordinate();
+        double y1 = List_Of_Vertices[(*i).getVertex_V1()].getyCoordinate();
+        double x2 = List_Of_Vertices[(*i).getVertex_V2()].getxCoordinate();
+        double y2 = List_Of_Vertices[(*i).getVertex_V2()].getyCoordinate();
+        double x3 = List_Of_Vertices[(*i).getVertex_V3()].getxCoordinate();
+        double y3 = List_Of_Vertices[(*i).getVertex_V3()].getyCoordinate();
+        double x4 = List_Of_Vertices[(*i).getVertex_V4()].getxCoordinate();
+        double y4 = List_Of_Vertices[(*i).getVertex_V4()].getyCoordinate();
+
+        double Area = 0.5*abs(x1*y2+x2*y3+x3*y4-x2*y1-x3*y2-x4*y3-x1*y4);
+        //std::cout << "Area = " << Area << std::endl;
+
+        (*i).setArea(Area);
     }
 }
 /*--------------------------------------------------------------------------*/

@@ -118,10 +118,10 @@ int main(int argc,char **args)
     PetscViewerPushFormat(viewer_info, PETSC_VIEWER_ASCII_INFO);
 
     double Eold = 0;
-    for (int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 10; Number_Of_Polynomial_Steps += 2)
+    //for (int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 10; Number_Of_Polynomial_Steps += 2)
     {
         Eold = 0.0;
-    //int Number_Of_Polynomial_Steps = N_Petsc    ;
+    int Number_Of_Polynomial_Steps = N_Petsc    ;
     for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < std::max(4,9-Number_Of_Polynomial_Steps); Number_Of_Spatial_Steps++) //
     {
 

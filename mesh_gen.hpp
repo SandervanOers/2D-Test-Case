@@ -70,4 +70,6 @@ void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_
 /*--------------------------------------------------------------------------*/
 std::string mesh_name_trapezoid(const unsigned int n);
 /*--------------------------------------------------------------------------*/
+void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
+/*--------------------------------------------------------------------------*/
 #endif

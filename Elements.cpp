@@ -368,6 +368,10 @@ void Squares2D::setJacobian(double J)
 {
     Jacobian = J;
 }
+void Squares2D::setArea(double A)
+{
+    Area = A;
+}
 void Squares2D::set_rx(double rx_v)
 {
     rx = rx_v;
@@ -387,6 +391,10 @@ void Squares2D::set_sy(double sy_v)
 double Squares2D::getJacobian() const
 {
     return Jacobian;
+}
+double Squares2D::getArea() const
+{
+    return Area;
 }
 double Squares2D::get_rx() const
 {
@@ -417,7 +425,6 @@ unsigned int Squares2D::get_Number_Of_Nodes() const
 {
     return Number_Of_Nodes;
 }
-
 void Squares2D::set_node_coordinates_x(double x)
 {
     node_coordinates_x.push_back(x);

@@ -62,7 +62,7 @@ int main(int argc,char **args)
 
     auto t1 = std::chrono::high_resolution_clock::now();
     // Read in options from command line
-    PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=10, Method=1;
+    PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=1000, Method=1;
     PetscInt   Number_Of_Periods=1, kmode=1;
     PetscScalar N2 = -1.0;//1.0; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
     PetscScalar   theta = 0.5;
@@ -102,7 +102,7 @@ int main(int argc,char **args)
     //for (int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 10; Number_Of_Polynomial_Steps++)
     {
         Eold = 0.0;
-    //for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < std::max(5,9-Number_Of_Polynomial_Steps); Number_Of_Spatial_Steps++) //std::max(5,7-Number_Of_Polynomial_Steps)
+    //for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < 7; Number_Of_Spatial_Steps++) //std::max(5,7-Number_Of_Polynomial_Steps)
     {
 
     int Number_Of_Spatial_Steps = 0;
@@ -118,6 +118,7 @@ int main(int argc,char **args)
     if (Method == 0)
     {
         mesh_name = "Mesh/square_tilted_quads_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh"; //2* switched/
+        //mesh_name = "Mesh/square_tilted_quads_2x2.msh"; //2* switched/
     }
     /**************************************************************** /
     // square_tilted_quads and manual_square (+ square) have opposite sign for E
@@ -146,12 +147,7 @@ int main(int argc,char **args)
     int element_num, node_num;
     load_msh_mesh2D(mesh_name, VX, VY, EToV, List_Of_Vertices, List_Of_Elements, element_num, node_num);
 
-    /*
-    std::cout << "List of Vertices "  << std::endl;
-    std::cout << "ID : x y"  << std::endl;
-    for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
-        std::cout << (*i).getID() << ": " << (*i).getxCoordinate() << " " << (*i).getyCoordinate() << std::endl;
-    */
+
     /*
     std::cout << "VX = " << std::endl;
     VecView(VX, viewer);
@@ -172,6 +168,11 @@ int main(int argc,char **args)
     VecDestroy(&VY);
 
     /*
+    std::cout << "List of Vertices "  << std::endl;
+    std::cout << "ID : x y"  << std::endl;
+    for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
+        std::cout << (*i).getID() << ": " << (*i).getxCoordinate() << " " << (*i).getyCoordinate() << std::endl;
+
     std::cout << "List of Elements "  << std::endl;
     std::cout << "ID : V1 V2 V3 V4"  << std::endl;
     for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
@@ -186,6 +187,7 @@ int main(int argc,char **args)
         std::cout << (*i).getID() <<  " : " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << std::endl;
     }
     */
+
     Calculate_Jacobian_Square(List_Of_Elements, List_Of_Vertices);
     Calculate_Jacobian_Boundaries_Square(List_Of_Elements, List_Of_Boundaries, List_Of_Vertices);
     set_Order_Polynomials_Uniform(List_Of_Elements, N_Petsc);
@@ -206,10 +208,10 @@ int main(int argc,char **args)
     sigma = calculate_sigma_2D_system2(rho_0_Deriv, kxmode, kzmode);
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
 
-    Number_Of_TimeSteps_In_One_Period = 100;//10*10*pow((double)N_Elements, (N_Petsc+1.0)/2.0);
+    //Number_Of_TimeSteps_In_One_Period = 10;//10*10*pow((double)N_Elements, (N_Petsc+1.0)/2.0);
     PetscScalar DeltaT = 1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
 
-    unsigned int Number_Of_TimeSteps = Number_Of_TimeSteps_In_One_Period*Number_Of_Periods;
+    unsigned int Number_Of_TimeSteps = Number_Of_TimeSteps_In_One_Period*Number_Of_Periods; //2.0*PETSC_PI*
 
     std::cout << "Number_Of_TimeSteps_In_One_Period  =  " << Number_Of_TimeSteps_In_One_Period << " => Delta T = " << DeltaT << std::endl;
 
