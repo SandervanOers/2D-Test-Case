@@ -2305,7 +2305,7 @@ void create_Matrices_Quads_EB(const std::vector<VertexCoordinates2D> &List_Of_Ve
         unsigned int Order_Polynomials = (*e).get_Order_Of_Polynomials();
 
         unsigned int Order_Gaussian_Quadrature = 2*Order_Polynomials+3+N_Q;//ceil(Order_Polynomials+3+N_Q); // + higher order for rho_0 term
-        Order_Gaussian_Quadrature = 3;// 28;//std::max((uint)10, Order_Gaussian_Quadrature);
+        Order_Gaussian_Quadrature = 20;// 28;//std::max((uint)10, Order_Gaussian_Quadrature);
 
         PetscInt in[Np];
         for (unsigned int n=0;n<Np; n++)
@@ -3899,7 +3899,7 @@ extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const 
             dummy = (values[j]);
             if (dummy!=0.0)
             {
-                MatSetValue(VectorLaplacian, 	i,     cols[j],     dummy, 	ADD_VALUES);
+                MatSetValue(VectorLaplacian, 	i,             cols[j],     dummy, 	ADD_VALUES);
                 MatSetValue(VectorLaplacian, 	N_Nodes+i,     N_Nodes+cols[j],     dummy, 	ADD_VALUES);
             }
         }
@@ -4098,7 +4098,7 @@ extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const 
             dummy = (values[j]);
             if (dummy!=0)
             {
-                MatSetValue(B, 	3*N_Nodes+i,     	3*N_Nodes+cols[j],     dummy, 		ADD_VALUES);
+                MatSetValue(B, 	3*N_Nodes+i,     	3*N_Nodes+cols[j],     -dummy, 		ADD_VALUES);
             }
         }
         MatRestoreRow(AF, i, &numberOfNonZeros, &cols, &values);
@@ -4730,8 +4730,8 @@ extern void ComputeForcing(const std::vector<Squares2D> &List_Of_Elements, const
         zCoor = (*k).get_node_coordinates_y();
         for (unsigned int n = 0; n < Np; n++)
         {
-            VecSetValue(Forcing_a, pos + n, (zCoor[n])/0.75,  INSERT_VALUES);
-            VecSetValue(Forcing_a, N_Nodes + pos + n, - (xCoor[n]-x0), INSERT_VALUES);
+            VecSetValue(Forcing_a, pos + n, (zCoor[n]-z0)/0.75,  INSERT_VALUES);
+            VecSetValue(Forcing_a, N_Nodes + pos + n, - (xCoor[n]-x0)/2.0, INSERT_VALUES);
         }
     }
 
@@ -5482,7 +5482,7 @@ extern void Simulate_WA_Forced(const Mat &A, const Mat &B, const Mat &M1_small, 
         PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
         VecView(Sol, viewer2);
         PetscViewerDestroy(&viewer2);
-
+        //compute_Divergence_Velocity(Sol, N_Nodes, DIV);
 
     }
     fprintf(f, "%1.16e \t %1.16e \t %1.16e\n", time, H1, M1);
