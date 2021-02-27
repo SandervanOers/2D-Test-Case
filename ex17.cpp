@@ -22,16 +22,18 @@ int main(int argc,char **args)
 
     auto t1 = std::chrono::high_resolution_clock::now();
     // Read in options from command line
-    PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=1000, Method=1;
-    PetscInt   Number_Of_Periods=10, kmode=1;
-    PetscScalar N2 = 1;//0.13*0.13;  //   //0.1625*0.1625; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
+    PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=100, Method=1;
+    PetscInt   Number_Of_Periods = 20, kmode=1;
+    PetscScalar N2 = (0.37*0.56/0.325)*(0.37*0.56/0.325); //1;//0.13*0.13;  //   //0.1625*0.1625; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 0, N_Q=0;
-    PetscScalar nu = 0.0;
+    PetscScalar nu = 1; //0;//
     PetscInt    Dimensions = 2;
-    PetscScalar F0 = 0.0001;
-    PetscScalar omega = 0.42;//0.05518;//0.17;//0.06139;//        //0.052; //0.06825;//
+    PetscScalar F0 = 0.001;//0.0001;
+    PetscScalar omega = 0.13*0.56/0.325;//0.7071;//0.42; ////0.05518;//0.17;//0.06139;//        //0.052; //0.06825;//
     PetscScalar Fr = 1;//0.56;//
+    PetscScalar Re = pow(10.0,5.0);
+    PetscScalar gamma = 0.0;// PETSC_PI/20.0;
 
     PetscOptionsGetInt(NULL, NULL, "-n", &Number_Of_Elements_Petsc, NULL);
     PetscOptionsGetInt(NULL, NULL, "-k", &kmode, NULL);
@@ -47,6 +49,8 @@ int main(int argc,char **args)
     PetscOptionsGetScalar(NULL, NULL, "-nu", &nu, NULL);
     PetscOptionsGetInt(NULL, NULL, "-dim", &Dimensions, NULL);
     PetscOptionsGetScalar(NULL, NULL, "-Fr", &Fr, NULL);
+    PetscOptionsGetScalar(NULL, NULL, "-Re", &Re, NULL);
+    PetscOptionsGetScalar(NULL, NULL, "-gamma", &gamma, NULL);
 
     PetscLogStage stage;
 
@@ -81,6 +85,7 @@ int main(int argc,char **args)
     std::string mesh_name;
 
     mesh_name = mesh_name_trapezoid(Number_Of_Elements_Petsc);
+    //mesh_name = "Mesh/square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh";
 
     std::vector<Squares2D> List_Of_Elements;
     std::vector<InternalBoundariesSquares2D> List_Of_Boundaries;
@@ -147,8 +152,8 @@ int main(int argc,char **args)
     double rho_0_Deriv = N2;// + 1.0; // = beta
     /// Estimate the required time step
     PetscScalar   sigma;
-    sigma = calculate_sigma_2DEB(rho_0_Deriv, kxmode, kzmode, Fr);
-    //sigma = omega;
+    //sigma = calculate_sigma_2DEB(rho_0_Deriv, kxmode, kzmode, Fr);
+    sigma = omega;
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
     PetscPrintf(PETSC_COMM_SELF,"Period %6.4e\n",2.0*PETSC_PI/(double)sigma);
     PetscPrintf(PETSC_COMM_SELF,"Number of Periods %6.4e\n",(double)Number_Of_Periods);
@@ -182,9 +187,9 @@ int main(int argc,char **args)
 
     Mat A, B;
     Mat DIV;
-    double Re = 3.25*100000;
+    //double Re = 100000;//pow(10,5);//3.25*100000;
     // Send List of Elements -> Get Np per Element for preallocation
-    create_WA_System_Forced_MidPoint(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, Forcing_a, N_Nodes, N_Petsc, DeltaT, 0.0, A, B, DIV, Re, Fr);
+    create_WA_System_Forced_MidPoint(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, Forcing_a, N_Nodes, N_Petsc, DeltaT, nu, A, B, DIV, Re, Fr, gamma);
     //create_EB_System_MidPoint(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, N_Nodes, N_Petsc, DeltaT, 0.0, A, B, DIV, Re, Fr);
 
     VecDestroy(&Forcing_a);

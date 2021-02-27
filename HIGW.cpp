@@ -3763,7 +3763,7 @@ extern void create_WA_System_MidPoint(const Mat &E, const Mat &ET, const Mat &in
     MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY);
 }
 /*--------------------------------------------------------------------------*/
-extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &M2_small, const Mat &NMat, const Mat &NDerivMat, const Vec &Forcing_a, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, const double &nu, Mat &A, Mat &B, Mat &DIV, const double &Re, const double &Fr)
+extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &M2_small, const Mat &NMat, const Mat &NDerivMat, const Vec &Forcing_a, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, const double &nu, Mat &A, Mat &B, Mat &DIV, const double &Re, const double &Fr, const double &gamma)
 {
     double Np = (N+1)*(N+1);
     std::cout << "Start Global Matrices Construction" << std::endl;
@@ -3775,9 +3775,9 @@ extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const 
     [0 0 dz L] [P^n+1]   [0 0 dz dx+dz] [F^n+1/2]
     */
     double fillBF = 1;
-    double gamma = 0.0;//PETSC_PI/20.0;
+    //double gamma = PETSC_PI/20.0;//PETSC_PI/4.0;//0.0;//
 
-
+    std::cout << "gamma = " << gamma << std::endl;
     Mat F;
     MatCreateSeqAIJ(PETSC_COMM_SELF,2*N_Nodes,N_Nodes,1, NULL, &F);
 
@@ -3882,6 +3882,7 @@ extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const 
 	MatMatMult(DIV, BF1, MAT_INITIAL_MATRIX, 1, &Laplacian);
 	MatScale(Laplacian, nu*1.0/Re); // nu = 0 or 1
 
+	std::cout << "1/Reynolds Number = " << nu*1.0/Re << std::endl;
     //std::cout << "Laplacian = " << std::endl;
     //MatView(Laplacian, PETSC_VIEWER_STDOUT_SELF);
 
@@ -4806,15 +4807,15 @@ extern void compute_InitialCondition_WA(const std::vector<Squares2D> &List_Of_El
             VecSetValue(VecNodes, 3*N_Nodes + pos + n, 0, INSERT_VALUES);
 
 
-            double value = 0.0;//Exact_Solution_mx_2DWA(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode, Fr);
+            double value = 0.0;//-PETSC_PI*sin(PETSC_PI*xCoor[n])*cos(PETSC_PI*zCoor[n]);//Exact_Solution_mx_2DWA(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode, Fr);
             VecSetValue(Velocity, pos + n, value, INSERT_VALUES);
             VecSetValue(Initial_Condition, pos + n, value, INSERT_VALUES);
 
-            //value = Exact_Solution_mz_2DWA(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode, Fr);
+            //value = PETSC_PI*cos(PETSC_PI*xCoor[n])*sin(PETSC_PI*zCoor[n]);//Exact_Solution_mz_2DWA(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode, Fr);
             VecSetValue(Velocity, N_Nodes+pos + n, value, INSERT_VALUES);
             VecSetValue(Initial_Condition, N_Nodes + pos + n, value, INSERT_VALUES);
 
-            //value = Exact_Solution_r_2DWA(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode, Fr);
+            value = 0.0;//Exact_Solution_r_2DWA(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode, Fr);
             VecSetValue(Initial_Condition, 2*N_Nodes + pos + n, value, INSERT_VALUES);
 
             //value = Exact_Solution_p_2DWA(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode, Fr);
@@ -5452,7 +5453,7 @@ extern void Simulate_WA_Forced(const Mat &A, const Mat &B, const Mat &M1_small, 
         // Compute the Forcing term and replace the pressure variable from the previous time step (since these are not used)
         // Forcing at half time Step
         PetscScalar Forcing = 0.0;
-        if (t < (2.0/3.0*Number_Of_TimeSteps))
+        //if (t < (2.0/3.0*Number_Of_TimeSteps))
             { Forcing = F0*sin(omega*(time+DeltaT/2.0));}
         PetscScalar Fx[N_Nodes];
         for (unsigned int k=0;k<N_Nodes; k++)

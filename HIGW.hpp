@@ -88,7 +88,7 @@ extern void Simulate_EB(const Mat &A, const Mat &B, const Mat &M1_small, const M
 /*--------------------------------------------------------------------------*/
 extern void ComputeNodesForcing(const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, Vec &VecNodes);
 /*--------------------------------------------------------------------------*/
-extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &M2_small, const Mat &NMat, const Mat &NDerivMat, const Vec &Forcing_a, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, const double &nu, Mat &A, Mat &B, Mat &DIV, const double &Re, const double &Fr);
+extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &M2_small, const Mat &NMat, const Mat &NDerivMat, const Vec &Forcing_a, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, const double &nu, Mat &A, Mat &B, Mat &DIV, const double &Re, const double &Fr, const double &gamma);
 /*--------------------------------------------------------------------------*/
 extern void ComputeForcing(const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, Vec &Forcing_a);
 /*--------------------------------------------------------------------------*/
