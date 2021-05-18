@@ -80,14 +80,13 @@ int main(int argc,char **args)
     load_msh_mesh3D(mesh_name, VX, VY, VZ, EToV, List_Of_Vertices, List_Of_Elements, element_num, node_num);
 
     // Check det J > 0: counterclockwise ordering
-    Calculate_Jacobian_RectangularCuboid(List_Of_Elements, List_Of_Vertices);
-
+    //Calculate_Jacobian_RectangularCuboid(List_Of_Elements, List_Of_Vertices);
+/*
     std::cout << "List of Vertices "  << std::endl;
     std::cout << "ID : x y z"  << std::endl;
     for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
         std::cout << (*i).getID() << ": " << (*i).getxCoordinate() << " " << (*i).getyCoordinate() << " " << (*i).getzCoordinate() << std::endl;
 
-/*
     std::cout << "VX = " << std::endl;
     VecView(VX, viewer);
     std::cout << "VY = " << std::endl;
@@ -97,12 +96,6 @@ int main(int argc,char **args)
     std::cout << "EToV = " << std::endl;
     MatView(EToV, viewer);
 */
-    std::cout << "List of Elements "  << std::endl;
-    std::cout << "ID : V1 V2 V3 V4 V5 V6 V7 V8"  << std::endl;
-    for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
-    {
-        std::cout << (*i).getID() << ": " << (*i).getVertex_V1() << " " << (*i).getVertex_V2() << " " << (*i).getVertex_V3() << " " << (*i).getVertex_V4() << " " << (*i).getVertex_V5() << " " << (*i).getVertex_V6() << " " << (*i).getVertex_V7() << " " << (*i).getVertex_V8() << std::endl;
-    }
 
     Mat EToE, EToF;
     Connect3D(EToV, element_num, node_num, EToE, EToF, List_Of_Boundaries);
@@ -117,6 +110,22 @@ int main(int argc,char **args)
     VecDestroy(&VY);
     VecDestroy(&VZ);
 
+    std::cout << "List of Elements "  << std::endl;
+    std::cout << "ID : V1 V2 V3 V4 V5 V6 V7 V8"  << std::endl;
+    for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
+    {
+        std::cout << (*i).getID() << ": " << (*i).getVertex_V1() << " " << (*i).getVertex_V2() << " " << (*i).getVertex_V3() << " " << (*i).getVertex_V4() << " " << (*i).getVertex_V5() << " " << (*i).getVertex_V6() << " " << (*i).getVertex_V7() << " " << (*i).getVertex_V8() << std::endl;
+    }
+
+    std::cout << "List of Boundaries "  << std::endl;
+    std::cout << "ID : LeftElement_ID RightElement_ID LeftElement_face RightElement_face "  << std::endl;
+    for(auto i = List_Of_Boundaries.begin(); i < List_Of_Boundaries.end(); i++)
+    {
+        std::cout << (*i).getID() <<  " : " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << " " << (*i).get_Type_Left() << " " << (*i).get_Type_Right() << std::endl;
+    }
+
+    Calculate_CuboidFaceNormals(List_Of_Elements, List_Of_Boundaries, List_Of_Vertices);
+    set_Order_Polynomials_Uniform(List_Of_Elements, N_Petsc);
 
     auto t3 = std::chrono::high_resolution_clock::now();
 

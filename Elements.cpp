@@ -395,6 +395,15 @@ unsigned int Cuboid::getVertex_V8() const
 {
     return ID_Vertex_V8;
 }
+void Cuboid::set_Order_Of_Polynomials(unsigned int N)
+{
+    Order_Of_Polynomials = N;
+    //Number_Of_Nodes = (N+1)*(N+2)/2;
+}
+unsigned int Cuboid::get_Order_Of_Polynomials() const
+{
+    return Order_Of_Polynomials;
+}
 
 Cuboid::~Cuboid()
 {

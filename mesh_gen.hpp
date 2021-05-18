@@ -60,6 +60,8 @@ void set_Order_Polynomials_Uniform(std::vector<Elements2D> &List_Of_Elements2D, 
 /*--------------------------------------------------------------------------*/
 void set_Order_Polynomials_Uniform(std::vector<Squares2D> &List_Of_Elements2D, const unsigned int &N);
 /*--------------------------------------------------------------------------*/
+void set_Order_Polynomials_Uniform(std::vector<Cuboid> &List_Of_Elements, const unsigned int &N);
+/*--------------------------------------------------------------------------*/
 extern unsigned int get_Number_Of_Nodes(std::vector<Elements2D> &List_Of_Elements2D);
 /*--------------------------------------------------------------------------*/
 extern unsigned int get_Number_Of_Nodes(std::vector<Squares2D> &List_Of_Elements2D);
@@ -75,6 +77,10 @@ void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZS, M
 void Connect2D(const Mat &EToV, const unsigned int &Number_Of_Elements, const unsigned int &Number_Of_Vertices, Mat &EToE, Mat &EToF, std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries);
 /*--------------------------------------------------------------------------*/
 void Connect3D(const Mat &EToV, const unsigned int &Number_Of_Elements, const unsigned int &Number_Of_Vertices, Mat &EToE, Mat &EToF, std::vector<InternalBoundariesCuboid> &List_Of_Boundaries);
+/*--------------------------------------------------------------------------*/
+void Calculate_CuboidFaceNormals(const std::vector<Cuboid> &List_Of_Elements, std::vector<InternalBoundariesCuboid> &List_Of_Boundaries, const std::vector<VertexCoordinates3D> &List_Of_Vertices);
+/*--------------------------------------------------------------------------*/
+void create_ListInternalBoundaries(const unsigned int &Number_Of_Elements, Mat &EToE, Mat &EToF, std::vector<InternalBoundariesCuboid> &List_Of_Boundaries);
 /*--------------------------------------------------------------------------*/
 void Calculate_Jacobian_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
 /*--------------------------------------------------------------------------*/

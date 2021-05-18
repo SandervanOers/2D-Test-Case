@@ -643,17 +643,25 @@ void Connect3D(const Mat &EToV, const unsigned int &Number_Of_Elements, const un
         }
         else if (f == 4)
         {
+            //ic[0] = 0;
+            //ic[1] = 4;
+            //ic[2] = 7;
+            //ic[3] = 3;
             ic[0] = 0;
-            ic[1] = 4;
+            ic[1] = 3;
             ic[2] = 7;
-            ic[3] = 3;
+            ic[3] = 4;
         }
         else if (f == 5)
         {
+            //ic[0] = 1;
+            //ic[1] = 5;
+            //ic[2] = 6;
+            //ic[3] = 2;
             ic[0] = 1;
-            ic[1] = 5;
+            ic[1] = 2;
             ic[2] = 6;
-            ic[3] = 2;
+            ic[3] = 5;
         }
         for (unsigned int k=0; k<Number_Of_Elements; k++)
         {
@@ -750,7 +758,49 @@ void Connect3D(const Mat &EToV, const unsigned int &Number_Of_Elements, const un
     MatAssemblyBegin(EToE, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(EToE,   MAT_FINAL_ASSEMBLY);
 
-}/*--------------------------------------------------------------------------*/
+    create_ListInternalBoundaries(Number_Of_Elements, EToE, EToF, List_Of_Boundaries);
+
+}
+/*--------------------------------------------------------------------------*/
+void create_ListInternalBoundaries(const unsigned int &Number_Of_Elements, Mat &EToE, Mat &EToF, std::vector<InternalBoundariesCuboid> &List_Of_Boundaries)
+{
+    unsigned int Nfaces = 6;
+    unsigned int TotalFaces = Nfaces * Number_Of_Elements;
+
+    std::set<BoundaryInfo, decltype(compare_BoundaryInfo)> SetType(compare_BoundaryInfo);
+    for (unsigned int i = 0; i < Number_Of_Elements; i++)
+    {
+        const PetscScalar *EToE_row, *EToF_row;
+        MatGetRow(EToE, i, NULL, NULL, &EToE_row);
+        MatGetRow(EToF, i, NULL, NULL, &EToF_row);
+        for (unsigned int j = 0; j < Nfaces; j++)
+        {
+            if (i==EToE_row[j])
+            {
+                // External Face
+            }
+            else
+            {
+                // Internal Face
+            BoundaryInfo BI(i, EToE_row[j], j, EToF_row[j]);
+            SetType.emplace(BI);
+            }
+        }
+        MatRestoreRow(EToE, i, NULL, NULL, &EToE_row);
+        MatRestoreRow(EToF, i, NULL, NULL, &EToF_row);
+    }
+    unsigned int ID_Boundary = 0;
+    //std::cout << "left right left-face right-face" <<  std::endl;
+    for(const auto& it: SetType)
+    {
+        InternalBoundariesCuboid B(ID_Boundary, it.left, it.right, it.faceleft, it.faceright);
+        ID_Boundary++;
+        List_Of_Boundaries.push_back(B);
+        //std::cout << (it).left << " " << (it).right << " "<< (it).faceleft << " "<< (it).faceright <<  std::endl;
+    }
+
+}
+/*--------------------------------------------------------------------------*/
 void Connect2D(const Mat &EToV, const unsigned int &Number_Of_Elements, const unsigned int &Number_Of_Vertices, Mat &EToE, Mat &EToF, std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries)
 {
     unsigned int Nfaces = 4;
@@ -1097,6 +1147,130 @@ void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::
 
 }*/
 /*--------------------------------------------------------------------------*/
+void Calculate_CuboidFaceNormals(const std::vector<Cuboid> &List_Of_Elements, std::vector<InternalBoundariesCuboid> &List_Of_Boundaries, const std::vector<VertexCoordinates3D> &List_Of_Vertices)
+{
+    for(auto f = List_Of_Boundaries.begin(); f < List_Of_Boundaries.end(); f++)
+    {
+        //std::cout << std::endl;
+        int left = (*f).getLeftElementID();
+        int left_face = (*f).get_Type_Left();
+        int right = (*f).getRightElementID();
+
+        double x1, x2, x3, y1, y2, y3, z1, z2, z3;
+        x1 = x2 = x3 = y1 = y2 = y3 = z1 = z2 = z3 = 0.0;
+        // We read the vertices counterclockwise so that we obtain the outward normal
+        switch(left_face)
+        {
+            case 0:
+                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getzCoordinate();
+                break;
+            case 1:
+                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getzCoordinate();
+                break;
+            case 2:
+                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getzCoordinate();
+                break;
+            case 3:
+                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getzCoordinate();
+                break;
+            case 4:
+                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getzCoordinate();
+                break;
+            case 5:
+                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getzCoordinate();
+                break;
+            default:
+                std::cout << "Something went wrong in the calculation of the normals" << std::endl;
+        }
+
+        double v1x = x2 - x1;
+        double v1y = y2 - y1;
+        double v1z = z2 - z1;
+        double v2x = x3 - x2;
+        double v2y = y3 - y2;
+        double v2z = z3 - z2;
+
+        double nx = v1y*v2z-v1z*v2y;
+        double ny = v1z*v2x-v1x*v2z;
+        double nz = v1x*v2y-v1y*v2x;
+
+        // Normalize
+        double length_n = sqrt(nx*nx+ny*ny+nz*nz);
+        nx = nx/length_n;
+        ny = ny/length_n;
+        nz = nz/length_n;
+
+        std::cout << "Boundary ID = " << (*f).getID() << ". Left El = " << left << ", Right El = " << right << ", left face = " << left_face << std::endl;
+        std::cout << nx << " " << ny << " " << nz << std::endl;
+
+        /*
+        double dx = x[1]-x[0];
+        double dy = y[1]-y[0];
+        double Length = sqrt(dx*dx+dy*dy);
+        double ReferenceLength = 2.0;
+        double Jacobian = Length/ReferenceLength; // Sign Boundary Jacobian. Can this be negative?
+        (*f).setJacobian(Jacobian);
+        //(*f).setJacobian(Length);
+        (*f).set_nx(dy/Length);
+        (*f).set_ny(-dx/Length);
+
+        std::cout << "Boundary ID = " << (*f).getID() << ". Left El = " << left << ", Right El = " << right << std::endl;
+        std::cout << "x[1] = " << x[1] << ", x[0] = " << x[0] << "y[1] = " << y[1] << ", y[0] = " << y[0] << std::endl;
+        std::cout << "J = " << Jacobian << ". nx = " << dy/Length << ", ny = " << -dx/Length << std::endl;
+        std::cout << "Length = " << Length << std::endl;
+        */
+
+    }
+}
+/*--------------------------------------------------------------------------*/
 void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_Elements, std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
 {
     //std::cout << "Boundary Jacobian " << std::endl;
@@ -1242,6 +1416,14 @@ void set_Order_Polynomials_Uniform(std::vector<Elements2D> &List_Of_Elements2D, 
 void set_Order_Polynomials_Uniform(std::vector<Squares2D> &List_Of_Elements2D, const unsigned int &N)
 {
     for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
+    {
+        (*i).set_Order_Of_Polynomials(N); //(rand() % 3) + 1
+    }
+}
+/*--------------------------------------------------------------------------*/
+void set_Order_Polynomials_Uniform(std::vector<Cuboid> &List_Of_Elements, const unsigned int &N)
+{
+    for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
     {
         (*i).set_Order_Of_Polynomials(N); //(rand() % 3) + 1
     }

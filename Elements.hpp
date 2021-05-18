@@ -198,7 +198,6 @@ class Elements2D
 class Cuboid
 {
     unsigned int ID;
-
     unsigned int ID_Vertex_V1;
     unsigned int ID_Vertex_V2;
     unsigned int ID_Vertex_V3;
@@ -207,6 +206,7 @@ class Cuboid
     unsigned int ID_Vertex_V6;
     unsigned int ID_Vertex_V7;
     unsigned int ID_Vertex_V8;
+    unsigned int Order_Of_Polynomials;
 
   public:
     Cuboid(unsigned int IDg, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int ID_V4, unsigned int ID_V5, unsigned int ID_V6, unsigned int ID_V7, unsigned int ID_V8);
@@ -219,7 +219,8 @@ class Cuboid
     unsigned int getVertex_V6() const;
     unsigned int getVertex_V7() const;
     unsigned int getVertex_V8() const;
-
+    void set_Order_Of_Polynomials(unsigned int N);
+    unsigned int get_Order_Of_Polynomials() const;
 
     ~Cuboid();
 };
