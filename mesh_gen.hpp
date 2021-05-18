@@ -20,6 +20,14 @@ inline auto compare = [](pairs lhs, pairs rhs) //custom compare lambda function
       return lhs< rhs;
    };
 /*--------------------------------------------------------------------------*/
+inline void sortrows(std::vector<std::vector<unsigned int>>& matrix, int col) { // can not sort by last column //stable_sort
+    std::sort(matrix.begin(),
+              matrix.end(),
+              [col](const std::vector<unsigned int>& lhs, const std::vector<unsigned int>& rhs) {
+                  return lhs[col] < rhs[col] || ((lhs[col]==rhs[col]) && lhs[col+1] < rhs[col+1]);
+              });
+};
+/*--------------------------------------------------------------------------*/
 struct BoundaryInfo {
     PetscInt left;
     PetscInt right;
@@ -46,6 +54,8 @@ void Calculate_Jacobian(std::vector<Elements2D> &List_Of_Elements2D, const std::
 /*--------------------------------------------------------------------------*/
 void Calculate_Jacobian_boundaries(std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
 /*--------------------------------------------------------------------------*/
+void Calculate_Jacobian_RectangularCuboid(std::vector<Cuboid> &List_Of_Elements, const std::vector<VertexCoordinates3D> &List_Of_Vertices);
+/*--------------------------------------------------------------------------*/
 void set_Order_Polynomials_Uniform(std::vector<Elements2D> &List_Of_Elements2D, const unsigned int &N);
 /*--------------------------------------------------------------------------*/
 void set_Order_Polynomials_Uniform(std::vector<Squares2D> &List_Of_Elements2D, const unsigned int &N);
@@ -60,7 +70,11 @@ void set_theta_Uniform(std::vector<InternalBoundariesSquares2D> &List_Of_Boundar
 /*--------------------------------------------------------------------------*/
 void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, std::vector<VertexCoordinates2D> &List_Of_Vertices, std::vector<Squares2D> &List_Of_Elements, int &element_num, int &node_num);
 /*--------------------------------------------------------------------------*/
+void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZS, Mat &EToV, std::vector<VertexCoordinates3D> &List_Of_Vertices, std::vector<Cuboid> &List_Of_Elements, int &element_num,  int &node_num);
+/*--------------------------------------------------------------------------*/
 void Connect2D(const Mat &EToV, const unsigned int &Number_Of_Elements, const unsigned int &Number_Of_Vertices, Mat &EToE, Mat &EToF, std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries);
+/*--------------------------------------------------------------------------*/
+void Connect3D(const Mat &EToV, const unsigned int &Number_Of_Elements, const unsigned int &Number_Of_Vertices, Mat &EToE, Mat &EToF, std::vector<InternalBoundariesCuboid> &List_Of_Boundaries);
 /*--------------------------------------------------------------------------*/
 void Calculate_Jacobian_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
 /*--------------------------------------------------------------------------*/

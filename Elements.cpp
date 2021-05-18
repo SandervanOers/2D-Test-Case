@@ -100,6 +100,29 @@ Boundaries::~Boundaries()
 {
 }
 /*--------------------------------------------------------------------------*/
+VertexCoordinates3D::VertexCoordinates3D(unsigned int IDg, double xC, double yC, double zC):
+    ID(IDg), xCoordinate(xC), yCoordinate(yC), zCoordinate(zC) {}
+
+unsigned int VertexCoordinates3D::getID() const
+{
+    return ID;
+}
+double VertexCoordinates3D::getxCoordinate() const
+{
+    return xCoordinate;
+}
+double VertexCoordinates3D::getyCoordinate() const
+{
+    return yCoordinate;
+}
+double VertexCoordinates3D::getzCoordinate() const
+{
+    return zCoordinate;
+}
+VertexCoordinates3D::~VertexCoordinates3D()
+{
+}
+/*--------------------------------------------------------------------------*/
 VertexCoordinates2D::VertexCoordinates2D(unsigned int IDg, double xC, double yC, bool Internal):
     ID(IDg), xCoordinate(xC), yCoordinate(yC), InternalVertex(Internal) {}
 
@@ -333,6 +356,115 @@ std::vector<unsigned int> Elements2D::get_nodes_on_boundary(unsigned int Type) c
 Elements2D::~Elements2D()
 {
 }
+/*--------------------------------------------------------------------------*/
+Cuboid::Cuboid(unsigned int IDg, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int ID_V4, unsigned int ID_V5, unsigned int ID_V6, unsigned int ID_V7, unsigned int ID_V8):
+    ID(IDg), ID_Vertex_V1(ID_V1), ID_Vertex_V2(ID_V2), ID_Vertex_V3(ID_V3), ID_Vertex_V4(ID_V4), ID_Vertex_V5(ID_V5), ID_Vertex_V6(ID_V6), ID_Vertex_V7(ID_V7), ID_Vertex_V8(ID_V8) {}
+unsigned int Cuboid::getID() const
+{
+    return ID;
+}
+unsigned int Cuboid::getVertex_V1() const
+{
+    return ID_Vertex_V1;
+}
+unsigned int Cuboid::getVertex_V2() const
+{
+    return ID_Vertex_V2;
+}
+unsigned int Cuboid::getVertex_V3() const
+{
+    return ID_Vertex_V3;
+}
+unsigned int Cuboid::getVertex_V4() const
+{
+    return ID_Vertex_V4;
+}
+unsigned int Cuboid::getVertex_V5() const
+{
+    return ID_Vertex_V5;
+}
+unsigned int Cuboid::getVertex_V6() const
+{
+    return ID_Vertex_V6;
+}
+unsigned int Cuboid::getVertex_V7() const
+{
+    return ID_Vertex_V7;
+}
+unsigned int Cuboid::getVertex_V8() const
+{
+    return ID_Vertex_V8;
+}
+
+Cuboid::~Cuboid()
+{
+
+}
+/*--------------------------------------------------------------------------*/
+InternalBoundariesCuboid::InternalBoundariesCuboid(unsigned int IDg, int ID_El_L, int ID_El_R, int Type_L, int Type_R):
+    ID(IDg), ID_Left_Element(ID_El_L), ID_Right_Element(ID_El_R), Type_Left(Type_L), Type_Right(Type_R){}
+unsigned int InternalBoundariesCuboid::getID() const
+{
+    return ID;
+}
+int InternalBoundariesCuboid::getLeftElementID() const
+{
+    return ID_Left_Element;
+}
+int InternalBoundariesCuboid::getRightElementID() const
+{
+    return ID_Right_Element;
+}
+//void InternalBoundariesCuboid::setJacobian(double J)
+//{
+//   Jacobian = J;
+//}
+//double InternalBoundariesCuboid::getJacobian() const
+//{
+//   return Jacobian;
+//}
+void InternalBoundariesCuboid::set_nx(double normalx)
+{
+    nx = normalx;
+}
+void InternalBoundariesCuboid::set_ny(double normaly)
+{
+    ny = normaly;
+}
+void InternalBoundariesCuboid::set_nz(double normalz)
+{
+    nz = normalz;
+}
+double InternalBoundariesCuboid::get_nx() const
+{
+    return nx;
+}
+double InternalBoundariesCuboid::get_ny() const
+{
+    return ny;
+}
+double InternalBoundariesCuboid::get_nz() const
+{
+    return nz;
+}
+unsigned int InternalBoundariesCuboid::get_Type_Left() const
+{
+    return Type_Left;
+}
+unsigned int InternalBoundariesCuboid::get_Type_Right() const
+{
+    return Type_Right;
+}
+void InternalBoundariesCuboid::set_theta(double T)
+{
+    theta = T;
+}
+double InternalBoundariesCuboid::get_theta() const
+{
+    return theta;
+}
+InternalBoundariesCuboid::~InternalBoundariesCuboid()
+{}
 /*--------------------------------------------------------------------------*/
 Squares2D::Squares2D(unsigned int IDg, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int ID_V4):
     ID(IDg), ID_Vertex_V1(ID_V1), ID_Vertex_V2(ID_V2), ID_Vertex_V3(ID_V3), ID_Vertex_V4(ID_V4) {}

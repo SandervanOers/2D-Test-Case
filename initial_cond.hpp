@@ -182,5 +182,18 @@ extern double rho_0_2DEB(const double &z, const double &beta, const double &Fr);
 extern double rho_0_deriv_2DEB(const double &z, const double &beta, const double &Fr);
 extern double N_2_2DEB(const double &z, const double &beta, const double &Fr);
 /*--------------------------------------------------------------------------*/
+// EB - Bucket Test Case
+extern double calculate_sigma_2DEB_Bucket();
+extern double period_2DEB_Bucket();
+extern double Exact_Solution_mx_2DEB_Bucket(const double &x, const double &z, const double &t);
+extern double Exact_Solution_mz_2DEB_Bucket(const double &x, const double &z, const double &t);
+extern double Exact_Solution_r_2DEB_Bucket(const double &x, const double &z, const double &t);
+extern double Exact_Solution_p_2DEB_Bucket(const double &x, const double &z, const double &t);
+extern double rho_0_2DEB_Bucket(const double &z, const double &beta, const double &Fr);
+extern double rho_0_deriv_2DEB_Bucket(const double &z, const double &beta, const double &Fr);
+extern double N_2_2DEB_Bucket(const double &z, const double &beta, const double &Fr);
+/*--------------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------------*/
 
 #endif

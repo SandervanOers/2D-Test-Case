@@ -81,6 +81,25 @@ class VertexCoordinates2D
         ~VertexCoordinates2D();
 };
 /*--------------------------------------------------------------------------*/
+class VertexCoordinates3D
+{
+    unsigned int ID;
+    double xCoordinate;
+    double yCoordinate;
+    double zCoordinate;
+    bool InternalVertex;
+
+    public:
+        VertexCoordinates3D(unsigned int IDg, double xC, double yC, double zC);
+        unsigned int getID() const;
+        double getxCoordinate() const;
+        double getyCoordinate() const;
+        double getzCoordinate() const;
+
+
+        ~VertexCoordinates3D();
+};
+/*--------------------------------------------------------------------------*/
 class Elements2D
 {
     unsigned int ID;
@@ -176,6 +195,74 @@ class Elements2D
         ~Elements2D();
 };
 /*--------------------------------------------------------------------------*/
+class Cuboid
+{
+    unsigned int ID;
+
+    unsigned int ID_Vertex_V1;
+    unsigned int ID_Vertex_V2;
+    unsigned int ID_Vertex_V3;
+    unsigned int ID_Vertex_V4;
+    unsigned int ID_Vertex_V5;
+    unsigned int ID_Vertex_V6;
+    unsigned int ID_Vertex_V7;
+    unsigned int ID_Vertex_V8;
+
+  public:
+    Cuboid(unsigned int IDg, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int ID_V4, unsigned int ID_V5, unsigned int ID_V6, unsigned int ID_V7, unsigned int ID_V8);
+    unsigned int getID() const ;
+    unsigned int getVertex_V1() const;
+    unsigned int getVertex_V2() const;
+    unsigned int getVertex_V3() const;
+    unsigned int getVertex_V4() const;
+    unsigned int getVertex_V5() const;
+    unsigned int getVertex_V6() const;
+    unsigned int getVertex_V7() const;
+    unsigned int getVertex_V8() const;
+
+
+    ~Cuboid();
+};
+/*--------------------------------------------------------------------------*/
+class InternalBoundariesCuboid
+{
+    unsigned int ID;
+    int ID_Left_Element;
+    int ID_Right_Element;
+    //double Jacobian;
+    unsigned int Type_Left;  // 1 2 3 4 5
+    unsigned int Type_Right; // 1 2 3 4 6
+    double theta;
+    double nx;
+    double ny;
+    double nz;
+
+    public:
+        InternalBoundariesCuboid(unsigned int IDg, int ID_El_L, int ID_El_R, int Type_L, int Type_R);
+        unsigned int getID() const ;
+        int getLeftElementID() const;
+        int getRightElementID() const;
+        unsigned int get_Type_Left() const;
+        unsigned int get_Type_Right() const;
+        //void setJacobian(double J);
+        //double getJacobian() const;
+        void set_nx(double normalx);
+        void set_ny(double normaly);
+        void set_nz(double normalz);
+        double get_nx() const;
+        double get_ny() const;
+        double get_nz() const;
+
+        bool operator < (const InternalBoundariesCuboid& other) const {return ID < other.ID; }
+
+        //void set_node_coordinates_x(double x);
+        //void set_node_coordinates_y(double y);
+        void set_theta(double T);
+        double get_theta() const;
+
+        ~InternalBoundariesCuboid();
+
+};/*--------------------------------------------------------------------------*/
 class Squares2D
 {
     unsigned int ID;

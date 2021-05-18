@@ -2510,13 +2510,20 @@ void create_Matrices_Quads_EB(const std::vector<VertexCoordinates2D> &List_Of_Ve
             ri_left = JacobiGL(0, 0, Order_Polynomials_left);
             ri_right = JacobiGL(0, 0, Order_Polynomials_right);
 
-            double x1 = List_Of_Vertices[(*f).get_Vertex_V1()].getxCoordinate();
-            double y1 = List_Of_Vertices[(*f).get_Vertex_V1()].getyCoordinate();
-            double x2 = List_Of_Vertices[(*f).get_Vertex_V2()].getxCoordinate();
-            double y2 = List_Of_Vertices[(*f).get_Vertex_V2()].getyCoordinate();
+            //double x1 = List_Of_Vertices[(*f).get_Vertex_V1()].getxCoordinate();
+            //double y1 = List_Of_Vertices[(*f).get_Vertex_V1()].getyCoordinate();
+            //double x2 = List_Of_Vertices[(*f).get_Vertex_V2()].getxCoordinate();
+            //double y2 = List_Of_Vertices[(*f).get_Vertex_V2()].getyCoordinate();
 
-            double dx = (x2-x1);
-            double dy = (y2-y1);
+            //double dx = (x2-x1);
+            //double dy = (y2-y1);
+
+
+            //std::cout << "(nx,ny) = (" << nx << ", " << ny << ")" << std::endl;
+            //std::cout << "(leftID, rightID) = (" << left << ", " << right << ")"<< std::endl;
+            //std::cout   << posL << ". posR = " << posR << std::endl;
+            //std::cout << std::endl;
+
 
             double factor = 1.0;
             double rho0 = 1.0;
@@ -2530,7 +2537,7 @@ void create_Matrices_Quads_EB(const std::vector<VertexCoordinates2D> &List_Of_Ve
                     // GLL
                     for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++) //Order_Gaussian_Quadrature_L
                     {
-                        double y = y1 + (r_a[q]+1.0)*dy;
+                        //double y = y1 + (r_a[q]+1.0)*dy;
                         double Li = LagrangePolynomial(ri_left, r_a[q], i);
                         double Lj = LagrangePolynomial(ri_left, r_a[q], j);
                         value_e += (1.0-theta)*w_a[q]*Li*Lj*Jacobian*factor*rho0;
@@ -2560,7 +2567,7 @@ void create_Matrices_Quads_EB(const std::vector<VertexCoordinates2D> &List_Of_Ve
                     double value_e = 0.0;
                     for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
                     {
-                        double y = y1 + (r_a[q]+1.0)*dy;
+                        //double y = y1 + (r_a[q]+1.0)*dy;
                         double Li = LagrangePolynomial(ri_left, r_a[q], i);
                         double Lj = LagrangePolynomial(ri_right, r_a[q], j);
                         value_e += -(1.0-theta)*w_a[q]*Li*Lj*Jacobian*factor*rho0;
@@ -2589,7 +2596,7 @@ void create_Matrices_Quads_EB(const std::vector<VertexCoordinates2D> &List_Of_Ve
                     double value_e = 0.0;
                     for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
                     {
-                        double y = y1 + (r_a[q]+1.0)*dy;
+                        //double y = y1 + (r_a[q]+1.0)*dy;
                         double Li = LagrangePolynomial(ri_right, r_a[q], i);
                         double Lj = LagrangePolynomial(ri_left, r_a[q], j);
                         value_e += theta*w_a[q]*Li*Lj*Jacobian*factor*rho0;
@@ -2616,7 +2623,7 @@ void create_Matrices_Quads_EB(const std::vector<VertexCoordinates2D> &List_Of_Ve
                     double value_e = 0.0;
                     for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++) //Order_Gaussian_Quadrature_R
                     {
-                        double y = y1 + (r_a[q]+1.0)*dy;
+                        //double y = y1 + (r_a[q]+1.0)*dy;
                         double Li = LagrangePolynomial(ri_right, r_a[q], i);
                         double Lj = LagrangePolynomial(ri_right, r_a[q], j);
                         value_e += -theta*w_a[q]*Li*Lj*Jacobian*factor*rho0;
@@ -4740,6 +4747,99 @@ extern void ComputeForcing(const std::vector<Squares2D> &List_Of_Elements, const
     VecAssemblyEnd(Forcing_a);
 }
 /*--------------------------------------------------------------------------*/
+extern void compute_InitialCondition_EB_Bucket(const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const double &rho_0_Deriv, const double &Fr, const double &kxmode, const double &kzmode, Vec &Initial_Condition, const unsigned int &Number_Of_Elements_Petsc, const unsigned int &Number_Of_TimeSteps_In_One_Period, const unsigned int &N_Petsc, const Mat &DIV)
+{
+    PetscScalar   sigma;
+    sigma = calculate_sigma_2DEB_Bucket();
+    //PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
+    std::cout << "Computing Initial Condition " << std::endl;
+    // Initial Condition
+    // Size = sum_i Np_i, i = 1 .. Nel
+    VecCreateSeq(PETSC_COMM_WORLD, 4*N_Nodes,&Initial_Condition);
+    Vec Velocity;
+    VecCreateSeq(PETSC_COMM_WORLD, 2*N_Nodes, &Velocity);
+
+    char szFileName[255] = {0};
+
+
+    std::string store_solution = "Solution/Coordinates_n"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+"N"+std::to_string(N_Petsc)+"Ts"+std::to_string(Number_Of_TimeSteps_In_One_Period)+".txt";
+    const char *store_solution_char = store_solution.c_str();
+    //FILE *f = fopen("Solution/Coordinates.txt", "w");
+    FILE *f = fopen(store_solution_char, "w");
+    fprintf(f, "n \t pos \t xCoor \t zCoor \t p value \n");
+    for (auto k = List_Of_Elements.begin(); k < List_Of_Elements.end(); k++)
+    {
+        unsigned int Np = (*k).get_Number_Of_Nodes();
+        unsigned int ID = (*k).getID();
+        unsigned int pos = (*k).getPosition();
+        std::vector<double> xCoor, zCoor;
+        xCoor = (*k).get_node_coordinates_x();
+        zCoor = (*k).get_node_coordinates_y();
+        double t = 0;
+
+        for (unsigned int n = 0; n < Np; n++)
+        {
+            double value = Exact_Solution_mx_2DEB_Bucket(xCoor[n], zCoor[n], t);
+            VecSetValue(Velocity, pos + n, value, INSERT_VALUES);
+            VecSetValue(Initial_Condition, pos + n, value, INSERT_VALUES);
+
+            value = Exact_Solution_mz_2DEB_Bucket(xCoor[n], zCoor[n], t);
+            VecSetValue(Velocity, N_Nodes+pos + n, value, INSERT_VALUES);
+            VecSetValue(Initial_Condition, N_Nodes + pos + n, value, INSERT_VALUES);
+
+            value = Exact_Solution_r_2DEB_Bucket(xCoor[n], zCoor[n], t);
+            VecSetValue(Initial_Condition, 2*N_Nodes + pos + n, value, INSERT_VALUES);
+
+            value = Exact_Solution_p_2DEB_Bucket(xCoor[n], zCoor[n], t);
+            VecSetValue(Initial_Condition, 3*N_Nodes + pos + n, value, INSERT_VALUES);
+
+            fprintf(f, "%1u \t %u \t %1.16e \t %1.16e \t %1.16e \n", n, pos, xCoor[n], zCoor[n], value);
+        }
+
+    }
+    fclose(f);
+    /*
+    double x = 1.17034;
+    double z = 1.29259;
+    double r = Exact_Solution_r_2DEB_Bucket(x, z, 0.0);
+    std::cout << "x = " << x << ", z = " << z << ", r = " << r << std::endl;
+    x = 0.825651;
+    z = 0.114228;
+    r = Exact_Solution_r_2DEB_Bucket(x, z, 0.0);
+    std::cout << "x = " << x << ", z = " << z << ", r = " << r << std::endl;
+    x = 0.324649;
+    z = 0.676353;
+    r = Exact_Solution_r_2DEB_Bucket(x, z, 0.0);
+    std::cout << "x = " << x << ", z = " << z << ", r = " << r << std::endl;
+    x = 1.63126;
+    z = 0.670341;
+    r = Exact_Solution_r_2DEB_Bucket(x, z, 0.0);
+    std::cout << "x = " << x << ", z = " << z << ", r = " << r << std::endl;
+    */
+    VecAssemblyBegin(Initial_Condition);
+    VecAssemblyEnd(Initial_Condition);
+    VecAssemblyBegin(Velocity);
+    VecAssemblyEnd(Velocity);
+
+    compute_Divergence_Velocity(Initial_Condition, N_Nodes, DIV);
+    correctInitialProjectionOfVelocity(N_Nodes, Velocity, DIV);
+
+	PetscScalar* XTEMP;
+	VecGetArray(Velocity, &XTEMP);
+    PetscInt ix[2*N_Nodes];
+    for (unsigned int k=0;k<2*N_Nodes; k++)
+    {
+        ix[k] = k;
+    }
+    VecSetValues(Initial_Condition, 2*N_Nodes, ix, XTEMP , INSERT_VALUES);
+	VecRestoreArray(Velocity, &XTEMP);
+    VecAssemblyBegin(Initial_Condition);
+    VecAssemblyEnd(Initial_Condition);
+    compute_Divergence_Velocity(Initial_Condition, N_Nodes, DIV);
+    VecDestroy(&Velocity);
+
+}
+/*--------------------------------------------------------------------------*/
 extern void compute_InitialCondition_WA(const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const double &rho_0_Deriv, const double &Fr, const double &kxmode, const double &kzmode, Vec &Initial_Condition, Vec &VecNodes, const unsigned int &Number_Of_Elements_Petsc, const unsigned int &Number_Of_TimeSteps_In_One_Period, const unsigned int &N_Petsc, const Mat &DIV)
 {
     PetscScalar   sigma;
@@ -5453,7 +5553,7 @@ extern void Simulate_WA_Forced(const Mat &A, const Mat &B, const Mat &M1_small, 
         // Compute the Forcing term and replace the pressure variable from the previous time step (since these are not used)
         // Forcing at half time Step
         PetscScalar Forcing = 0.0;
-        //if (t < (2.0/3.0*Number_Of_TimeSteps))
+        if (t < (3.0/4.0*Number_Of_TimeSteps))
             { Forcing = F0*sin(omega*(time+DeltaT/2.0));}
         PetscScalar Fx[N_Nodes];
         for (unsigned int k=0;k<N_Nodes; k++)
@@ -5495,6 +5595,146 @@ extern void Simulate_WA_Forced(const Mat &A, const Mat &B, const Mat &M1_small, 
     std::cout << "Initial Energy    = " << std::setprecision(16) << H0 << std::endl;
     std::cout << "Final Energy      = " << std::setprecision(16) << H1 << std::endl;
     std::cout << "Difference Energy = " << std::setprecision(16) << H1-H0 << std::endl;
+    std::cout << "Initial " ; compute_Divergence_Velocity(Initial_Condition, N_Nodes, DIV);
+    std::cout << "Final   "  ; compute_Divergence_Velocity(Sol, N_Nodes, DIV);
+}
+/*--------------------------------------------------------------------------*/
+extern void Simulate_WA_Forced_Continuous(const Mat &A, const Mat &B, const Mat &M1_small, const Mat &M2_small, const Mat &DIV, const Vec &Initial_Condition, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Number_Of_TimeSteps, const double &DeltaT, Vec &Sol, const unsigned int &Number_Of_Variables, const double &F0, const double &omega)
+{
+    double M0 = 0.0;
+    double H0 = calculate_Hamiltonian2D_IC(M1_small, M2_small, Initial_Condition, List_Of_Elements, N_Nodes, M0);
+    std::cout << "Initial Energy = " << std::setprecision(16) << H0 << std::endl;
+
+    std::cout << "Start Simulations " << std::endl;
+
+    KSP ksp;
+    PC pc;
+    KSPCreate(PETSC_COMM_WORLD,&ksp);
+    KSPSetOperators(ksp,A,A);
+    KSPGetPC(ksp,&pc);
+    KSPSetUp(ksp);
+    KSPSetTolerances(ksp, 1e-14, 1e-14, 1e30, PETSC_DEFAULT);
+
+    //KSPSetType(ksp,KSPPREONLY);
+    //KSPSetType(ksp,KSPCG);
+    KSPSetType(ksp,KSPGMRES);
+    //KSPSetType(ksp,KSPBCGS);
+    KSPSetInitialGuessNonzero(ksp,PETSC_TRUE);
+
+    KSPGetPC(ksp,&pc);
+    //PCSetType(pc,PCLU);
+    PCSetType(pc,PCILU);
+    //PCSetType(pc,PCNONE);
+    //PCSetType(pc,PCSOR);
+
+    KSPSetFromOptions(ksp);
+
+    Vec QX;
+    VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &Sol);
+    VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &QX);
+    VecCopy(Initial_Condition, Sol);
+
+    char szFileName[255] = {0};
+        PetscViewer viewer2;
+        sprintf(szFileName, "Solution/solution%d.txt", 0);
+        PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
+        VecView(Sol, viewer2);
+        PetscViewerDestroy(&viewer2);
+    double H1 = H0;
+    double M1 = M0;
+
+    //PetscPrintf(PETSC_COMM_SELF,"Size Global Matrices %6.4e\n",(double)sigma);
+    // MatView(A, viewer_info);
+
+    //VecView(VecNodes, PETSC_VIEWER_STDOUT_SELF);
+    FILE *f = fopen("Solution/Energy.txt", "w");
+    //fprintf(f, "%1.16e \t %1.16e \t %1.16e\n", 0.0, H0, M0);
+    // Solve Linear System
+    std::cout << "Start Time Stepping" << std::endl;
+    double time = 0.0;
+    std::cout << "Forcing Amplitude = " << F0 << std::endl;
+
+
+    double Hold = H0;
+    double Mold = M0;
+
+    PetscInt ix[N_Nodes];
+    for (unsigned int k=0;k<N_Nodes; k++)
+        ix[k] = 3*N_Nodes+k;
+
+    double omega_start = 0.03*0.56/0.325;
+    double omega_end = 0.31*0.56/0.325;
+    double omega_delta = 0.01*0.56/0.325;
+    double omega_range = omega_end - omega_start;
+    unsigned int omega_steps = omega_range/omega_delta + 1;
+
+    unsigned int Number_Of_TimeSteps_Per_Omega = Number_Of_TimeSteps;
+    unsigned int Total_TimeSteps = Number_Of_TimeSteps_Per_Omega*omega_steps;
+
+    double sigma = omega_start;
+    std::cout << "Number of Frequency Steps = " << omega_steps << std::endl;
+
+    for (unsigned int t = 0; t < Total_TimeSteps; t++)
+    {
+        time = (t)*DeltaT;//(t+1)*DeltaT;
+        fprintf(f, "%1.16e \t %1.16e \t %1.16e\n", time, H1, M1);
+
+
+        // Compute the Forcing term and replace the pressure variable from the previous time step (since these are not used)
+        // Forcing at half time Step
+
+        if (t%Number_Of_TimeSteps_Per_Omega == 0)
+        {
+            sigma = sigma + omega_delta;
+            std::cout << "omega = " << sigma/0.56*0.325<< std::endl;
+        }
+
+        PetscScalar Forcing = 0.0;
+        //if (t < (2.0/3.0*Number_Of_TimeSteps))
+            { Forcing = F0*sin(sigma*(time+DeltaT/2.0));}
+        PetscScalar Fx[N_Nodes];
+        for (unsigned int k=0;k<N_Nodes; k++)
+            {Fx[k] = Forcing;}
+        VecSetValues(Sol,N_Nodes,ix,Fx,INSERT_VALUES);
+        VecAssemblyBegin(Sol);
+        VecAssemblyEnd(Sol);
+
+
+
+
+        MatMult(B, Sol, QX);
+        KSPSolve(ksp, QX, Sol);
+
+        H1 = calculate_Hamiltonian2D_IC(M1_small, M2_small, Sol, List_Of_Elements, N_Nodes, M1);
+
+        //std::cout << "Energy Diff= " << std::setprecision(16) << H1-Hold <<std::endl;
+        Hold = H1;
+        Mold = M1;
+
+       // std::cout << "QX = " << std::endl;
+        //VecView(QX, PETSC_VIEWER_STDOUT_SELF);
+        //std::cout << "Solution = " << std::endl;
+        //VecView(Sol, PETSC_VIEWER_STDOUT_SELF);
+        PetscViewer viewer2;
+        sprintf(szFileName, "Solution/solution%d.txt", t+1);
+        PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
+        VecView(Sol, viewer2);
+        PetscViewerDestroy(&viewer2);
+        //compute_Divergence_Velocity(Sol, N_Nodes, DIV);
+
+    }
+    fprintf(f, "%1.16e \t %1.16e \t %1.16e\n", time, H1, M1);
+    fclose(f);
+    std::cout << "Final Time = " << time << std::endl;
+    std::cout << "End Time Stepping" << std::endl;
+    KSPDestroy(&ksp);
+    VecDestroy(&QX);
+    std::cout << "Initial Energy    = " << std::setprecision(16) << H0 << std::endl;
+    std::cout << "Final Energy      = " << std::setprecision(16) << H1 << std::endl;
+    std::cout << "Difference Energy = " << std::setprecision(16) << H1-H0 << std::endl;
+    std::cout << "Initial Mass    = " << std::setprecision(16) << M0 << std::endl;
+    std::cout << "Final Mass      = " << std::setprecision(16) << M1 << std::endl;
+    std::cout << "Difference Mass = " << std::setprecision(16) << M1-M0 << std::endl;
     std::cout << "Initial " ; compute_Divergence_Velocity(Initial_Condition, N_Nodes, DIV);
     std::cout << "Final   "  ; compute_Divergence_Velocity(Sol, N_Nodes, DIV);
 }
@@ -6266,8 +6506,9 @@ void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<V
     drdy = -dxds/Jacobian;
     dsdx = -dydr/Jacobian;
     dsdy = dxdr/Jacobian;
-    //std::cout << "Jacobian = " << Jacobian << std::endl;
     /*
+    std::cout << "Jacobian = " << Jacobian << std::endl;
+
     std::cout << r_p << " " << s_p << std::endl;
     std::cout << "Area = " << Area << std::endl;
     std::cout << x1 << " " << x2 << " " << x3 << " " << x4 << std::endl;
@@ -6275,6 +6516,6 @@ void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<V
 
     std::cout << drdx << " " << drdy << " " << dsdx << " " << dsdy << std::endl;
     std::cout << std::endl;
-    */
+        */
 }
 /*--------------------------------------------------------------------------*/

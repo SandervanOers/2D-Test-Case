@@ -505,6 +505,11 @@ extern double calculate_sigma_2DEB(const double &beta, const unsigned int &kx, c
     double N2 = N_2_2DEB(0.0, beta, Fr);
     return sqrt(Fr*Fr*N2*kxd/(4.0*PETSC_PI*PETSC_PI*(kxd*kxd+kzd*kzd)));
 }
+extern double period_2DEB(const double &beta, const unsigned int &kx, const unsigned int &kz, const double &Fr)
+{
+    double sigma = calculate_sigma_2DEB(beta, kx, kz, Fr);
+    return 1.0/sigma;
+}
 extern double Exact_Solution_mx_2DEB(const double &x, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &kz, const double &Fr)
 {
     double kxd = (double)kx;
@@ -541,5 +546,136 @@ extern double rho_0_deriv_2DEB(const double &z, const double &beta, const double
 extern double N_2_2DEB(const double &z, const double &beta, const double &Fr)
 {
     return beta;
+}
+/*--------------------------------------------------------------------------*/
+// EB - Bucket Test Case
+extern double calculate_sigma_2DEB_Bucket()
+{
+    double N2 = 1.0;
+    return 0.5*sqrt(2.0);
+}
+extern double period_2DEB_Bucket()
+{
+    double sigma = calculate_sigma_2DEB_Bucket();
+    return 2.0*PETSC_PI/sigma;
+}
+extern double Exact_Solution_mx_2DEB_Bucket(const double &x, const double &z, const double &t)
+{
+    double u;
+    if (x-0.5 <= z && -x+1.5 <= z) // region I
+    {
+        u = 0.2e1 * ((double) (int) pow((double) (x - 1), (double) 2) + pow(z - 0.1e1 / 0.2e1, 0.2e1) - 0.2e1 * z + 0.1e1) * sin(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else if (x-0.5 > z && -x+1.5 < z) // region II
+    {
+        u = (-(double) (7 * (int) pow((double) (x - 1), (double) 2)) + 0.18e2 * (double) (x - 1) * (z - 0.1e1 / 0.2e1) - 0.7e1 * pow(z - 0.1e1 / 0.2e1, 0.2e1) + (double) (6 * x) - 0.1e1 - 0.10e2 * z) * sin(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else if (x-0.5 < z && -x+1.5 > z) // region III
+    {
+        u = (-(double) (7 * (int) pow((double) (x - 1), (double) 2)) - 0.18e2 * (double) (x - 1) * (z - 0.1e1 / 0.2e1) - 0.7e1 * pow(z - 0.1e1 / 0.2e1, 0.2e1) - (double) (6 * x) + 0.11e2 - 0.10e2 * z) * sin(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else if (x-0.5 >= z && -x+1.5 >= z) // region IV
+    {
+        u = -0.16e2 * ((double) (int) pow((double) (x - 1), (double) 2) + pow(z - 0.1e1 / 0.2e1, 0.2e1) + z - 0.1e1 / 0.2e1) * sin(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else
+    {
+        std::cout << "Error in Initial Condition u" << std::endl;
+        std::cout << "x = " << x << ", z = " << z << std::endl;
+        u = 0.0;
+    }
+    return u;
+}
+extern double Exact_Solution_mz_2DEB_Bucket(const double &x, const double &z, const double &t)
+{
+    double w;
+    if (x-0.5 <= z && -x+1.5 <= z) // region I
+    {
+        w = -0.4e1 * (double) (x - 1) * (z - 0.3e1 / 0.2e1) * sin(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else if (x-0.5 > z && -x+1.5 < z) // region II
+    {
+        w = (-(double) (9 * (int) pow((double) (x - 1), (double) 2)) + 0.14e2 * (double) (x - 1) * (z - 0.1e1 / 0.2e1) - 0.9e1 * pow(z - 0.1e1 / 0.2e1, 0.2e1) + (double) (10 * x) - 0.7e1 - 0.6e1 * z) * sin(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else if (x-0.5 < z && -x+1.5 > z) // region III
+    {
+        w = ((double) (9 * (int) pow((double) (x - 1), (double) 2)) + 0.14e2 * (double) (x - 1) * (z - 0.1e1 / 0.2e1) + 0.9e1 * pow(z - 0.1e1 / 0.2e1, 0.2e1) + (double) (10 * x) - 0.13e2 + 0.6e1 * z) * sin(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else if (x-0.5 >= z && -x+1.5 >= z) // region IV
+    {
+        w = 0.32e2 * z * (double) (x - 1) * sin(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else
+    {
+        std::cout << "Error in Initial Condition w" << std::endl;
+        w = 0.0;
+    }
+    return w;
+}
+extern double Exact_Solution_r_2DEB_Bucket(const double &x, const double &z, const double &t)
+{
+    double r;
+    if (x-0.5 <= z && -x+1.5 <= z) // region I
+    {
+        r = 0.4e1 * sqrt(0.2e1) * (double) (x - 1) * (z - 0.3e1 / 0.2e1) * cos(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else if (x-0.5 > z && -x+1.5 < z) // region II
+    {
+        //r = -sqrt(0.2e1) * (-(double) (9 * (int) pow((double) (x - 1), (double) 2)) + 0.14e2 * (double) (x - 1) * (z - 0.1e1 / 0.2e1) - 0.9e1 * pow(z - 0.1e1 / 0.2e1, 0.2e1) + (double) (10 * x) - 0.7e1 - 0.6e1 * z) * cos(sqrt(0.2e1) * t / 0.2e1);
+        r = -sqrt(2.0) * (-(double) (9.0 *  pow((double) (x - 1.0), (double) 2.0)) + 0.14e2 * (double) (x - 1.0) * (z - 0.5) - 0.9e1 * pow(z - 0.5, 2.0) + (double) (10.0 * x) - 0.7e1 - 0.6e1 * z) * cos(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else if (x-0.5 < z && -x+1.5 > z) // region III
+    {
+        //r = -sqrt(0.2e1) * ((double) (9 * (int) pow((double) (x - 1), (double) 2)) + 0.14e2 * (double) (x - 1) * (z - 0.1e1 / 0.2e1) + 0.9e1 * pow(z - 0.1e1 / 0.2e1, 0.2e1) + (double) (10 * x) - 0.13e2 + 0.6e1 * z) * cos(sqrt(0.2e1) * t / 0.2e1);
+        r = -sqrt(0.2e1) * ((double) (9.0 * pow((double) (x - 1), (double) 2)) + 0.14e2 * (double) (x - 1) * (z - 0.1e1 / 0.2e1) + 0.9e1 * pow(z - 0.1e1 / 0.2e1, 0.2e1) + (double) (10 * x) - 0.13e2 + 0.6e1 * z) * cos(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else if (x-0.5 >= z && -x+1.5 >= z) // region IV
+    {
+        r = -0.32e2 * sqrt(0.2e1) * z * (double) (x - 1) * cos(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else
+    {
+        std::cout << "Error in Initial Condition r" << std::endl;
+        r = 0.0;
+    }
+    return r;
+}
+extern double Exact_Solution_p_2DEB_Bucket(const double &x, const double &z, const double &t)
+{
+    double p;
+    if (x-0.5 <= z && -x+1.5 <= z) // region I
+    {
+        p = -sqrt(0.2e1) * cos(sqrt(0.2e1) * t / 0.2e1) * (double) (x - 1.0) * ((double)  pow((double) (x - 1.0), (double) 2.0) + 0.3e1 * pow(z - 0.1e1 / 0.2e1, 0.2e1) - 0.6e1 * z + 0.3e1) / 0.3e1;
+    }
+    else if (x-0.5 > z && -x+1.5 < z) // region II
+    {
+        p = sqrt(0.2e1) * cos(sqrt(0.2e1) * t / 0.2e1) * (double) (x - 1.0) * ((double) (7.0 * pow((double) (x - 1.0), (double) 2.0)) - 0.27e2 * (double) (x - 1) * (z - 0.1e1 / 0.2e1) + 0.21e2 * pow(z - 0.1e1 / 0.2e1, 0.2e1) - (double) (9 * x) - 0.6e1 + 0.30e2 * z) / 0.6e1 - 0.3e1 / 0.2e1 * sqrt(0.2e1) * (pow(z - 0.1e1 / 0.2e1, 0.3e1) + pow(z - 0.1e1 / 0.2e1, 0.2e1)) * cos(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else if (x-0.5 < z && -x+1.5 > z) // region III
+    {
+        p = sqrt(0.2e1) * cos(sqrt(0.2e1) * t / 0.2e1) * (double) (x - 1.0) * ((double) (7.0 * pow((double) (x - 1.0), (double) 2.0)) + 0.27e2 * (double) (x - 1) * (z - 0.1e1 / 0.2e1) + 0.21e2 * pow(z - 0.1e1 / 0.2e1, 0.2e1) + (double) (9 * x) - 0.24e2 + 0.30e2 * z) / 0.6e1 + 0.3e1 / 0.2e1 * sqrt(0.2e1) * (pow(z - 0.1e1 / 0.2e1, 0.3e1) + pow(z - 0.1e1 / 0.2e1, 0.2e1)) * cos(sqrt(0.2e1) * t / 0.2e1);
+    }
+    else if (x-0.5 >= z && -x+1.5 >= z) // region IV
+    {
+        p = 0.8e1 / 0.3e1 * sqrt(0.2e1) * cos(sqrt(0.2e1) * t / 0.2e1) * (double) (x - 1.0) * ((double) pow((double) (x - 1.0), (double) 2.0) + 0.3e1 * pow(z - 0.1e1 / 0.2e1, 0.2e1) + 0.3e1 * z - 0.3e1 / 0.2e1);
+    }
+    else
+    {
+        std::cout << "Error in Initial Condition p" << std::endl;
+        p = 0.0;
+    }
+    return p;
+}
+extern double rho_0_2DEB_Bucket(const double &z, const double &beta, const double &Fr)
+{
+    return 1.0;
+}
+extern double rho_0_deriv_2DEB_Bucket(const double &z, const double &beta, const double &Fr)
+{
+    return -1.0;
+}
+extern double N_2_2DEB_Bucket(const double &z, const double &beta, const double &Fr)
+{
+    return 1.0;
 }
 /*--------------------------------------------------------------------------*/
