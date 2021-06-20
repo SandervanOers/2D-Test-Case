@@ -198,6 +198,9 @@ class Elements2D
 class Cuboid
 {
     unsigned int ID;
+    unsigned int Number_Of_Nodes;
+    unsigned int pos;
+
     unsigned int ID_Vertex_V1;
     unsigned int ID_Vertex_V2;
     unsigned int ID_Vertex_V3;
@@ -206,7 +209,15 @@ class Cuboid
     unsigned int ID_Vertex_V6;
     unsigned int ID_Vertex_V7;
     unsigned int ID_Vertex_V8;
-    unsigned int Order_Of_Polynomials;
+    unsigned int Order_Of_Polynomials_x;
+    unsigned int Order_Of_Polynomials_y;
+    unsigned int Order_Of_Polynomials_z;
+    std::vector<unsigned int> node_on_face0;
+    std::vector<unsigned int> node_on_face1;
+    std::vector<unsigned int> node_on_face2;
+    std::vector<unsigned int> node_on_face3;
+    std::vector<unsigned int> node_on_face4;
+    std::vector<unsigned int> node_on_face5;
 
   public:
     Cuboid(unsigned int IDg, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int ID_V4, unsigned int ID_V5, unsigned int ID_V6, unsigned int ID_V7, unsigned int ID_V8);
@@ -219,8 +230,29 @@ class Cuboid
     unsigned int getVertex_V6() const;
     unsigned int getVertex_V7() const;
     unsigned int getVertex_V8() const;
-    void set_Order_Of_Polynomials(unsigned int N);
-    unsigned int get_Order_Of_Polynomials() const;
+    void set_Order_Of_Polynomials_x(unsigned int N);
+    void set_Order_Of_Polynomials_y(unsigned int N);
+    void set_Order_Of_Polynomials_z(unsigned int N);
+    unsigned int get_Order_Of_Polynomials_x() const;
+    unsigned int get_Order_Of_Polynomials_y() const;
+    unsigned int get_Order_Of_Polynomials_z() const;
+    unsigned int get_Number_Of_Nodes() const;
+    void set_Number_Of_Nodes(unsigned int Nnodes);
+    unsigned int get_pos() const;
+    void set_pos(unsigned int POS);
+    void set_node_on_face0(unsigned int k);
+    void set_node_on_face1(unsigned int k);
+    void set_node_on_face2(unsigned int k);
+    void set_node_on_face3(unsigned int k);
+    void set_node_on_face4(unsigned int k);
+    void set_node_on_face5(unsigned int k);
+    std::vector<unsigned int> get_node_on_face0() const;
+    std::vector<unsigned int> get_node_on_face1() const;
+    std::vector<unsigned int> get_node_on_face2() const;
+    std::vector<unsigned int> get_node_on_face3() const;
+    std::vector<unsigned int> get_node_on_face4() const;
+    std::vector<unsigned int> get_node_on_face5() const;
+    std::vector<unsigned int> get_nodes_on_boundary(unsigned int Type) const;
 
     ~Cuboid();
 };
@@ -230,7 +262,7 @@ class InternalBoundariesCuboid
     unsigned int ID;
     int ID_Left_Element;
     int ID_Right_Element;
-    //double Jacobian;
+    double Jacobian;
     unsigned int Type_Left;  // 1 2 3 4 5
     unsigned int Type_Right; // 1 2 3 4 6
     double theta;
@@ -245,8 +277,8 @@ class InternalBoundariesCuboid
         int getRightElementID() const;
         unsigned int get_Type_Left() const;
         unsigned int get_Type_Right() const;
-        //void setJacobian(double J);
-        //double getJacobian() const;
+        void setJacobian(double J);
+        double getJacobian() const;
         void set_nx(double normalx);
         void set_ny(double normaly);
         void set_nz(double normalz);

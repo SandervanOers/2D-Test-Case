@@ -1,5 +1,201 @@
 #include "mesh_gen.hpp"
 /*--------------------------------------------------------------------------*/
+void load_msh_mesh(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat &EToV, std::vector<VertexCoordinates3D> &List_Of_Vertices, std::vector<Cuboid> &List_Of_Elements, int &element_num,  int &node_num)
+{
+
+      int *element_node;
+      int element_order;
+      std::string gmsh_filename = mesh_name;
+      int m;
+      double *node_x;
+
+    //
+    //  Get the data size.
+    //
+      gmsh_size_read ( gmsh_filename, node_num, m, element_num,
+        element_order );
+    //
+    //  Print the sizes.
+    //
+      std::cout << "\n";
+      std::cout << "  Node data read from file \"" << gmsh_filename << "\"\n";
+      std::cout << "  Number of vertices = " << node_num << "\n";
+      std::cout << "  Spatial dimension = " << m << "\n";
+      std::cout << "  Number of elements = " << element_num << "\n";
+      //std::cout << "  Element order = " << element_order << "\n";
+      std::cout << "\n";
+    //
+    //  Allocate memory.
+    //
+      node_x =  new  double[( m * node_num * sizeof ( double ) )];
+      element_node =  new  int[( element_order * element_num * sizeof ( int ) )];
+    //
+    //  Get the data.
+    //
+      gmsh_data_read ( gmsh_filename, m, node_num, node_x, element_order, element_num, element_node );
+    //
+    //  Print some of the data.
+    //
+    //r8mat_transpose_print_some ( m, node_num, node_x, 1, 1, m, 10, "  Coordinates for first 10 nodes:" );
+
+    unsigned int ID_Vertices = 0;
+    unsigned int ID_Elements = 0;
+    PetscScalar vx[node_num];
+    PetscScalar vy[node_num];
+    PetscScalar vz[node_num];
+    Vec VXT, VYT, VZT;
+    for (int i = 0; i < node_num; i++)
+    {
+        vx[i] = node_x[m*i];
+        vy[i] = 0.0;
+        vz[i] = 0.0;
+        if (m>1)
+        {
+        vy[i] = node_x[m*i+1];
+        }
+        if (m>2)
+        {
+        vy[i] = node_x[m*i+1];
+        vz[i] = node_x[m*i+2];
+        }
+
+        std::cout << i <<  " " << vx[i] << " " << vy[i] << " " << vz[i] << std::endl;
+        VertexCoordinates3D V(ID_Vertices, vx[i], vy[i], vz[i]);
+        List_Of_Vertices.push_back(V);
+        ID_Vertices++;
+    }
+
+    VecCreateSeqWithArray(PETSC_COMM_SELF,1,node_num,vx,&VXT);
+    VecCreateSeqWithArray(PETSC_COMM_SELF,1,node_num,vy,&VYT);
+    VecCreateSeqWithArray(PETSC_COMM_SELF,1,node_num,vz,&VZT);
+    VecAssemblyBegin(VXT);
+    VecAssemblyEnd(VXT);
+    VecAssemblyBegin(VYT);
+    VecAssemblyEnd(VYT);
+    VecAssemblyBegin(VZT);
+    VecAssemblyEnd(VZT);
+    VecDuplicate(VXT, &VX);
+    VecDuplicate(VYT, &VY);
+    VecDuplicate(VZT, &VZ);
+    VecCopy(VXT, VX);
+    VecCopy(VYT, VY);
+    VecCopy(VZT, VZ);
+    VecDestroy(&VXT);
+    VecDestroy(&VYT);
+    VecDestroy(&VZT);
+
+    Mat EToVT;
+    unsigned int Number_Of_Vertices;
+    switch(m)
+    {
+        case 1:
+            Number_Of_Vertices = 2;
+            break;
+        case 2:
+            Number_Of_Vertices = 4;
+            break;
+        case 3:
+            Number_Of_Vertices = 8;
+            break;
+        default:
+            std::cout << "Something went wrong in the determination of the number of vertices" << std::endl;
+    }
+/*
+    PetscScalar etov[element_num*Number_Of_Vertices]; //8 = number of vertices
+    for (unsigned int i = 0; i < element_num; i++)
+    {
+        if (m == 1)
+            Cuboid S(ID_Elements, element_node[8*i]-1, element_node[8*i+(1)%8]-1, element_node[8*i+(2)%8]-1, element_node[8*i+(3)%8]-1, element_node[8*i+(4)%8]-1, element_node[8*i+(5)%8]-1, element_node[8*i+(6)%8]-1, element_node[8*i+(7)%8]-1);
+        else if (m == 2)
+            Cuboid S(ID_Elements, element_node[8*i]-1, element_node[8*i+(1)%8]-1, element_node[8*i+(2)%8]-1, element_node[8*i+(3)%8]-1, element_node[8*i+(4)%8]-1, element_node[8*i+(5)%8]-1, element_node[8*i+(6)%8]-1, element_node[8*i+(7)%8]-1);
+        else if (m == 1)
+            Cuboid S(ID_Elements, element_node[8*i]-1, element_node[8*i+(1)%8]-1, element_node[8*i+(2)%8]-1, element_node[8*i+(3)%8]-1, element_node[8*i+(4)%8]-1, element_node[8*i+(5)%8]-1, element_node[8*i+(6)%8]-1, element_node[8*i+(7)%8]-1);
+        end
+        ID_Elements++;
+        List_Of_Elements.push_back(S);
+
+
+       //std::cout << element_node[4*i+flag]-1 << " " << element_node[4*i+(flag+1)%4]-1 << " " << element_node[4*i+(flag+2)%4]-1 << " " << element_node[4*i+(flag+3)%4]-1 << std::endl;
+        Squares2D S(ID_Elements, element_node[4*i+flag]-1, element_node[4*i+(flag+1)%4]-1, element_node[4*i+(flag+2)%4]-1, element_node[4*i+(flag+3)%4]-1);
+        ID_Elements++;
+        List_Of_Elements.push_back(S);
+
+        etov[4*i+1] = (PetscScalar)element_node[4*i+(flag+1)%4]-1;
+        etov[4*i+2] = (PetscScalar)element_node[4*i+(flag+2)%4]-1;
+        etov[4*i+3] = (PetscScalar)element_node[4*i+(flag+3)%4]-1;
+        etov[4*i] = (PetscScalar)element_node[4*i+flag]-1;
+
+
+        etov[Number_Of_Vertices*i+1] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+1)%8]-1;
+        etov[Number_Of_Vertices*i+2] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+2)%8]-1;
+        etov[Number_Of_Vertices*i+3] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+3)%8]-1;
+        etov[Number_Of_Vertices*i+4] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+4)%8]-1;
+        etov[Number_Of_Vertices*i+5] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+5)%8]-1;
+        etov[Number_Of_Vertices*i+6] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+6)%8]-1;
+        etov[Number_Of_Vertices*i+7] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+7)%8]-1;
+        etov[Number_Of_Vertices*i]   = (PetscScalar)element_node[Number_Of_Vertices*i+flag]-1;
+    }
+
+       /* Gmsh Ordering
+        Line:                 Line3:          Line4:
+
+              v
+              ^
+              |
+              |
+        0-----+-----1 --> u   0----2----1     0---2---3---1
+
+        Quadrangle:            Quadrangle8:            Quadrangle9:
+
+              v
+              ^
+              |
+        3-----------2          3-----6-----2           3-----6-----2
+        |     |     |          |           |           |           |
+        |     |     |          |           |           |           |
+        |     +---- | --> u    7           5           7     8     5
+        |           |          |           |           |           |
+        |           |          |           |           |           |
+        0-----------1          0-----4-----1           0-----4-----1
+
+        Hexahedron:             Hexahedron20:          Hexahedron27:
+
+               v
+        3----------2            3----13----2           3----13----2
+        |\     ^   |\           |\         |\          |\         |\
+        | \    |   | \          | 15       | 14        |15    24  | 14
+        |  \   |   |  \         9  \       11 \        9  \ 20    11 \
+        |   7------+---6        |   7----19+---6       |   7----19+---6
+        |   |  +-- |-- | -> u   |   |      |   |       |22 |  26  | 23|
+        0---+---\--1   |        0---+-8----1   |       0---+-8----1   |
+         \  |    \  \  |         \  17      \  18       \ 17    25 \  18
+          \ |     \  \ |         10 |        12|        10 |  21    12|
+           \|      w  \|           \|         \|          \|         \|
+            4----------5            4----16----5           4----16----5
+
+
+        * /
+
+
+    MatCreateSeqDense(PETSC_COMM_SELF, 8, element_num, etov, &EToVT);
+    MatAssemblyBegin(EToVT, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(EToVT, MAT_FINAL_ASSEMBLY);
+    MatTranspose(EToVT, MAT_INPLACE_MATRIX, &EToVT);
+    MatDuplicate(EToVT, MAT_COPY_VALUES, &EToV);
+    MatDestroy(&EToVT);
+
+*/
+    //  i4mat_transpose_print_some ( element_order, element_num, element_node, 1, 1, element_order, 10, "  Connectivity for first 10 elements:" );
+    //
+    //  Clean up.
+    //
+      delete[] element_node;
+      delete[] node_x;
+
+
+    }
+
+/*--------------------------------------------------------------------------*/
 void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat &EToV, std::vector<VertexCoordinates3D> &List_Of_Vertices, std::vector<Cuboid> &List_Of_Elements, int &element_num,  int &node_num)
 {
       int *element_node;
@@ -42,6 +238,7 @@ void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Ma
     //
     //r8mat_transpose_print_some ( m, node_num, node_x, 1, 1, m, 10, "  Coordinates for first 10 nodes:" );
 
+    std::cout << "node_num = " << node_num << std::endl;
     unsigned int ID_Vertices = 0;
     unsigned int ID_Elements = 0;
     PetscScalar vx[node_num];
@@ -53,6 +250,7 @@ void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Ma
         vx[i] = node_x[3*i];
         vy[i] = node_x[3*i+1];
         vz[i] = node_x[3*i+2];
+        std::cout << i <<  " " << vx[i] << " " << vy[i] << " " << vz[i] << std::endl;
         VertexCoordinates3D V(ID_Vertices, node_x[3*i], node_x[3*i+1], node_x[3*i+2]);
         List_Of_Vertices.push_back(V);
         ID_Vertices++;
@@ -782,8 +980,8 @@ void create_ListInternalBoundaries(const unsigned int &Number_Of_Elements, Mat &
             else
             {
                 // Internal Face
-            BoundaryInfo BI(i, EToE_row[j], j, EToF_row[j]);
-            SetType.emplace(BI);
+                BoundaryInfo BI(i, EToE_row[j], j, EToF_row[j]);
+                SetType.emplace(BI);
             }
         }
         MatRestoreRow(EToE, i, NULL, NULL, &EToE_row);
@@ -1230,7 +1428,6 @@ void Calculate_CuboidFaceNormals(const std::vector<Cuboid> &List_Of_Elements, st
             default:
                 std::cout << "Something went wrong in the calculation of the normals" << std::endl;
         }
-
         double v1x = x2 - x1;
         double v1y = y2 - y1;
         double v1z = z2 - z1;
@@ -1248,8 +1445,18 @@ void Calculate_CuboidFaceNormals(const std::vector<Cuboid> &List_Of_Elements, st
         ny = ny/length_n;
         nz = nz/length_n;
 
-        std::cout << "Boundary ID = " << (*f).getID() << ". Left El = " << left << ", Right El = " << right << ", left face = " << left_face << std::endl;
-        std::cout << nx << " " << ny << " " << nz << std::endl;
+        std::cout << "length_n = " << length_n << std::endl;
+        //std::cout << "Boundary ID = " << (*f).getID() << ". Left El = " << left << ", Right El = " << right << ", left face = " << left_face << std::endl;
+        //std::cout << nx << " " << ny << " " << nz << std::endl;
+
+        //double Length = sqrt(dx*dx+dy*dy);
+        double Area = 2.0*2.0;
+        double detJacobian = length_n/Area;
+        std::cout << "detJacobian = " << detJacobian << std::endl;
+        (*f).setJacobian(detJacobian);
+        (*f).set_nx(nx);
+        (*f).set_ny(ny);
+        (*f).set_nz(nz);
 
         /*
         double dx = x[1]-x[0];
@@ -1360,7 +1567,7 @@ void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_
         double dy = y[1]-y[0];
         double Length = sqrt(dx*dx+dy*dy);
         double ReferenceLength = 2.0;
-        double Jacobian = Length/ReferenceLength; // Sign Boundary Jacobian. Can this be negative?
+        double Jacobian = Length/ReferenceLength; // Sign Boundary Jacobian. Can this be negative? => shouldn't be for convex elements
         (*f).setJacobian(Jacobian);
         //(*f).setJacobian(Length);
         (*f).set_nx(dy/Length);
@@ -1421,12 +1628,27 @@ void set_Order_Polynomials_Uniform(std::vector<Squares2D> &List_Of_Elements2D, c
     }
 }
 /*--------------------------------------------------------------------------*/
-void set_Order_Polynomials_Uniform(std::vector<Cuboid> &List_Of_Elements, const unsigned int &N)
+void set_Order_Polynomials_Uniform(std::vector<Cuboid> &List_Of_Elements, const unsigned int &Nx, const unsigned int &Ny, const unsigned int &Nz)
 {
     for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
     {
-        (*i).set_Order_Of_Polynomials(N); //(rand() % 3) + 1
+        (*i).set_Order_Of_Polynomials_x(Nx); //(rand() % 3) + 1
+        (*i).set_Order_Of_Polynomials_y(Ny); //(rand() % 3) + 1
+        (*i).set_Order_Of_Polynomials_z(Nz); //(rand() % 3) + 1
+        unsigned int Nnodes = (Nx+1)*(Ny+1)*(Nz+1);
+        (*i).set_Number_Of_Nodes(Nnodes);
     }
+}
+/*--------------------------------------------------------------------------*/
+extern unsigned int get_Number_Of_Nodes(std::vector<Cuboid> &List_Of_Elements)
+{
+    unsigned int Number_Of_Nodes = 0;
+    for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
+    {
+        (*i).set_pos(Number_Of_Nodes);
+        Number_Of_Nodes += (*i).get_Number_Of_Nodes();
+    }
+    return Number_Of_Nodes;
 }
 /*--------------------------------------------------------------------------*/
 extern unsigned int get_Number_Of_Nodes(std::vector<Elements2D> &List_Of_Elements2D)
@@ -1449,6 +1671,14 @@ extern unsigned int get_Number_Of_Nodes(std::vector<Squares2D> &List_Of_Elements
         Number_Of_Nodes += (*i).get_Number_Of_Nodes();
     }
     return Number_Of_Nodes;
+}
+/*--------------------------------------------------------------------------*/
+void set_theta_Uniform(std::vector<InternalBoundariesCuboid> &List_Of_Boundaries, const double &theta)
+{
+    for(auto f = List_Of_Boundaries.begin(); f < List_Of_Boundaries.end(); f++)
+    {
+        (*f).set_theta(theta); //(rand() % 3) + 1
+    }
 }
 /*--------------------------------------------------------------------------*/
 void set_theta_Uniform(std::vector<Boundaries2D> &List_Of_Boundaries2D, const double &theta)

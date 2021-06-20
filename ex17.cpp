@@ -22,18 +22,34 @@ int main(int argc,char **args)
 
     auto t1 = std::chrono::high_resolution_clock::now();
     // Read in options from command line
+    // Bucket
+    PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=200, Method=1;
+    PetscInt   Number_Of_Periods = 1;
+    PetscInt   kmode=1;
+    PetscScalar N2 = 1.0;
+    PetscScalar   theta = 0.5;
+    PetscInt    N_Petsc = 0, N_Q=0;
+    PetscScalar nu = 0;//
+    PetscInt    Dimensions = 2;
+    PetscScalar F0 = 0.0;
+    PetscScalar omega = 0.5*sqrt(2.0);
+    PetscScalar Fr = 1;//0.56;//0.0291;//
+    PetscScalar Re = 1.0;
+    PetscScalar gamma = 0.0;// PETSC_PI/20.0;
+    /*// Read in options from command line
     PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=100, Method=1;
-    PetscInt   Number_Of_Periods = 20, kmode=1;
-    PetscScalar N2 = (0.37*0.56/0.325)*(0.37*0.56/0.325); //1;//0.13*0.13;  //   //0.1625*0.1625; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
+    PetscInt   Number_Of_Periods = 64;//30,
+    PetscInt   kmode=1;
+    PetscScalar N2 = (0.37*1.79/0.325)*(0.37*1.79/0.325); //(0.37*0.052/0.325)*(0.37*0.052/0.325); //(0.37*1.79/0.325)*(0.37*1.79/0.325); //(0.37*0.56/0.325)*(0.37*0.56/0.325); //1;//0.13*0.13;  //   //0.1625*0.1625; // N2 = beta-1; beta = 1/rho_0 drho_0/dz
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 0, N_Q=0;
     PetscScalar nu = 1; //0;//
     PetscInt    Dimensions = 2;
-    PetscScalar F0 = 0.001;//0.0001;
-    PetscScalar omega = 0.13*0.56/0.325;//0.7071;//0.42; ////0.05518;//0.17;//0.06139;//        //0.052; //0.06825;//
-    PetscScalar Fr = 1;//0.56;//
-    PetscScalar Re = pow(10.0,5.0);
-    PetscScalar gamma = 0.0;// PETSC_PI/20.0;
+    PetscScalar F0 = 3*pow(10.0,-7.0);//0.00001; //0.001;//
+    PetscScalar omega = 0.16*1.79/0.325;// 0.04*1.79/0.325;//0.16*0.052/0.325;//0.14*1.79/0.325;//0.245*0.56/0.325;//0.7071;//0.42; ////0.05518;//0.17;//0.06139;//        //0.052; //0.06825;//
+    PetscScalar Fr = 1;//0.56;//0.0291;//
+    PetscScalar Re = 5.82*pow(10.0,5.0); // 1.82 16900;//
+    PetscScalar gamma = 0.0;// PETSC_PI/20.0;*/
 
     PetscOptionsGetInt(NULL, NULL, "-n", &Number_Of_Elements_Petsc, NULL);
     PetscOptionsGetInt(NULL, NULL, "-k", &kmode, NULL);
@@ -69,12 +85,13 @@ int main(int argc,char **args)
     PetscViewerPushFormat(viewer_info, PETSC_VIEWER_ASCII_INFO);
 
     double Eold = 0;
-    //for (int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 10; Number_Of_Polynomial_Steps += 2)
+    //for (int Number_Of_Polynomial_Steps = 0; Number_Of_Polynomial_Steps < 3; Number_Of_Polynomial_Steps ++ ) //Number_Of_Polynomial_Steps += 2
+    //for (int Number_Of_Polynomial_Steps = 1; Number_Of_Polynomial_Steps < 2; Number_Of_Polynomial_Steps ++ ) //Number_Of_Polynomial_Steps += 2
     {
 
         Eold = 0.0;
     int Number_Of_Polynomial_Steps = N_Petsc    ;
-    //for (int Number_Of_Spatial_Steps = 0; Number_Of_Spatial_Steps < 7; Number_Of_Spatial_Steps++) //std::max(4,7-Number_Of_Polynomial_Steps)
+    //for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < 8-Number_Of_Polynomial_Steps; Number_Of_Spatial_Steps++) //std::max(4,7-Number_Of_Polynomial_Steps)
     {
 
     int Number_Of_Spatial_Steps = 0;
@@ -86,6 +103,10 @@ int main(int argc,char **args)
 
     mesh_name = mesh_name_trapezoid(Number_Of_Elements_Petsc);
     //mesh_name = "Mesh/square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh";
+    //mesh_name = "Mesh/Bucket_TopRight_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
+    //mesh_name = "Mesh/Bucket_TopLeft_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
+    //mesh_name = "Mesh/bucket_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh";
+    //mesh_name = "Mesh/Bucket_ConformingNew_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
 
     std::vector<Squares2D> List_Of_Elements;
     std::vector<InternalBoundariesSquares2D> List_Of_Boundaries;
@@ -101,6 +122,7 @@ int main(int argc,char **args)
     for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
         std::cout << (*i).getID() << ": " << (*i).getxCoordinate() << " " << (*i).getyCoordinate() << std::endl;
     */
+
     /*
     std::cout << "VX = " << std::endl;
     VecView(VX, viewer);
@@ -135,6 +157,7 @@ int main(int argc,char **args)
         std::cout << (*i).getID() <<  " : " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << std::endl;
     }
     */
+
     Calculate_Area_Square(List_Of_Elements, List_Of_Vertices);
     Calculate_Jacobian_Boundaries_Square(List_Of_Elements, List_Of_Boundaries, List_Of_Vertices);
     set_Order_Polynomials_Uniform(List_Of_Elements, N_Petsc);
@@ -153,14 +176,20 @@ int main(int argc,char **args)
     /// Estimate the required time step
     PetscScalar   sigma;
     //sigma = calculate_sigma_2DEB(rho_0_Deriv, kxmode, kzmode, Fr);
-    sigma = omega;
+    sigma = calculate_sigma_2DEB_Bucket();
+    //sigma = omega;
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
-    PetscPrintf(PETSC_COMM_SELF,"Period %6.4e\n",2.0*PETSC_PI/(double)sigma);
+    PetscScalar Period = period_2DEB_Bucket();
+    PetscPrintf(PETSC_COMM_SELF,"Period %6.4e\n", Period);
     PetscPrintf(PETSC_COMM_SELF,"Number of Periods %6.4e\n",(double)Number_Of_Periods);
 
     //Number_Of_TimeSteps_In_One_Period = 1000;//10*10*pow((double)N_Elements, (N_Petsc+1.0)/2.0);
     //PetscScalar DeltaT = 1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
+
+
+    //sigma = omega;
     PetscScalar DeltaT = 2.0*PETSC_PI/(double)Number_Of_TimeSteps_In_One_Period/sigma;
+
 
     unsigned int Number_Of_TimeSteps = Number_Of_TimeSteps_In_One_Period*Number_Of_Periods;
 
@@ -219,19 +248,27 @@ int main(int argc,char **args)
     MatDestroy(&NDerivMat);
 
 
-    Vec Initial_Condition, VecNodes;
+    Vec Initial_Condition;
+
+    Vec VecNodes;
     compute_InitialCondition_WA(List_Of_Elements, N_Nodes, rho_0_Deriv, Fr, kxmode, kzmode, Initial_Condition, VecNodes, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, DIV);
     //compute_InitialCondition_EB(List_Of_Elements, N_Nodes, rho_0_Deriv, Fr, kxmode, kzmode, Initial_Condition, VecNodes, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, DIV);
-    //compute_InitialCondition_EB(List_Of_Elements, N_Nodes, rho_0_Deriv, Fr, kxmode, kzmode, Initial_Condition, VecNodes, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, DIV);
+    //compute_InitialCondition_EB_Bucket(List_Of_Elements, N_Nodes, rho_0_Deriv, Fr, kxmode, kzmode, Initial_Condition, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, DIV);
+
 
     Vec Sol;
+    //Number_Of_TimeSteps = 10*Number_Of_TimeSteps_In_One_Period;
+    //Simulate_WA_Forced_Continuous(A, B, M1_small, M2_small, DIV, Initial_Condition, List_Of_Elements, N_Nodes, Number_Of_TimeSteps, DeltaT, Sol, 4, F0, omega);
+    //Number_Of_TimeSteps = 1;
     Simulate_WA_Forced(A, B, M1_small, M2_small, DIV, Initial_Condition, List_Of_Elements, N_Nodes, Number_Of_TimeSteps, DeltaT, Sol, 4, F0, omega);
+
+
     //Simulate_EB(A, B, M1_small, M2_small, DIV, Initial_Condition, VecNodes, List_Of_Elements, N_Nodes, Number_Of_TimeSteps, DeltaT, Sol, 4, F0, omega);
     MatDestroy(&DIV);
-
     //double Error = calculate_Error2D(Initial_Condition, Sol, 2, 1.0/Number_Of_Elements_Petsc, 1.0/Number_Of_Elements_Petsc, (N_Petsc+1)*(N_Petsc+1));
     //double Error = calculate_Error2D(Initial_Condition, Sol, 2, List_Of_Elements, N_Nodes);
-    double Error = calculate_Error2D(Initial_Condition, Sol, 2, 1.0/Number_Of_Elements_Petsc, 1.0/Number_Of_Elements_Petsc, (N_Petsc+1)*(N_Petsc+1));
+    //double Error = calculate_Error2D(Initial_Condition, Sol, 2, 1.0/Number_Of_Elements_Petsc, 1.0/Number_Of_Elements_Petsc, (N_Petsc+1)*(N_Petsc+1));
+    double Error = calculate_Error2D(Initial_Condition, Sol, 2, 1.0/sqrt(Number_Of_Elements_Petsc), 1.0/sqrt(Number_Of_Elements_Petsc), (N_Petsc+1)*(N_Petsc+1));
 
         char szFileName[255] = {0};
         std::string store_solution = "Solution/Solutions/Sol_n"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+"N"+std::to_string(N_Petsc)+"Ts"+std::to_string(Number_Of_TimeSteps_In_One_Period)+".txt";
@@ -283,7 +320,7 @@ int main(int argc,char **args)
     Eold = Enew;
     std::cout << "**********************************************************"<< std::endl;
     std::cout << "L2 Errors " << std::endl;
-    std::cout << "\t h \t N \t Er \t Order \t t " << std::endl;
+    std::cout << "   h \t N \t \t Er \t Order \t t " << std::endl;
     for (auto i = L2Errors.begin(); i != L2Errors.end(); ++i)
     {
         std::cout << std::setw(5) << std::setprecision(4) << (*i)[0] << "    " << std::setw(4) << (*i)[1] << "    " << std::setw(10) << std::setprecision(4) << (*i)[2] << "    " << std::setw(5) << std::setprecision(2) << (*i)[3] << "    " << std::setw(5) << std::setprecision(4) << (*i)[4] << std::endl;
@@ -294,7 +331,7 @@ int main(int argc,char **args)
 
     std::cout << "**********************************************************"<< std::endl;
     std::cout << "L2 Errors " << std::endl;
-    std::cout << "\t h \t N \t Er \t Order \t t " << std::endl;
+    std::cout << "   h \t N \t \t Er \t Order \t t " << std::endl;
     for (auto i = L2Errors.begin(); i != L2Errors.end(); ++i)
     {
         std::cout << std::setw(5) << std::setprecision(4) << (*i)[0] << "    " << std::setw(4) << (*i)[1] << "    " << std::setw(10) << std::setprecision(4) << (*i)[2] << "    " << std::setw(5) << std::setprecision(2) << (*i)[3] << "    " << std::setw(5) << std::setprecision(4) << (*i)[4] << std::endl;

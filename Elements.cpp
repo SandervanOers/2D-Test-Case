@@ -395,14 +395,120 @@ unsigned int Cuboid::getVertex_V8() const
 {
     return ID_Vertex_V8;
 }
-void Cuboid::set_Order_Of_Polynomials(unsigned int N)
+void Cuboid::set_Order_Of_Polynomials_x(unsigned int N)
 {
-    Order_Of_Polynomials = N;
-    //Number_Of_Nodes = (N+1)*(N+2)/2;
+    Order_Of_Polynomials_x = N;
 }
-unsigned int Cuboid::get_Order_Of_Polynomials() const
+void Cuboid::set_Order_Of_Polynomials_y(unsigned int N)
 {
-    return Order_Of_Polynomials;
+    Order_Of_Polynomials_y = N;
+}
+void Cuboid::set_Order_Of_Polynomials_z(unsigned int N)
+{
+    Order_Of_Polynomials_z = N;
+}
+unsigned int Cuboid::get_Order_Of_Polynomials_x() const
+{
+    return Order_Of_Polynomials_x;
+}
+unsigned int Cuboid::get_Order_Of_Polynomials_y() const
+{
+    return Order_Of_Polynomials_y;
+}
+unsigned int Cuboid::get_Order_Of_Polynomials_z() const
+{
+    return Order_Of_Polynomials_z;
+}
+unsigned int Cuboid::get_Number_Of_Nodes() const
+{
+    return Number_Of_Nodes;
+}
+void Cuboid::set_Number_Of_Nodes(unsigned int Nnodes)
+{
+    Number_Of_Nodes = Nnodes;
+}
+unsigned int Cuboid::get_pos() const
+{
+    return pos;
+}
+void Cuboid::set_pos(unsigned int POS)
+{
+    pos = POS;
+}
+void Cuboid::set_node_on_face0(unsigned int k)
+{
+    node_on_face0.push_back(k);
+}
+void Cuboid::set_node_on_face1(unsigned int k)
+{
+    node_on_face1.push_back(k);
+}
+void Cuboid::set_node_on_face2(unsigned int k)
+{
+    node_on_face2.push_back(k);
+}
+void Cuboid::set_node_on_face3(unsigned int k)
+{
+    node_on_face3.push_back(k);
+}
+void Cuboid::set_node_on_face4(unsigned int k)
+{
+    node_on_face4.push_back(k);
+}
+void Cuboid::set_node_on_face5(unsigned int k)
+{
+    node_on_face5.push_back(k);
+}
+std::vector<unsigned int> Cuboid::get_node_on_face0() const
+{
+    return node_on_face0;
+}
+std::vector<unsigned int> Cuboid::get_node_on_face1() const
+{
+    return node_on_face1;
+}
+std::vector<unsigned int> Cuboid::get_node_on_face2() const
+{
+    return node_on_face2;
+}
+std::vector<unsigned int> Cuboid::get_node_on_face3() const
+{
+    return node_on_face3;
+}
+std::vector<unsigned int> Cuboid::get_node_on_face4() const
+{
+    return node_on_face4;
+}
+std::vector<unsigned int> Cuboid::get_node_on_face5() const
+{
+    return node_on_face5;
+}
+std::vector<unsigned int> Cuboid::get_nodes_on_boundary(unsigned int Type) const
+{
+    switch(Type)
+    {
+    case 0:
+        return node_on_face0;
+        break;
+    case 1:
+        return node_on_face1;
+        break;
+    case 2:
+        return node_on_face2;
+        break;
+    case 3:
+        return node_on_face3;
+        break;
+    case 4:
+        return node_on_face4;
+        break;
+    case 5:
+        return node_on_face5;
+        break;
+    default:
+        std::cout << "Wrong Boundary Type" << std::endl;
+        return {0};
+    }
 }
 
 Cuboid::~Cuboid()
@@ -424,14 +530,14 @@ int InternalBoundariesCuboid::getRightElementID() const
 {
     return ID_Right_Element;
 }
-//void InternalBoundariesCuboid::setJacobian(double J)
-//{
-//   Jacobian = J;
-//}
-//double InternalBoundariesCuboid::getJacobian() const
-//{
-//   return Jacobian;
-//}
+void InternalBoundariesCuboid::setJacobian(double J)
+{
+   Jacobian = J;
+}
+double InternalBoundariesCuboid::getJacobian() const
+{
+   return Jacobian;
+}
 void InternalBoundariesCuboid::set_nx(double normalx)
 {
     nx = normalx;

@@ -60,6 +60,10 @@ extern double calculate_Error2D_Quad(const Vec &Exact, const Vec &Solution, cons
 /*--------------------------------------------------------------------------*/
 void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<VertexCoordinates2D> &List_Of_Vertices, const double &r_p, const double &s_p, double &Jacobian, double &drdx, double &drdy, double &dsdx, double &dsdy, double &x, double &y);
 /*--------------------------------------------------------------------------*/
+void Calculate_Jacobian_Cuboid(const Cuboid &Element, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const double &r_p, const double &s_p, const double &t_p, double &det_J, double &drdx, double &drdy, double &drdz, double &dsdx, double &dsdy, double &dsdz, double &dtdx, double &dtdy, double &dtdz, double &x, double &y, double &z);
+/*--------------------------------------------------------------------------*/
+void create_Matrices_Cuboids(const std::vector<VertexCoordinates3D> &List_Of_Vertices, const std::vector<InternalBoundariesCuboid> &List_Of_Boundaries, const std::vector<Cuboid> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Nx_e, const unsigned int &Ny_e, const unsigned int &Nz_e, const unsigned int &N_Q, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat);
+/*--------------------------------------------------------------------------*/
 void printFullMatrixInfo(Mat& matrix, const std::string& name);
 /*--------------------------------------------------------------------------*/
 extern void correctInitialProjectionOfVelocity(const unsigned int &N_Nodes, Vec &UInit, const Mat &DIV);

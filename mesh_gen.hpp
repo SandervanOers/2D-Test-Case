@@ -42,6 +42,8 @@ inline auto compare_BoundaryInfo = [](BoundaryInfo lhs, BoundaryInfo rhs)
       return lhs.left<rhs.left || (!(rhs.left<lhs.left) && lhs.right<rhs.right);
 };
 /*--------------------------------------------------------------------------*/
+void load_msh_mesh(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat &EToV, std::vector<VertexCoordinates3D> &List_Of_Vertices, std::vector<Cuboid> &List_Of_Elements, int &element_num,  int &node_num);
+/*--------------------------------------------------------------------------*/
 void Compute_Vertex_Coordinates_Uniform_Rectangle_2D(const double &xmin, const double &xmax, const double &ymin, const double &ymax, const unsigned int &Number_Of_Elements_X, const unsigned int &Number_Of_Elements_Y, std::vector<VertexCoordinates2D> &List_Of_Vertices, std::vector<Boundaries2D> &List_Of_Boundaries, std::vector<Elements2D> &List_Of_Elements);
 /*--------------------------------------------------------------------------*/
 // generate equidistant grid
@@ -60,11 +62,15 @@ void set_Order_Polynomials_Uniform(std::vector<Elements2D> &List_Of_Elements2D, 
 /*--------------------------------------------------------------------------*/
 void set_Order_Polynomials_Uniform(std::vector<Squares2D> &List_Of_Elements2D, const unsigned int &N);
 /*--------------------------------------------------------------------------*/
-void set_Order_Polynomials_Uniform(std::vector<Cuboid> &List_Of_Elements, const unsigned int &N);
+void set_Order_Polynomials_Uniform(std::vector<Cuboid> &List_Of_Elements, const unsigned int &Nx, const unsigned int &Ny, const unsigned int &Nz);
+/*--------------------------------------------------------------------------*/
+extern unsigned int get_Number_Of_Nodes(std::vector<Cuboid> &List_Of_Elements);
 /*--------------------------------------------------------------------------*/
 extern unsigned int get_Number_Of_Nodes(std::vector<Elements2D> &List_Of_Elements2D);
 /*--------------------------------------------------------------------------*/
 extern unsigned int get_Number_Of_Nodes(std::vector<Squares2D> &List_Of_Elements2D);
+/*--------------------------------------------------------------------------*/
+void set_theta_Uniform(std::vector<InternalBoundariesCuboid> &List_Of_Boundaries, const double &theta);
 /*--------------------------------------------------------------------------*/
 void set_theta_Uniform(std::vector<Boundaries2D> &List_Of_Boundaries2D, const double &theta);
 /*--------------------------------------------------------------------------*/

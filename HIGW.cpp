@@ -2654,6 +2654,424 @@ void create_Matrices_Quads_EB(const std::vector<VertexCoordinates2D> &List_Of_Ve
 
 }
 /*--------------------------------------------------------------------------*/
+void create_Matrices_Cuboids(const std::vector<VertexCoordinates3D> &List_Of_Vertices, const std::vector<InternalBoundariesCuboid> &List_Of_Boundaries, const std::vector<Cuboid> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Nx_e, const unsigned int &Ny_e, const unsigned int &Nz_e, const unsigned int &N_Q, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
+{
+    // estimate the number of nonzeros
+    double N = std::max({Nx_e,Ny_e,Nz_e});
+    double Np = (N+1)*(N+1)*(N+1);
+    //Mat Ex, ExT, Ey, EyT;
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 3*N_Nodes, N_Nodes, 9*Np, NULL, &E);   //number of possible nonzero blocks are 9: element and his 8 neighbours (3D)
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, 3*N_Nodes, 3*5*Np, NULL, &ET);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 3*N_Nodes, 3*N_Nodes, 3*Np, NULL, &invM);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &invM_small);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 3*N_Nodes, 3*N_Nodes, 3*Np, NULL, &M1);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &M1_small);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &M2_small);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &NMat);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 3*N_Nodes, 3*N_Nodes, 3*Np, NULL, &M2);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &NDerivMat);
+
+    std::cout << "Start Elemental Calculations " << std::endl;
+    for (auto e = List_Of_Elements.begin(); e < List_Of_Elements.end(); e++)
+    {
+        unsigned int Np = (*e).get_Number_Of_Nodes();
+        unsigned int pos = (*e).get_pos();
+
+        unsigned int Nx = (*e).get_Order_Of_Polynomials_x();
+        unsigned int Ny = (*e).get_Order_Of_Polynomials_y();
+        unsigned int Nz = (*e).get_Order_Of_Polynomials_z();
+
+        unsigned int Order_Polynomials = std::max({Nx,Ny,Nz});
+
+        unsigned int Order_Gaussian_Quadrature = 2*Order_Polynomials+3+N_Q;//ceil(Order_Polynomials+3+N_Q); // + higher order for rho_0 term
+        Order_Gaussian_Quadrature = 20;// 28;//std::max((uint)10, Order_Gaussian_Quadrature);
+
+        PetscInt in[Np];
+        for (unsigned int n=0;n<Np; n++)
+        {
+            in[n] = n+pos;
+        }
+
+        Mat M_Elemental;
+        Mat invM_Elemental;
+        MatCreateSeqAIJ(PETSC_COMM_WORLD, Np, Np, Np, NULL, &M_Elemental);
+
+        Vec ri_x, ri_y, ri_z;
+        ri_x = JacobiGL(0, 0, Nx);
+        ri_y = JacobiGL(0, 0, Ny);
+        ri_z = JacobiGL(0, 0, Nz);
+
+        Vec Weights;
+        Vec QuadraturePoints;
+        //QuadraturePoints = JacobiGQ_withWeights(0, 0, Order_Gaussian_Quadrature, Weights);
+        QuadraturePoints = JacobiGL_withWeights(0, 0, Order_Gaussian_Quadrature, Weights);
+        PetscScalar *w, *qp;
+        VecGetArray(Weights, &w);
+        VecGetArray(QuadraturePoints, &qp);
+        double rho0 = 1.0;
+
+        for (unsigned int k = 1; k <= Np; k++)
+        {
+            unsigned int alpha = (k-1)%(Nx+1);            // r
+            unsigned int kk = (k-1)/(Nx+1);
+            unsigned int beta = (kk)%(Ny+1);              // s
+            unsigned int zeta = (k-1)/((Nx+1)*(Ny+1));    // t
+
+            for (unsigned int l = 1; l <= Np; l++)
+            {
+                unsigned int gamma = (l-1)%(Nx+1);
+                unsigned int ll = (l-1)/(Nx+1);
+                unsigned int delta = (ll)%(Ny+1);
+                unsigned int epsilon = (l-1)/((Nx+1)*(Ny+1));
+
+                double value_ex = 0.0;
+                double value_ey = 0.0;
+                double value_ez = 0.0;
+                double value_m = 0.0;
+                double value_m1 = 0.0;
+                double value_n = 0.0;
+                double value_m2 = 0.0;
+                double value_n_deriv = 0.0;
+
+                for (unsigned int p = 0; p <= Order_Gaussian_Quadrature; p++)
+                {
+                    double L_alpha = LagrangePolynomial(ri_x, qp[p], alpha);
+                    double L_gamma = LagrangePolynomial(ri_x, qp[p], gamma);
+                    for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
+                    {
+                        double L_beta  = LagrangePolynomial(ri_y, qp[q], beta);
+                        double L_delta = LagrangePolynomial(ri_y, qp[q], delta);
+                        for (unsigned int r = 0; r <= Order_Gaussian_Quadrature; r++)
+                        {
+                            double L_zeta    = LagrangePolynomial(ri_z, qp[r], zeta);
+                            double L_epsilon = LagrangePolynomial(ri_z, qp[r], epsilon);
+
+                            double J, drdx, drdy, drdz, dsdx, dsdy, dsdz, dtdx, dtdy, dtdz, x, y, z;
+                            Calculate_Jacobian_Cuboid((*e), List_Of_Vertices, qp[p], qp[q], qp[r], J, drdx, drdy, drdz, dsdx, dsdy, dsdz, dtdx, dtdy, dtdz, x, y, z);
+
+                            double N2 = 1;          // ref to calculation based on (x,y,z)
+                            double rho0deriv = -1;  // ref to calculation based on (x,y,z)
+
+                            value_m  += w[p]*L_alpha*L_gamma * w[q]*L_beta*L_delta * w[r]*L_zeta*L_epsilon * J;
+                            value_m1 += w[p]*L_alpha*L_gamma * w[q]*L_beta*L_delta * w[r]*L_zeta*L_epsilon * J / rho0;
+                            value_m2 += w[p]*L_alpha*L_gamma * w[q]*L_beta*L_delta * w[r]*L_zeta*L_epsilon * J / rho0 / N2 /Fr/Fr; // Check Fr
+                            value_n  += w[p]*L_alpha*L_gamma * w[q]*L_beta*L_delta * w[r]*L_zeta*L_epsilon * J * rho0;
+                            value_n_deriv += w[p]*L_alpha*L_gamma * w[q]*L_beta*L_delta * w[r]*L_zeta*L_epsilon * J * rho0deriv;
+
+                            if (Nx > 0)
+                            {
+                                double dL_gamma   = LagrangePolynomialDeriv(ri_x, qp[p], gamma);
+                                double dL_delta   = LagrangePolynomialDeriv(ri_x, qp[q], delta);
+                                double dL_epsilon = LagrangePolynomialDeriv(ri_x, qp[r], epsilon);
+                                value_ex += w[p]*w[q]*w[r] * L_alpha*L_beta*L_zeta * (drdx*dL_gamma * L_delta * L_epsilon + dsdx * L_gamma * dL_delta * L_epsilon + dtdx * L_gamma * L_delta * dL_epsilon) * J * rho0;
+                            }
+                            if (Ny > 0)
+                            {
+                                double dL_gamma   = LagrangePolynomialDeriv(ri_y, qp[p], gamma);
+                                double dL_delta   = LagrangePolynomialDeriv(ri_y, qp[q], delta);
+                                double dL_epsilon = LagrangePolynomialDeriv(ri_y, qp[r], epsilon);
+                                value_ey += w[p]*w[q]*w[r] * L_alpha*L_beta*L_zeta * (drdy*dL_gamma * L_delta * L_epsilon + dsdy * L_gamma * dL_delta * L_epsilon + dtdy * L_gamma * L_delta * dL_epsilon) * J * rho0;
+                            }
+                            if (Nz > 0)
+                            {
+                                double dL_gamma   = LagrangePolynomialDeriv(ri_z, qp[p], gamma);
+                                double dL_delta   = LagrangePolynomialDeriv(ri_z, qp[q], delta);
+                                double dL_epsilon = LagrangePolynomialDeriv(ri_z, qp[r], epsilon);
+                                value_ez += w[p]*w[q]*w[r] * L_alpha*L_beta*L_zeta * (drdz*dL_gamma * L_delta * L_epsilon + dsdz * L_gamma * dL_delta * L_epsilon + dtdz * L_gamma * L_delta * dL_epsilon) * J * rho0;
+                            }
+
+                        }
+                    }
+                }
+                MatSetValue(M_Elemental, (k-1), (l-1), value_m, ADD_VALUES);
+                MatSetValue(M1_small, pos+(k-1), pos+(l-1), value_m1, ADD_VALUES);
+                MatSetValue(NMat, pos+(k-1), pos+(l-1), value_n, ADD_VALUES);
+                MatSetValue(M2_small, pos+(k-1), pos+(l-1), value_m2, ADD_VALUES);
+                MatSetValue(M2, pos+(k-1), pos+(l-1), value_m2, ADD_VALUES);
+                MatSetValue(M2, N_Nodes+pos+(k-1), N_Nodes+pos+(l-1), value_m2, ADD_VALUES);
+                MatSetValue(M2, 2*N_Nodes+pos+(k-1), 2*N_Nodes+pos+(l-1), value_m2, ADD_VALUES);
+                MatSetValue(NDerivMat, pos+(k-1), pos+(l-1), value_n_deriv, ADD_VALUES);
+                MatSetValue(M1, pos+(k-1), pos+(l-1), value_m1, ADD_VALUES);
+                MatSetValue(M1, N_Nodes+pos+(k-1), N_Nodes+pos+(l-1), value_m1, ADD_VALUES);
+                MatSetValue(M1, 2*N_Nodes+pos+(k-1), 2*N_Nodes+pos+(l-1), value_m1, ADD_VALUES);
+                MatSetValue(E, pos+(k-1), pos+(l-1), -value_ex, ADD_VALUES);
+                MatSetValue(E, N_Nodes+pos+(k-1), pos+(l-1), -value_ey, ADD_VALUES);
+                MatSetValue(E, 2*N_Nodes+pos+(k-1), pos+(l-1), -value_ez, ADD_VALUES);
+                MatSetValue(ET, pos+(l-1), pos+(k-1), value_ex, ADD_VALUES);
+                MatSetValue(ET, pos+(l-1), N_Nodes+pos+(k-1), value_ey, ADD_VALUES);
+                MatSetValue(ET, pos+(l-1), 2*N_Nodes+pos+(k-1), value_ez, ADD_VALUES);
+            }
+        }
+        VecRestoreArray(Weights, &w);
+        VecRestoreArray(QuadraturePoints, &qp);
+        VecDestroy(&Weights);
+        VecDestroy(&QuadraturePoints);
+        VecDestroy(&ri_x);
+        VecDestroy(&ri_y);
+        VecDestroy(&ri_z);
+
+        // Construction of Inverse Mass Matrix
+        MatAssemblyBegin(M_Elemental, MAT_FINAL_ASSEMBLY);
+        MatAssemblyEnd(M_Elemental, MAT_FINAL_ASSEMBLY);
+        invM_Elemental = Inverse_Matrix(M_Elemental);
+        MatDestroy(&M_Elemental);
+        for (PetscInt i=0; i<Np; i++)
+        {
+            PetscInt ncols;
+            const PetscInt *cols;
+            const PetscScalar *vals_invM;
+            MatGetRow(invM_Elemental, i, &ncols, &cols, &vals_invM);
+            const PetscInt IndexI = pos+i;
+            PetscInt GlobalIndexCol[ncols];
+            PetscInt GlobalIndexCol2[ncols];
+            PetscInt GlobalIndexCol3[ncols];
+            for (unsigned int j=0; j < ncols; j++)
+            {
+                GlobalIndexCol[j] = cols[j]+pos;
+                GlobalIndexCol2[j] = N_Nodes+cols[j]+pos;
+                GlobalIndexCol3[j] = 2*N_Nodes+cols[j]+pos;
+            }
+            PetscInt GlobalIndex[1] = {i + pos};
+            PetscInt GlobalIndex2[1] = {N_Nodes+i + pos};
+            PetscInt GlobalIndex3[1] = {2*N_Nodes+i + pos};
+
+            MatSetValues(invM_small,1, GlobalIndex, ncols, GlobalIndexCol,vals_invM,ADD_VALUES);
+            MatSetValues(invM,1, GlobalIndex, ncols, GlobalIndexCol,vals_invM,ADD_VALUES);
+            MatSetValues(invM,1, GlobalIndex2, ncols, GlobalIndexCol2,vals_invM,ADD_VALUES);
+            MatSetValues(invM,1, GlobalIndex3, ncols, GlobalIndexCol3,vals_invM,ADD_VALUES);
+
+            MatRestoreRow(invM_Elemental, i, &ncols, &cols, &vals_invM);
+        }
+        MatDestroy(&invM_Elemental);
+                    /// Order 5, 9, 13, 17 give a nonzero difference
+                    /// Independent of Order_Gaussian_Quadrature
+    }
+    MatAssemblyBegin(M1, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(M1, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(M2, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(M2, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(M2_small, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(M2_small, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(NMat, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(NMat, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(NDerivMat, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(NDerivMat, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(M1_small, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(M1_small, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(invM, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(invM, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(invM_small, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(invM_small, MAT_FINAL_ASSEMBLY);
+
+    std::cout << "Start Boundary Calculations " << std::endl;
+    for (auto f = List_Of_Boundaries.begin(); f < List_Of_Boundaries.end(); f++)
+    {
+            double Jacobian = (*f).getJacobian();
+            unsigned int Type_Boundary_Left = (*f).get_Type_Left();
+            unsigned int Type_Boundary_Right = (*f).get_Type_Right();
+            double theta = (*f).get_theta();
+            double nx = (*f).get_nx();
+            double ny = (*f).get_ny();
+            double nz = (*f).get_nz();
+
+            int left = (*f).getLeftElementID();
+            int right = (*f).getRightElementID();
+
+            unsigned int posL = List_Of_Elements[left].get_pos();
+            unsigned int posR = List_Of_Elements[right].get_pos();
+
+            // We should expand: from face i -> (Nx, Ny), (Nx, Nz) or (Ny, Nz)
+            unsigned int Order_Polynomials_left = (List_Of_Elements[left]).get_Order_Of_Polynomials_x();
+            unsigned int Order_Polynomials_right = (List_Of_Elements[right]).get_Order_Of_Polynomials_x();
+
+            //std::cout << "(Order_Polynomials_left, Order_Polynomials_right) = " << Order_Polynomials_left << ", " << Order_Polynomials_left << std::endl;
+            std::vector<unsigned int> Node_Numbers_On_Boundary_Left = List_Of_Elements[left].get_nodes_on_boundary(Type_Boundary_Left);
+            std::vector<unsigned int> Node_Numbers_On_Boundary_Right = List_Of_Elements[right].get_nodes_on_boundary(Type_Boundary_Right);
+
+            auto size_left = Node_Numbers_On_Boundary_Left.size();
+            auto size_right = Node_Numbers_On_Boundary_Right.size();
+
+            /// Or use two different gaussian quadratures
+            // unsigned int Order_Gaussian_Quadrature_L
+            // unsigned int Order_Gaussian_Quadrature_R
+            unsigned int Order_Gaussian_Quadrature  = ceil(std::max(2*Order_Polynomials_left, 2*Order_Polynomials_right)+3+N_Q);
+            Order_Gaussian_Quadrature = 3;//std::max((uint)10, Order_Gaussian_Quadrature);
+            // Order_Gaussian_Quadrature+1 = Number of Points
+
+            Vec Weights;
+            Vec QuadraturePoints;
+            //QuadraturePoints = JacobiGQ_withWeights(0, 0, Order_Gaussian_Quadrature, Weights);
+            QuadraturePoints = JacobiGL_withWeights(0, 0, Order_Gaussian_Quadrature, Weights);
+            PetscScalar *w_a, *qp_a;
+            VecGetArray(QuadraturePoints, &qp_a);
+            VecGetArray(Weights, &w_a);
+
+            Vec ri_x_left, ri_x_right, ri_y_left, ri_y_right;
+            ri_x_left = JacobiGL(0, 0, Order_Polynomials_left);
+            ri_y_left = JacobiGL(0, 0, Order_Polynomials_left);
+            ri_x_right = JacobiGL(0, 0, Order_Polynomials_right);
+            ri_y_right = JacobiGL(0, 0, Order_Polynomials_right);
+
+            double rho0 = 1.0;
+
+            //std::cout << "det J = " << Jacobian << std::endl;
+            // GLL
+            for (unsigned int k = 1; k < size_left+1; k++)
+            {
+                unsigned int alpha = (k-1)%(Order_Polynomials_left+1);
+                unsigned int beta = (k-1)/(Order_Polynomials_left+1);
+                for (unsigned int l = 1; l < size_left+1; l++)
+                {
+                    unsigned int gamma = (l-1)%(Order_Polynomials_left+1);
+                    unsigned int delta = (l-1)/(Order_Polynomials_left+1);
+                    // E Matrix
+                    double value_e = 0.0;
+                    //std::cout << alpha << " " << beta << " " << gamma << " " << delta << std::endl;
+                    for (unsigned int p = 0; p <= Order_Gaussian_Quadrature; p++) //Order_Gaussian_Quadrature_L
+                    {
+                        double L_alpha = LagrangePolynomial(ri_x_left, qp_a[p], alpha);
+                        double L_gamma = LagrangePolynomial(ri_x_left, qp_a[p], gamma);
+                        for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++) //Order_Gaussian_Quadrature_L
+                        {
+                            double L_beta  = LagrangePolynomial(ri_y_left, qp_a[q], beta);
+                            double L_delta = LagrangePolynomial(ri_y_left, qp_a[q], delta);
+                            //std::cout << "qp_a[q] = " << qp_a[q] << std::endl;
+                            //std::cout << L_alpha << " " << L_beta << " " << L_gamma << " " << L_delta << std::endl;
+                            value_e += (1.0-theta) * w_a[p]*L_alpha*L_beta * w_a[q]*L_gamma*L_delta * Jacobian*rho0;
+                        }
+                    }
+                    unsigned int i = k - 1;
+                    unsigned int j = l - 1;
+                    std::cout << value_e << " " << nx << " " << ny << " " << nz << std::endl;
+                    MatSetValue(E,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
+                    MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
+                    MatSetValue(E,  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
+                    MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
+                    MatSetValue(E,  2*N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], nz*value_e, ADD_VALUES);
+                    MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], 2*N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], -nz*value_e, ADD_VALUES);
+
+                }
+            }
+            /*
+            // GLR
+            for (unsigned int k = 1; k <= size_left+1; k++)
+            {
+                unsigned int alpha = (k-1)%(Order_Polynomials_left+1);
+                unsigned int beta = (k-1)/(Order_Polynomials_left+1);
+                for (unsigned int l = 1; l <= size_right+1; l++)
+                {
+                    unsigned int gamma = (l-1)%(Order_Polynomials_right+1);
+                    unsigned int delta = (l-1)/(Order_Polynomials_right+1);
+                    // E Matrix
+                    double value_e = 0.0;
+                    for (unsigned int p = 0; p <= Order_Gaussian_Quadrature; p++)
+                    {
+                        double L_alpha = LagrangePolynomial(ri_x_left, qp_a[p], alpha);
+                        double L_gamma = LagrangePolynomial(ri_x_left, qp_a[p], gamma);
+                        for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
+                        {
+                            double L_beta  = LagrangePolynomial(ri_y_left, qp_a[q], beta);
+                            double L_delta = LagrangePolynomial(ri_y_left, qp_a[q], delta);
+                            value_e += -(1.0-theta) * w_a[p]*L_alpha*L_beta * w_a[q]*L_gamma*L_delta * Jacobian*rho0;
+                        }
+                    }
+                    unsigned int i = k - 1;
+                    unsigned int j = l - 1;
+                    MatSetValue(E,  posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
+                    MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
+                    MatSetValue(E,  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
+                    MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j],  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], -ny*value_e, ADD_VALUES);
+                    MatSetValue(E,  2*N_Nodes+posL+Node_Numbers_On_Boundary_Left[i],  posR+Node_Numbers_On_Boundary_Right[j], nz*value_e, ADD_VALUES);
+                    MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j],  2*N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], -nz*value_e, ADD_VALUES);
+
+                }
+            }
+            // GRL
+            for (unsigned int k = 1; k <= size_right+1; k++)
+            {
+                unsigned int alpha = (k-1)%(Order_Polynomials_right+1);
+                unsigned int beta = (k-1)/(Order_Polynomials_right+1);
+                for (unsigned int l = 1; l <= size_left+1; l++)
+                {
+                    unsigned int gamma = (l-1)%(Order_Polynomials_left+1);
+                    unsigned int delta = (l-1)/(Order_Polynomials_left+1);
+                    // E Matrix
+                    double value_e = 0.0;
+                    for (unsigned int p = 0; p <= Order_Gaussian_Quadrature; p++)
+                    {
+                        double L_alpha = LagrangePolynomial(ri_x_left, qp_a[p], alpha);
+                        double L_gamma = LagrangePolynomial(ri_x_left, qp_a[p], gamma);
+                        for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
+                        {
+                            double L_beta  = LagrangePolynomial(ri_y_left, qp_a[q], beta);
+                            double L_delta = LagrangePolynomial(ri_y_left, qp_a[q], delta);
+                            value_e += theta * w_a[p]*L_alpha*L_beta * w_a[q]*L_gamma*L_delta * Jacobian*rho0;
+                        }
+                    }
+                    unsigned int i = k - 1;
+                    unsigned int j = l - 1;
+                    MatSetValue(E,  posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
+                    MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j],  posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
+                    MatSetValue(E,  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
+                    MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j],  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
+                    MatSetValue(E,  2*N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], posL+Node_Numbers_On_Boundary_Left[j], nz*value_e, ADD_VALUES);
+                    MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j],  2*N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], -nz*value_e, ADD_VALUES);
+                }
+            }
+            // GRR
+            for (unsigned int k = 1; k <= size_right+1; k++)
+            {
+                unsigned int alpha = (k-1)%(Order_Polynomials_right+1);
+                unsigned int beta = (k-1)/(Order_Polynomials_right+1);
+                for (unsigned int l = 1; l <= size_right+1; l++)
+                {
+                    unsigned int gamma = (l-1)%(Order_Polynomials_right+1);
+                    unsigned int delta = (l-1)/(Order_Polynomials_right+1);
+                    // E Matrix
+                    double value_e = 0.0;
+                    for (unsigned int p = 0; p <= Order_Gaussian_Quadrature; p++)
+                    {
+                        double L_alpha = LagrangePolynomial(ri_x_left, qp_a[p], alpha);
+                        double L_gamma = LagrangePolynomial(ri_x_left, qp_a[p], gamma);
+                        for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
+                        {
+                            double L_beta  = LagrangePolynomial(ri_y_left, qp_a[q], beta);
+                            double L_delta = LagrangePolynomial(ri_y_left, qp_a[q], delta);
+                            value_e += theta * w_a[p]*L_alpha*L_beta * w_a[q]*L_gamma*L_delta * Jacobian*rho0;
+                        }
+                    }
+                    unsigned int i = k - 1;
+                    unsigned int j = l - 1;
+                    MatSetValue(E,  posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], nx*value_e, ADD_VALUES);
+                    MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], posR+Node_Numbers_On_Boundary_Right[i], -nx*value_e, ADD_VALUES);
+                    MatSetValue(E,  N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], ny*value_e, ADD_VALUES);
+                    MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], -ny*value_e, ADD_VALUES);
+                    MatSetValue(E,  2*N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], posR+Node_Numbers_On_Boundary_Right[j], nz*value_e, ADD_VALUES);
+                    MatSetValue(ET, posR+Node_Numbers_On_Boundary_Right[j], 2*N_Nodes+posR+Node_Numbers_On_Boundary_Right[i], -nz*value_e, ADD_VALUES);
+                }
+            }
+            //std::cout << "ri = " << std::endl;
+            //    VecView(ri_x_left, PETSC_VIEWER_STDOUT_SELF);
+
+            //std::cout << "qp = " << std::endl;
+            //    VecView(QuadraturePoints, PETSC_VIEWER_STDOUT_SELF);
+            */
+            VecDestroy(&ri_x_left);
+            VecDestroy(&ri_y_left);
+            VecDestroy(&ri_x_right);
+            VecDestroy(&ri_y_right);
+            VecRestoreArray(QuadraturePoints, &qp_a);
+            VecRestoreArray(Weights, &w_a);
+            VecDestroy(&Weights);
+            VecDestroy(&QuadraturePoints);
+    }
+    MatAssemblyBegin(E, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(E, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(ET, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(ET, MAT_FINAL_ASSEMBLY);
+}
+
+/*--------------------------------------------------------------------------*/
 extern void create_Compressible_System_MidPoint(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &NMat, const Mat &NDerivMat, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, Mat &A, Mat &B)
 {
     double Np = (N+1)*(N+1);
@@ -3895,6 +4313,7 @@ extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const 
 
     Mat VectorLaplacian;
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, 2*N_Nodes, 10*6*Np+1+3*Np*Np, NULL, &VectorLaplacian);
+    ///MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, N_Nodes, (10*6*Np+1+3*Np*Np)*2, NULL, &VectorLaplacian);
     for (unsigned int i = 0; i < N_Nodes; i++)
     {
         double dummy=0;
@@ -3908,6 +4327,7 @@ extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const 
             if (dummy!=0.0)
             {
                 MatSetValue(VectorLaplacian, 	i,             cols[j],     dummy, 	ADD_VALUES);
+                ///MatSetValue(VectorLaplacian, 	N_Nodes+i,             cols[j],     dummy, 	ADD_VALUES);
                 MatSetValue(VectorLaplacian, 	N_Nodes+i,     N_Nodes+cols[j],     dummy, 	ADD_VALUES);
             }
         }
@@ -3916,12 +4336,35 @@ extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const 
     MatAssemblyBegin(VectorLaplacian,MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(VectorLaplacian,MAT_FINAL_ASSEMBLY);
 
+    //std::cout << "DIV = " << std::endl;
+    //MatView(DIV, PETSC_VIEWER_STDOUT_SELF);
+
     //std::cout << "VectorLaplacian = " << std::endl;
     //MatView(VectorLaplacian, PETSC_VIEWER_STDOUT_SELF);
 
     // invM_small Not needed since we scale both sides of the equation (= constructed incompressibility)
     Mat ALaplacian, ALaplacian_h, ADivLaplacian, AF;
 	MatMatMult(DIV_TEMP2, VectorLaplacian, MAT_INITIAL_MATRIX, 1, &ADivLaplacian);
+
+	/*MatMatMult(DIV, VectorLaplacian, MAT_INITIAL_MATRIX, 1, &ADivLaplacian);
+	Mat ADivLaplacian2;
+    Mat DIVT;
+    MatTranspose(DIV, MAT_INITIAL_MATRIX,&DIVT);
+	MatMatMult(VectorLaplacian, DIVT, MAT_INITIAL_MATRIX, 1, &ADivLaplacian2);
+
+	std::cout << "ADivLaplacian = " << std::endl;
+    MatView(ADivLaplacian, PETSC_VIEWER_STDOUT_SELF);
+	std::cout << "ADivLaplacian2 = " << std::endl;
+    MatView(ADivLaplacian2, PETSC_VIEWER_STDOUT_SELF);
+
+	MatAXPY(ADivLaplacian2, -1.0, ADivLaplacian, DIFFERENT_NONZERO_PATTERN);
+
+	PetscScalar Tr;
+	MatGetTrace(ADivLaplacian2,&Tr);
+	std::cout << "Trace = " << Tr << std::endl;
+	MatDestroy(&ADivLaplacian2);
+	MatDestroy(&DIVT);
+*/
 	MatMatMult(DIV_TEMP2, BF1, MAT_INITIAL_MATRIX, 1, &ALaplacian);
 	MatMatMult(DIV_TEMP2, F1, MAT_INITIAL_MATRIX, 1, &AF);
 	MatMatMult(DIV_TEMP2, Identity3, MAT_INITIAL_MATRIX, 1, &ALaplacian_h);
@@ -3929,11 +4372,43 @@ extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const 
     MatDestroy(&Identity3);
     MatDestroy(&VectorLaplacian);
 
+    /*
+    Analytically:
+    div . u = 0 for an incompressible fluid
+    The viscous terms in the momentum equations are du/dt = ... + nu * Delta u
+    When computing the pressure, to ensure the divergende of the velocity stays zero, we compute
+    d div u / dt = 0 = div(... + nu * Delta u)
+    divergence and laplacian operators commute, so div (Delta u) = Delta (div u) = 0
+
+
+    This holds analytically. Numerically the operator DL = DIV*Laplacian is nonzero.
+    The velocity is approximately nonzero.
+
+    We need to include this term in the computation of the new pressure,
+    otherwise the divergence of the velocity becomes nonzero.
+    */
+
+    /// Pass DIV_TEMP2 instead of DIV to compute L infinity norm of divergence
+/*
     //std::cout << "ADivLaplacian = " << std::endl;
     //MatView(ADivLaplacian, PETSC_VIEWER_STDOUT_SELF);
 
-    /// Pass DIV_TEMP2 instead of DIV to compute L infinity norm of divergence
 
+    // invM_small Not needed since we scale both sides of the equation (= constructed incompressibility)
+    Mat ALaplacian, ALaplacian_h, ADivLaplacian, AF;
+	MatMatMult(DIV, VectorLaplacian, MAT_INITIAL_MATRIX, 1, &ADivLaplacian);
+	///MatMatMult(DIV, VectorLaplacian, MAT_INITIAL_MATRIX, 1, &ADivLaplacian);
+	//PetscScalar Tr;
+	//MatGetTrace(ADivLaplacian,&Tr);
+	//std::cout << "Trace = " << Tr << std::endl;
+
+	MatMatMult(DIV, BF1, MAT_INITIAL_MATRIX, 1, &ALaplacian);
+	MatMatMult(DIV, F1, MAT_INITIAL_MATRIX, 1, &AF);
+	MatMatMult(DIV, Identity3, MAT_INITIAL_MATRIX, 1, &ALaplacian_h);
+    MatDestroy(&DIV_TEMP2);
+    MatDestroy(&Identity3);
+    MatDestroy(&VectorLaplacian);
+*/
 
     // factor 4 = Number of Variables
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 10*6*Np+1+9*Np*Np,  NULL, &A); // Check Factor 10 // Change from Triangles to Quadrilaterals
@@ -6477,7 +6952,6 @@ extern double calculate_Error2D_Quad(const Vec &Exact, const Vec &Solution, cons
 /*--------------------------------------------------------------------------*/
 void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<VertexCoordinates2D> &List_Of_Vertices, const double &r_p, const double &s_p, double &Jacobian, double &drdx, double &drdy, double &dsdx, double &dsdy, double &x, double &y)
 {
-
     double x1 = List_Of_Vertices[Quad.getVertex_V1()].getxCoordinate();
     double y1 = List_Of_Vertices[Quad.getVertex_V1()].getyCoordinate();
     double x2 = List_Of_Vertices[Quad.getVertex_V2()].getxCoordinate();
@@ -6487,13 +6961,12 @@ void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<V
     double x4 = List_Of_Vertices[Quad.getVertex_V4()].getxCoordinate();
     double y4 = List_Of_Vertices[Quad.getVertex_V4()].getyCoordinate();
 
-    double Area = 0.5*abs(x1*y2+x2*y3+x3*y4+x4*y1-x2*y1-x3*y2-x4*y3-x1*y4);
+    //double Area = 0.5*abs(x1*y2+x2*y3+x3*y4+x4*y1-x2*y1-x3*y2-x4*y3-x1*y4);
 
     //std::cout << "ID = " << Quad.getID() << ", Area = " << Area << std::endl;
 
     x = ((1.0-s_p)*(1.0-r_p)*x1 + (1.0-s_p)*(1.0+r_p)*x2 + (1.0+s_p)*(1.0+r_p)*x3 + (1.0+s_p)*(1.0-r_p)*x4)/4.0;
     y = ((1.0-s_p)*(1.0-r_p)*y1 + (1.0-s_p)*(1.0+r_p)*y2 + (1.0+s_p)*(1.0+r_p)*y3 + (1.0+s_p)*(1.0-r_p)*y4)/4.0;
-
 
     double dxdr = (x2+x3-x1-x4)/4.0 + (x1-x2+x3-x4)*s_p/4.0;
     double dxds = (x3+x4-x2-x1)/4.0 + (x1-x2+x3-x4)*r_p/4.0;
@@ -6518,4 +6991,283 @@ void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<V
     std::cout << std::endl;
         */
 }
+/*--------------------------------------------------------------------------*/
+/*void Calculate_Jacobian_Cuboid_Face(const Cuboid &Element, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const int &face, const double &r_p, const double &s_p, double &det_J, double &x, double &y)
+{
+        double x1, x2, x3, x4, y1, y2, y3, y4;
+        x1 = x2 = x3 = x4 = y1 = y2 = y3 = y4 = 0.0;
+        // We read the vertices counterclockwise so that we obtain the outward normal
+        switch(face)
+        {
+            case 0:
+                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getzCoordinate();
+                break;
+            case 1:
+                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getzCoordinate();
+                break;
+            case 2:
+                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getzCoordinate();
+                break;
+            case 3:
+                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getzCoordinate();
+                break;
+            case 4:
+                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getzCoordinate();
+                break;
+            case 5:
+                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getzCoordinate();
+                break;
+            default:
+                std::cout << "Something went wrong in the calculation of the normals" << std::endl;
+        }
+}*/
+/*--------------------------------------------------------------------------*/
+void Calculate_Jacobian_Cuboid(const Cuboid &Element, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const double &r_p, const double &s_p, const double &t_p, double &det_J, double &drdx, double &drdy, double &drdz, double &dsdx, double &dsdy, double &dsdz, double &dtdx, double &dtdy, double &dtdz, double &x, double &y, double &z)
+{
+        double x0 = List_Of_Vertices[Element.getVertex_V1()].getxCoordinate();
+        double y0 = List_Of_Vertices[Element.getVertex_V1()].getyCoordinate();
+        double z0 = List_Of_Vertices[Element.getVertex_V1()].getzCoordinate();
+        double x1 = List_Of_Vertices[Element.getVertex_V2()].getxCoordinate();
+        double y1 = List_Of_Vertices[Element.getVertex_V2()].getyCoordinate();
+        double z1 = List_Of_Vertices[Element.getVertex_V2()].getzCoordinate();
+        double x2 = List_Of_Vertices[Element.getVertex_V3()].getxCoordinate();
+        double y2 = List_Of_Vertices[Element.getVertex_V3()].getyCoordinate();
+        double z2 = List_Of_Vertices[Element.getVertex_V3()].getzCoordinate();
+        double x3 = List_Of_Vertices[Element.getVertex_V4()].getxCoordinate();
+        double y3 = List_Of_Vertices[Element.getVertex_V4()].getyCoordinate();
+        double z3 = List_Of_Vertices[Element.getVertex_V4()].getzCoordinate();
+        double x4 = List_Of_Vertices[Element.getVertex_V5()].getxCoordinate();
+        double y4 = List_Of_Vertices[Element.getVertex_V5()].getyCoordinate();
+        double z4 = List_Of_Vertices[Element.getVertex_V5()].getzCoordinate();
+        double x5 = List_Of_Vertices[Element.getVertex_V6()].getxCoordinate();
+        double y5 = List_Of_Vertices[Element.getVertex_V6()].getyCoordinate();
+        double z5 = List_Of_Vertices[Element.getVertex_V6()].getzCoordinate();
+        double x6 = List_Of_Vertices[Element.getVertex_V7()].getxCoordinate();
+        double y6 = List_Of_Vertices[Element.getVertex_V7()].getyCoordinate();
+        double z6 = List_Of_Vertices[Element.getVertex_V7()].getzCoordinate();
+        double x7 = List_Of_Vertices[Element.getVertex_V8()].getxCoordinate();
+        double y7 = List_Of_Vertices[Element.getVertex_V8()].getyCoordinate();
+        double z7 = List_Of_Vertices[Element.getVertex_V8()].getzCoordinate();
+
+        x = (1.0-r_p)*(1.0-s_p)*(1.0-t_p)*x0 + (1.0+r_p)*(1.0-s_p)*(1.0-t_p)*x1 + (1.0+r_p)*(1.0+s_p)*(1.0-t_p)*x2 + (1.0-r_p)*(1.0+s_p)*(1.0-t_p)*x3 + (1.0-r_p)*(1.0-s_p)*(1.0+t_p)*x4 + (1.0+r_p)*(1.0-s_p)*(1.0+t_p)*x5 + (1.0+r_p)*(1.0+s_p)*(1.0+t_p)*x6 + (1.0-r_p)*(1.0+s_p)*(1.0+t_p)*x7;
+        y = (1.0-r_p)*(1.0-s_p)*(1.0-t_p)*y0 + (1.0+r_p)*(1.0-s_p)*(1.0-t_p)*y1 + (1.0+r_p)*(1.0+s_p)*(1.0-t_p)*y2 + (1.0-r_p)*(1.0+s_p)*(1.0-t_p)*y3 + (1.0-r_p)*(1.0-s_p)*(1.0+t_p)*y4 + (1.0+r_p)*(1.0-s_p)*(1.0+t_p)*y5 + (1.0+r_p)*(1.0+s_p)*(1.0+t_p)*y6 + (1.0-r_p)*(1.0+s_p)*(1.0+t_p)*y7;
+        z = (1.0-r_p)*(1.0-s_p)*(1.0-t_p)*z0 + (1.0+r_p)*(1.0-s_p)*(1.0-t_p)*z1 + (1.0+r_p)*(1.0+s_p)*(1.0-t_p)*z2 + (1.0-r_p)*(1.0+s_p)*(1.0-t_p)*z3 + (1.0-r_p)*(1.0-s_p)*(1.0+t_p)*z4 + (1.0+r_p)*(1.0-s_p)*(1.0+t_p)*z5 + (1.0+r_p)*(1.0+s_p)*(1.0+t_p)*z6 + (1.0-r_p)*(1.0+s_p)*(1.0+t_p)*z7;
+
+        x = x/8.0;
+        y = y/8.0;
+        z = z/8.0;
+
+        double dxdr = (-x0+x1+x2-x3-x4+x5+x6-x7)/8.0 + (x0-x1+x2-x3+x4-x5+x6-x7)/8.0*s_p + (x0-x1-x2+x3-x4+x5+x6-x7)/8.0*t_p + (-x0+x1-x2+x3+x4-x5+x6-x7)/8.0*s_p*t_p;
+        double dxds = (-x0-x1+x2+x3-x4-x5+x6+x7)/8.0 + (x0-x1+x2-x3+x4-x5+x6-x7)/8.0*r_p + (x0+x1-x2-x3-x4-x5+x6+x7)/8.0*t_p + (-x0+x1-x2+x3+x4-x5+x6-x7)/8.0*r_p*t_p;
+        double dxdt = (-x0-x1-x2-x3+x4+x5+x6+x7)/8.0 + (x0+x1-x2-x3-x4-x5+x6+x7)/8.0*s_p + (x0-x1-x2+x3-x4+x5+x6-x7)/8.0*r_p + (-x0+x1-x2+x3+x4-x5+x6-x7)/8.0*r_p*s_p;
+        double dydr = (-y0+y1+y2-y3-y4+y5+y6-y7)/8.0 + (y0-y1+y2-y3+y4-y5+y6-y7)/8.0*s_p + (y0-y1-y2+y3-y4+y5+y6-y7)/8.0*t_p + (-y0+y1-y2+y3+y4-y5+y6-y7)/8.0*s_p*t_p;
+        double dyds = (-y0-y1+y2+y3-y4-y5+y6+y7)/8.0 + (y0-y1+y2-y3+y4-y5+y6-y7)/8.0*r_p + (y0+y1-y2-y3-y4-y5+y6+y7)/8.0*t_p + (-y0+y1-y2+y3+y4-y5+y6-y7)/8.0*r_p*t_p;
+        double dydt = (-y0-y1-y2-y3+y4+y5+y6+y7)/8.0 + (y0+y1-y2-y3-y4-y5+y6+y7)/8.0*s_p + (y0-y1-y2+y3-y4+y5+y6-y7)/8.0*r_p + (-y0+y1-y2+y3+y4-y5+y6-y7)/8.0*r_p*s_p;
+        double dzdr = (-z0+z1+z2-z3-z4+z5+z6-z7)/8.0 + (z0-z1+z2-z3+z4-z5+z6-z7)/8.0*s_p + (z0-z1-z2+z3-z4+z5+z6-z7)/8.0*t_p + (-z0+z1-z2+z3+z4-z5+z6-z7)/8.0*s_p*t_p;
+        double dzds = (-z0-z1+z2+z3-z4-z5+z6+z7)/8.0 + (z0-z1+z2-z3+z4-z5+z6-z7)/8.0*r_p + (z0+z1-z2-z3-z4-z5+z6+z7)/8.0*t_p + (-z0+z1-z2+z3+z4-z5+z6-z7)/8.0*r_p*t_p;
+        double dzdt = (-z0-z1-z2-z3+z4+z5+z6+z7)/8.0 + (z0+z1-z2-z3-z4-z5+z6+z7)/8.0*s_p + (z0-z1-z2+z3-z4+z5+z6-z7)/8.0*r_p + (-z0+z1-z2+z3+z4-z5+z6-z7)/8.0*r_p*s_p;
+
+        //std::cout << "dxdr = " << dxdr << std::endl;
+        //std::cout << "dxds = " << dxds << std::endl;
+        //std::cout << "dxdt = " << dxdt << std::endl;
+        //std::cout << "dydr = " << dydr << std::endl;
+        //std::cout << "dyds = " << dyds << std::endl;
+        //std::cout << "dydt = " << dydt << std::endl;
+        //std::cout << "dzdr = " << dzdr << std::endl;
+        //std::cout << "dzds = " << dzds << std::endl;
+        //std::cout << "dzdt = " << dzdt << std::endl;
+        det_J = dzdt*(dxdr*dyds-dxds*dydr)-dzds*(dxdt*dydr-dxdr*dydt)+dzdr*(dxds*dydt-dxdt*dyds);
+
+        //std::cout << "dxdr*dyds-dxds*dydr = " << dxdr*dyds-dxds*dydr << std::endl;
+        drdx = (dyds*dzdt-dydt*dzds)/det_J;
+        drdy = -(dxds*dzdt-dxdt*dzds)/det_J;
+        drdz = (dxds*dydt-dxdt*dyds)/det_J;
+        dsdx = -(dydr*dzdt-dxdt*dydr)/det_J;
+        dsdy = (dxdr*dzdt-dxdt*dzdr)/det_J;
+        dsdz = -(dxdr*dydt-dxdt*dydr)/det_J;
+        dtdx = (dydr*dzds-dyds*dzdr)/det_J;
+        dtdy = -(dxdr*dzds-dxds*dzdr)/det_J;
+        dtdz = (dxdr*dyds-dxds*dydr)/det_J;
+        //std::cout << "det_Jacobian = " << det_J << std::endl;
+}
+/*--------------------------------------------------------------------------*/
+/*void Calculate_SurfaceJacobian_Cuboid(const Cuboid &Element, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const double &r_p, const double &s_p, double &det_J, const unsigned int &face)
+{
+        /*
+        Hexahedron:
+
+               s
+        3----------2
+        |\     ^   |\
+        | \    |   | \
+        |  \   |   |  \
+        |   7------+---6
+        |   |  +-- |-- | -> r
+        0---+---\--1   |
+         \  |    \  \  |
+          \ |     \  \ |
+           \|      t  \|
+            4----------5
+
+            * /
+
+        double r = 0.0, s = 0.0, t = 0.0;
+        double dxdr = 0.0, dxds = 0.0, dxdt = 0.0, dydr = 0.0, dyds = 0.0, dydt = 0.0, dzdr = 0.0, dzds = 0.0, dzdt = 0.0;
+        switch (face)
+        {
+            case 0:
+                // t = -1
+                r = r_p;
+                s = s_p;
+                t = -1;
+                dxdr =
+                break;
+            case 1:
+                // t = 1
+                r = r_p;
+                s = s_p;
+                t = 1;
+                break;
+            case 2:
+                // s = -1
+                r = r_p;
+                s = -1;
+                t = s_p;
+                break;
+            case 3:
+                // s = 1
+                r = r_p;
+                s = 1;
+                t = s_p;
+                break;
+            case 4:
+                // r = -1
+                r = -1;
+                s = r_p;
+                t = s_p;
+                break;
+            case 5:
+                // r = 1
+                r = 1;
+                s = r_p;
+                t = s_p;
+                break;
+
+            default:
+                std::cout << "Wrong Face Number" << std::endl;
+        }
+        double x0 = List_Of_Vertices[Element.getVertex_V1()].getxCoordinate();
+        double y0 = List_Of_Vertices[Element.getVertex_V1()].getyCoordinate();
+        double z0 = List_Of_Vertices[Element.getVertex_V1()].getzCoordinate();
+        double x1 = List_Of_Vertices[Element.getVertex_V2()].getxCoordinate();
+        double y1 = List_Of_Vertices[Element.getVertex_V2()].getyCoordinate();
+        double z1 = List_Of_Vertices[Element.getVertex_V2()].getzCoordinate();
+        double x2 = List_Of_Vertices[Element.getVertex_V3()].getxCoordinate();
+        double y2 = List_Of_Vertices[Element.getVertex_V3()].getyCoordinate();
+        double z2 = List_Of_Vertices[Element.getVertex_V3()].getzCoordinate();
+        double x3 = List_Of_Vertices[Element.getVertex_V4()].getxCoordinate();
+        double y3 = List_Of_Vertices[Element.getVertex_V4()].getyCoordinate();
+        double z3 = List_Of_Vertices[Element.getVertex_V4()].getzCoordinate();
+        double x4 = List_Of_Vertices[Element.getVertex_V5()].getxCoordinate();
+        double y4 = List_Of_Vertices[Element.getVertex_V5()].getyCoordinate();
+        double z4 = List_Of_Vertices[Element.getVertex_V5()].getzCoordinate();
+        double x5 = List_Of_Vertices[Element.getVertex_V6()].getxCoordinate();
+        double y5 = List_Of_Vertices[Element.getVertex_V6()].getyCoordinate();
+        double z5 = List_Of_Vertices[Element.getVertex_V6()].getzCoordinate();
+        double x6 = List_Of_Vertices[Element.getVertex_V7()].getxCoordinate();
+        double y6 = List_Of_Vertices[Element.getVertex_V7()].getyCoordinate();
+        double z6 = List_Of_Vertices[Element.getVertex_V7()].getzCoordinate();
+        double x7 = List_Of_Vertices[Element.getVertex_V8()].getxCoordinate();
+        double y7 = List_Of_Vertices[Element.getVertex_V8()].getyCoordinate();
+        double z7 = List_Of_Vertices[Element.getVertex_V8()].getzCoordinate();
+
+        x = (1.0-r_p)*(1.0-s_p)*(1.0-t_p)*x0 + (1.0+r_p)*(1.0-s_p)*(1.0-t_p)*x1 + (1.0+r_p)*(1.0+s_p)*(1.0-t_p)*x2 + (1.0-r_p)*(1.0+s_p)*(1.0-t_p)*x3 + (1.0-r_p)*(1.0-s_p)*(1.0+t_p)*x4 + (1.0+r_p)*(1.0-s_p)*(1.0+t_p)*x5 + (1.0+r_p)*(1.0+s_p)*(1.0+t_p)*x6 + (1.0-r_p)*(1.0+s_p)*(1.0+t_p)*x7;
+        y = (1.0-r_p)*(1.0-s_p)*(1.0-t_p)*y0 + (1.0+r_p)*(1.0-s_p)*(1.0-t_p)*y1 + (1.0+r_p)*(1.0+s_p)*(1.0-t_p)*y2 + (1.0-r_p)*(1.0+s_p)*(1.0-t_p)*y3 + (1.0-r_p)*(1.0-s_p)*(1.0+t_p)*y4 + (1.0+r_p)*(1.0-s_p)*(1.0+t_p)*y5 + (1.0+r_p)*(1.0+s_p)*(1.0+t_p)*y6 + (1.0-r_p)*(1.0+s_p)*(1.0+t_p)*y7;
+        z = (1.0-r_p)*(1.0-s_p)*(1.0-t_p)*z0 + (1.0+r_p)*(1.0-s_p)*(1.0-t_p)*z1 + (1.0+r_p)*(1.0+s_p)*(1.0-t_p)*z2 + (1.0-r_p)*(1.0+s_p)*(1.0-t_p)*z3 + (1.0-r_p)*(1.0-s_p)*(1.0+t_p)*z4 + (1.0+r_p)*(1.0-s_p)*(1.0+t_p)*z5 + (1.0+r_p)*(1.0+s_p)*(1.0+t_p)*z6 + (1.0-r_p)*(1.0+s_p)*(1.0+t_p)*z7;
+
+        x = x/8.0;
+        y = y/8.0;
+        z = z/8.0;
+
+        double dxdr = (-x0+x1+x2-x3-x4+x5+x6-x7)/8.0 + (x0-x1+x2-x3+x4-x5+x6-x7)/8.0*s_p + (x0-x1-x2+x3-x4+x5+x6-x7)/8.0*t_p + (-x0+x1-x2+x3+x4-x5+x6-x7)/8.0*s_p*t_p;
+        double dxds = (-x0-x1+x2+x3-x4-x5+x6+x7)/8.0 + (x0-x1+x2-x3+x4-x5+x6-x7)/8.0*r_p + (x0+x1-x2-x3-x4-x5+x6+x7)/8.0*t_p + (-x0+x1-x2+x3+x4-x5+x6-x7)/8.0*r_p*t_p;
+        double dxdt = (-x0-x1-x2-x3+x4+x5+x6+x7)/8.0 + (x0+x1-x2-x3-x4-x5+x6+x7)/8.0*s_p + (x0-x1-x2+x3-x4+x5+x6-x7)/8.0*r_p + (-x0+x1-x2+x3+x4-x5+x6-x7)/8.0*r_p*s_p;
+        double dydr = (-y0+y1+y2-y3-y4+y5+y6-y7)/8.0 + (y0-y1+y2-y3+y4-y5+y6-y7)/8.0*s_p + (y0-y1-y2+y3-y4+y5+y6-y7)/8.0*t_p + (-y0+y1-y2+y3+y4-y5+y6-y7)/8.0*s_p*t_p;
+        double dyds = (-y0-y1+y2+y3-y4-y5+y6+y7)/8.0 + (y0-y1+y2-y3+y4-y5+y6-y7)/8.0*r_p + (y0+y1-y2-y3-y4-y5+y6+y7)/8.0*t_p + (-y0+y1-y2+y3+y4-y5+y6-y7)/8.0*r_p*t_p;
+        double dydt = (-y0-y1-y2-y3+y4+y5+y6+y7)/8.0 + (y0+y1-y2-y3-y4-y5+y6+y7)/8.0*s_p + (y0-y1-y2+y3-y4+y5+y6-y7)/8.0*r_p + (-y0+y1-y2+y3+y4-y5+y6-y7)/8.0*r_p*s_p;
+        double dzdr = (-z0+z1+z2-z3-z4+z5+z6-z7)/8.0 + (z0-z1+z2-z3+z4-z5+z6-z7)/8.0*s_p + (z0-z1-z2+z3-z4+z5+z6-z7)/8.0*t_p + (-z0+z1-z2+z3+z4-z5+z6-z7)/8.0*s_p*t_p;
+        double dzds = (-z0-z1+z2+z3-z4-z5+z6+z7)/8.0 + (z0-z1+z2-z3+z4-z5+z6-z7)/8.0*r_p + (z0+z1-z2-z3-z4-z5+z6+z7)/8.0*t_p + (-z0+z1-z2+z3+z4-z5+z6-z7)/8.0*r_p*t_p;
+        double dzdt = (-z0-z1-z2-z3+z4+z5+z6+z7)/8.0 + (z0+z1-z2-z3-z4-z5+z6+z7)/8.0*s_p + (z0-z1-z2+z3-z4+z5+z6-z7)/8.0*r_p + (-z0+z1-z2+z3+z4-z5+z6-z7)/8.0*r_p*s_p;
+
+        std::cout << "dxdr = " << dxdr << std::endl;
+        std::cout << "dxds = " << dxds << std::endl;
+        std::cout << "dxdt = " << dxdt << std::endl;
+        std::cout << "dydr = " << dydr << std::endl;
+        std::cout << "dyds = " << dyds << std::endl;
+        std::cout << "dydt = " << dydt << std::endl;
+        std::cout << "dzdr = " << dzdr << std::endl;
+        std::cout << "dzds = " << dzds << std::endl;
+        std::cout << "dzdt = " << dzdt << std::endl;
+        det_J = dzdt*(dxdr*dyds-dxds*dydr)-dzds*(dxdt*dydr-dxdr*dydt)+dzdr*(dxds*dydt-dxdt*dyds);
+
+        std::cout << "dxdr*dyds-dxds*dydr = " << dxdr*dyds-dxds*dydr << std::endl;
+        drdx = (dyds*dzdt-dydt*dzds)/det_J;
+        drdy = -(dxds*dzdt-dxdt*dzds)/det_J;
+        drdz = (dxds*dydt-dxdt*dyds)/det_J;
+        dsdx = -(dydr*dzdt-dxdt*dydr)/det_J;
+        dsdy = (dxdr*dzdt-dxdt*dzdr)/det_J;
+        dsdz = -(dxdr*dydt-dxdt*dydr)/det_J;
+        dtdx = (dydr*dzds-dyds*dzdr)/det_J;
+        dtdy = -(dxdr*dzds-dxds*dzdr)/det_J;
+        dtdz = (dxdr*dyds-dxds*dydr)/det_J;
+        //std::cout << "det_Jacobian = " << det_J << std::endl;
+} */
 /*--------------------------------------------------------------------------*/

@@ -2424,4 +2424,194 @@ extern void NodesSquares2D(unsigned int N, Vec &XX, Vec &YY)
 
 }
 /*--------------------------------------------------------------------------*/
+void NodesCuboid(unsigned int Nx, unsigned int Ny, unsigned int Nz, Vec &XX, Vec &YY, Vec &ZZ)
+{
+    // function [x,y, z] = NodesCuboid(Nx, Ny, Nz, X, Y, Z);
+    // Purpose  : Compute (x,y,z) nodes in cuboids for
+    //             polynomial of order N
+    Vec X, Y, Z;
+    if (Nx==0 && Ny==0 && Nz==0)
+    {
+        double x [1] = {0};
+        double y [1] = {0};
+        double z [1] = {0};
+        VecCreateSeqWithArray(PETSC_COMM_WORLD,1,1,x,&X);
+        VecCreateSeqWithArray(PETSC_COMM_WORLD,1,1,y,&Y);
+        VecCreateSeqWithArray(PETSC_COMM_WORLD,1,1,z,&Z);
+        VecAssemblyBegin(X);
+        VecAssemblyEnd(X);
+        VecAssemblyBegin(Y);
+        VecAssemblyEnd(Y);
+        VecAssemblyBegin(Z);
+        VecAssemblyEnd(Z);
+        VecDuplicate(X,&XX);
+        VecCopy(X, XX);
+        VecDuplicate(Y,&YY);
+        VecCopy(Y, YY);
+        VecDuplicate(Z,&ZZ);
+        VecCopy(Z, ZZ);
+    }
+    else
+    {
+        // total number of nodes
+        unsigned int  Np = (Nx+1)*(Ny+1)*(Nz+1);
+        double x [Np] = {};
+        double y [Np] = {};
+        double z [Np] = {};
+        Vec rx = JacobiGL(0, 0, Nx);
+        Vec ry = JacobiGL(0, 0, Ny);
+        Vec rz = JacobiGL(0, 0, Nz);
+        //std::cout << "r = " << std::endl;
+        //VecView(r, PETSC_VIEWER_STDOUT_SELF);
+
+        PetscScalar *rx_a, *ry_a, *rz_a;
+        VecGetArray(rx, &rx_a);
+        VecGetArray(ry, &ry_a);
+        VecGetArray(rz, &rz_a);
+        for (unsigned int i = 0; i < (Nz+1); i++)
+        {
+            for (unsigned int j = 0; j < (Ny+1); j++)
+            {
+                for (unsigned int k = 0; k < (Nx+1); k++)
+                {
+                x[i*(Ny+1)*(Nx+1)+j*(Nx+1)+k] = rx_a[k];
+                y[i*(Ny+1)*(Nx+1)+j*(Nx+1)+k] = ry_a[j];
+                z[i*(Ny+1)*(Nx+1)+j*(Nx+1)+k] = rz_a[i];
+                //std::cout << x[i*(N+1)+j] << " " << y[i*(N+1)+j] << std::endl;
+                }
+            }
+        }
+        VecRestoreArray(rx, &rx_a);
+        VecRestoreArray(ry, &ry_a);
+        VecRestoreArray(rz, &rz_a);
+        VecDestroy(&rx);
+        VecDestroy(&ry);
+        VecDestroy(&rz);
+        VecCreateSeqWithArray(PETSC_COMM_WORLD,1,Np,x,&X);
+        VecCreateSeqWithArray(PETSC_COMM_WORLD,1,Np,y,&Y);
+        VecCreateSeqWithArray(PETSC_COMM_WORLD,1,Np,z,&Z);
+        VecAssemblyBegin(X);
+        VecAssemblyEnd(X);
+        VecAssemblyBegin(Y);
+        VecAssemblyEnd(Y);
+        VecAssemblyBegin(Z);
+        VecAssemblyEnd(Z);
+
+        VecDuplicate(X,&XX);
+        VecCopy(X, XX);
+        VecDuplicate(Y,&YY);
+        VecCopy(Y, YY);
+        VecDuplicate(Z,&ZZ);
+        VecCopy(Z, ZZ);
+    }
+        VecDestroy(&X);
+        VecDestroy(&Y);
+        VecDestroy(&Z);
+}
+/*--------------------------------------------------------------------------*/
+void set_Node_Coordinates_Cuboid(std::vector<Cuboid> &List_Of_Elements, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const unsigned int &Nx, const unsigned int &Ny, const unsigned int &Nz)
+{
+    Vec R, S, T;
+    // Compute Nodes on a Reference Element (Quadrilateral)
+    NodesCuboid(Nx, Ny, Nz, R, S, T);
+    /*
+    PetscViewer viewer_dense;
+    PetscViewerCreate(PETSC_COMM_WORLD, &viewer_dense);
+    PetscViewerPushFormat(viewer_dense, PETSC_VIEWER_ASCII_DENSE);
+    PetscViewerSetType(viewer_dense, PETSCVIEWERASCII);
+    std::cout << "R = " << std::endl;
+    VecView(R, viewer_dense);
+    std::cout << "S = " << std::endl;
+    VecView(S, viewer_dense);
+    std::cout << "T = " << std::endl;
+    VecView(T, viewer_dense);
+    PetscViewerDestroy(&viewer_dense);
+    */
+
+    PetscScalar *r_a, *s_a, *t_a;
+    VecGetArray(R, &r_a);
+    VecGetArray(S, &s_a);
+    VecGetArray(T, &t_a);
+
+    PetscInt size_r;
+    VecGetSize(R, &size_r); // Vec R S T are same size
+    for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
+    {
+        /*
+        double x_v1 = List_Of_Vertices[(*i).getVertex_V1()].getxCoordinate();
+        double y_v1 = List_Of_Vertices[(*i).getVertex_V1()].getyCoordinate();
+        double z_v1 = List_Of_Vertices[(*i).getVertex_V1()].getzCoordinate();
+        double x_v2 = List_Of_Vertices[(*i).getVertex_V2()].getxCoordinate();
+        double y_v2 = List_Of_Vertices[(*i).getVertex_V2()].getyCoordinate();
+        double z_v2 = List_Of_Vertices[(*i).getVertex_V2()].getzCoordinate();
+        double x_v3 = List_Of_Vertices[(*i).getVertex_V3()].getxCoordinate();
+        double y_v3 = List_Of_Vertices[(*i).getVertex_V3()].getyCoordinate();
+        double z_v3 = List_Of_Vertices[(*i).getVertex_V3()].getzCoordinate();
+        double x_v4 = List_Of_Vertices[(*i).getVertex_V4()].getxCoordinate();
+        double y_v4 = List_Of_Vertices[(*i).getVertex_V4()].getyCoordinate();
+        double z_v4 = List_Of_Vertices[(*i).getVertex_V4()].getzCoordinate();
+        double x_v5 = List_Of_Vertices[(*i).getVertex_V5()].getxCoordinate();
+        double y_v5 = List_Of_Vertices[(*i).getVertex_V5()].getyCoordinate();
+        double z_v5 = List_Of_Vertices[(*i).getVertex_V5()].getzCoordinate();
+        double x_v6 = List_Of_Vertices[(*i).getVertex_V6()].getxCoordinate();
+        double y_v6 = List_Of_Vertices[(*i).getVertex_V6()].getyCoordinate();
+        double z_v6 = List_Of_Vertices[(*i).getVertex_V6()].getzCoordinate();
+        double x_v7 = List_Of_Vertices[(*i).getVertex_V7()].getxCoordinate();
+        double y_v7 = List_Of_Vertices[(*i).getVertex_V7()].getyCoordinate();
+        double z_v7 = List_Of_Vertices[(*i).getVertex_V7()].getzCoordinate();
+        double x_v8 = List_Of_Vertices[(*i).getVertex_V8()].getxCoordinate();
+        double y_v8 = List_Of_Vertices[(*i).getVertex_V8()].getyCoordinate();
+        double z_v8 = List_Of_Vertices[(*i).getVertex_V8()].getzCoordinate();
+        */
+
+        for(unsigned int k = 0; k < size_r; k++)
+        {
+            unsigned int type_node = 0;
+            // Boundary of Elements
+            if (abs(t_a[k]+1.0) < NODETOL || Nz == 0)
+            {
+                // face 0
+                type_node = 0;
+                (*i).set_node_on_face0(k);
+            }
+            if (abs(t_a[k]-1.0) < NODETOL || Nz == 0)
+            {
+                // face 1
+                type_node = 1;
+                (*i).set_node_on_face1(k);
+            }
+            if (abs(s_a[k]+1.0) < NODETOL || Ny == 0)
+            {
+                // face 2
+                type_node = 2;
+                (*i).set_node_on_face2(k);
+            }
+            if (abs(s_a[k]-1.0) < NODETOL || Ny == 0)
+            {
+                // face 3
+                type_node = 3;
+                (*i).set_node_on_face3(k);
+            }
+            if (abs(r_a[k]+1.0) < NODETOL || Nx == 0)
+            {
+                // face 4
+                type_node = 4;
+                (*i).set_node_on_face4(k);
+            }
+            if (abs(r_a[k]-1.0) < NODETOL || Nx == 0)
+            {
+                // face 5
+                type_node = 5;
+                (*i).set_node_on_face5(k);
+            }
+        }
+    }
+    VecRestoreArray(R, &r_a);
+    VecRestoreArray(S, &s_a);
+    VecRestoreArray(R, &t_a);
+
+    VecDestroy(&R);
+    VecDestroy(&S);
+    VecDestroy(&T);
+}
 /*--------------------------------------------------------------------------*/

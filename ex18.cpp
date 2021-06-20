@@ -69,6 +69,7 @@ int main(int argc,char **args)
     PetscViewerPushFormat(viewer_info, PETSC_VIEWER_ASCII_INFO);
 
     std::string mesh_name;
+    //mesh_name = "Mesh/cuboid_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
     mesh_name = "Mesh/cuboid_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
 
     std::vector<Cuboid> List_Of_Elements;
@@ -81,12 +82,12 @@ int main(int argc,char **args)
 
     // Check det J > 0: counterclockwise ordering
     //Calculate_Jacobian_RectangularCuboid(List_Of_Elements, List_Of_Vertices);
-/*
+
     std::cout << "List of Vertices "  << std::endl;
     std::cout << "ID : x y z"  << std::endl;
     for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
         std::cout << (*i).getID() << ": " << (*i).getxCoordinate() << " " << (*i).getyCoordinate() << " " << (*i).getzCoordinate() << std::endl;
-
+/*
     std::cout << "VX = " << std::endl;
     VecView(VX, viewer);
     std::cout << "VY = " << std::endl;
@@ -99,10 +100,10 @@ int main(int argc,char **args)
 
     Mat EToE, EToF;
     Connect3D(EToV, element_num, node_num, EToE, EToF, List_Of_Boundaries);
-    std::cout << "EToE = " << std::endl;
-    MatView(EToE, viewer_dense);
-    std::cout << "EToF = " << std::endl;
-    MatView(EToF, viewer_dense);
+    //std::cout << "EToE = " << std::endl;
+    //MatView(EToE, viewer_dense);
+    //std::cout << "EToF = " << std::endl;
+    //MatView(EToF, viewer_dense);
     MatDestroy(&EToE);
     MatDestroy(&EToF);
     MatDestroy(&EToV);
@@ -110,6 +111,7 @@ int main(int argc,char **args)
     VecDestroy(&VY);
     VecDestroy(&VZ);
 
+    /*
     std::cout << "List of Elements "  << std::endl;
     std::cout << "ID : V1 V2 V3 V4 V5 V6 V7 V8"  << std::endl;
     for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
@@ -123,9 +125,34 @@ int main(int argc,char **args)
     {
         std::cout << (*i).getID() <<  " : " << (*i).getLeftElementID() << " " << (*i).getRightElementID() << " " << (*i).get_Type_Left() << " " << (*i).get_Type_Right() << std::endl;
     }
-
+    */
     Calculate_CuboidFaceNormals(List_Of_Elements, List_Of_Boundaries, List_Of_Vertices);
-    set_Order_Polynomials_Uniform(List_Of_Elements, N_Petsc);
+    PetscInt Nx = N_Petsc;
+    PetscInt Ny = N_Petsc;
+    PetscInt Nz = N_Petsc;
+    set_Order_Polynomials_Uniform(List_Of_Elements, Nx, Ny, Nz);
+    set_Node_Coordinates_Cuboid(List_Of_Elements, List_Of_Vertices, Nx, Ny, Nz);
+    unsigned int N_Nodes = get_Number_Of_Nodes(List_Of_Elements);
+
+
+    Mat E, ET, invM, M1, M2, M2_small, NMat, NDerivMat, invM_small, M1_small;
+    create_Matrices_Cuboids(List_Of_Vertices, List_Of_Boundaries, List_Of_Elements, N_Nodes, Nx, Ny, Nz, N_Q, Fr, E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat);
+
+    std::cout << "M = " << std::endl;
+    MatView(M1_small, viewer_dense);
+    std::cout << "E = " << std::endl;
+    MatView(E, viewer_dense);
+
+    MatDestroy(&E);
+    MatDestroy(&ET);
+    MatDestroy(&invM);
+    MatDestroy(&invM_small);
+    MatDestroy(&M1);
+    MatDestroy(&M2);
+    MatDestroy(&M1_small);
+    MatDestroy(&M2_small);
+    MatDestroy(&NMat);
+    MatDestroy(&NDerivMat);
 
     auto t3 = std::chrono::high_resolution_clock::now();
 
