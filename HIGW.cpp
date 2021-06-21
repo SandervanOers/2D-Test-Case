@@ -5749,6 +5749,35 @@ void compute_Divergence_Velocity(const Vec &Initial_Condition, const double &N_N
     VecDestroy(&UVel);
     VecDestroy(&RHS);
 }
+/*----------
+/*--------------------------------------------------------------------------*/
+double compute_Max_Velocity(const Vec &Sol, const unsigned int &N_Nodes)
+{
+    //Vec RHS, UVel;
+	//VecCreateSeq(PETSC_COMM_SELF, N_Nodes, &RHS);
+    PetscScalar* XTEMP;
+    PetscScalar amplitude_velocity[2*N_Nodes];
+	VecGetArray(Sol, &XTEMP);
+    //VecCreateSeqWithArray(PETSC_COMM_SELF, 2.0*N_Nodes, 2.0*N_Nodes, XTEMP, &UVel);
+    //VecAssemblyBegin(UVel);
+    //VecAssemblyEnd(UVel);
+    for (unsigned int i=0; i < 2*N_Nodes; i++)
+    {
+        amplitude_velocity[i] = std::sqrt(XTEMP[i]*XTEMP[i] + XTEMP[N_Nodes+i]*XTEMP[N_Nodes+i]);
+    }
+	VecRestoreArray(Sol, &XTEMP);
+
+    std::sort(amplitude_velocity, amplitude_velocity + 2*N_Nodes, std::greater<PetscScalar>());
+
+    unsigned int n = floor(0.1*2*N_Nodes);
+    PetscScalar Sum = 0.0;
+    for (unsigned int i = 0; i < n; i++)
+    {
+        Sum += amplitude_velocity[i];
+    }
+    return Sum/n;
+
+}
 /*--------------------------------------------------------------------------*/
 extern void Simulate_IC(const Mat &A, const Mat &B, const Mat &M1_small, const Mat &M2_small, const Mat &DIV, const Vec &Initial_Condition, const Vec &VecNodes, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Number_Of_TimeSteps, const double &DeltaT, Vec &Sol, const unsigned int &Number_Of_Variables, const double &F0, const double &omega)
 {
@@ -6028,7 +6057,7 @@ extern void Simulate_WA_Forced(const Mat &A, const Mat &B, const Mat &M1_small, 
         // Compute the Forcing term and replace the pressure variable from the previous time step (since these are not used)
         // Forcing at half time Step
         PetscScalar Forcing = 0.0;
-        if (t < (3.0/4.0*Number_Of_TimeSteps))
+        //if (t < (3.0/4.0*Number_Of_TimeSteps))
             { Forcing = F0*sin(omega*(time+DeltaT/2.0));}
         PetscScalar Fx[N_Nodes];
         for (unsigned int k=0;k<N_Nodes; k++)
@@ -6036,9 +6065,6 @@ extern void Simulate_WA_Forced(const Mat &A, const Mat &B, const Mat &M1_small, 
         VecSetValues(Sol,N_Nodes,ix,Fx,INSERT_VALUES);
         VecAssemblyBegin(Sol);
         VecAssemblyEnd(Sol);
-
-
-
 
         MatMult(B, Sol, QX);
         KSPSolve(ksp, QX, Sol);
@@ -6048,7 +6074,8 @@ extern void Simulate_WA_Forced(const Mat &A, const Mat &B, const Mat &M1_small, 
         //std::cout << "Energy Diff= " << std::setprecision(16) << H1-Hold <<std::endl;
         Hold = H1;
         Mold = M1;
-
+        double MaxV = compute_Max_Velocity(Sol, N_Nodes);
+        std::cout << floor(t/100) << ": Max Velocity mean = " << MaxV << " = "  << MaxV*56.5 << " [mm/s] " << std::endl;
        // std::cout << "QX = " << std::endl;
         //VecView(QX, PETSC_VIEWER_STDOUT_SELF);
         //std::cout << "Solution = " << std::endl;

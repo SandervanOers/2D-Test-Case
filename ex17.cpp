@@ -23,18 +23,18 @@ int main(int argc,char **args)
     auto t1 = std::chrono::high_resolution_clock::now();
     // Read in options from command line
     // Bucket
-    PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=200, Method=1;
-    PetscInt   Number_Of_Periods = 1;
+    PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=100, Method=1;
+    PetscInt   Number_Of_Periods = 48;
     PetscInt   kmode=1;
-    PetscScalar N2 = 1.0;
+    PetscScalar N2 = (0.37*5.57)*(0.37*5.57);
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 0, N_Q=0;
-    PetscScalar nu = 0;//
+    PetscScalar nu = 1;//
     PetscInt    Dimensions = 2;
-    PetscScalar F0 = 0.0;
-    PetscScalar omega = 0.5*sqrt(2.0);
+    PetscScalar F0 = 1.5*pow(10.0,-6.0);
+    PetscScalar omega = 0.16*5.57;
     PetscScalar Fr = 1;//0.56;//0.0291;//
-    PetscScalar Re = 1.0;
+    PetscScalar Re = 1.8*pow(10.0,4.0);
     PetscScalar gamma = 0.0;// PETSC_PI/20.0;
     /*// Read in options from command line
     PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=100, Method=1;
@@ -101,7 +101,8 @@ int main(int argc,char **args)
 
     std::string mesh_name;
 
-    mesh_name = mesh_name_trapezoid(Number_Of_Elements_Petsc);
+    //mesh_name = mesh_name_trapezoid(Number_Of_Elements_Petsc);
+    mesh_name = "Mesh/Trapezoid_Sensor_5mm.msh";
     //mesh_name = "Mesh/square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh";
     //mesh_name = "Mesh/Bucket_TopRight_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
     //mesh_name = "Mesh/Bucket_TopLeft_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
