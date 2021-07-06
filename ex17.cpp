@@ -24,14 +24,14 @@ int main(int argc,char **args)
     // Read in options from command line
     // Bucket
     PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=100, Method=1;
-    PetscInt   Number_Of_Periods = 48;
+    PetscInt   Number_Of_Periods = 64; // 48 periods forced, 16 decay
     PetscInt   kmode=1;
     PetscScalar N2 = (0.37*5.57)*(0.37*5.57);
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 0, N_Q=0;
     PetscScalar nu = 1;//
     PetscInt    Dimensions = 2;
-    PetscScalar F0 = 1.5*pow(10.0,-6.0);
+    PetscScalar F0 = 3.5*pow(10.0,-6.0);
     PetscScalar omega = 0.16*5.57;
     PetscScalar Fr = 1;//0.56;//0.0291;//
     PetscScalar Re = 1.8*pow(10.0,4.0);
@@ -177,8 +177,8 @@ int main(int argc,char **args)
     /// Estimate the required time step
     PetscScalar   sigma;
     //sigma = calculate_sigma_2DEB(rho_0_Deriv, kxmode, kzmode, Fr);
-    sigma = calculate_sigma_2DEB_Bucket();
-    //sigma = omega;
+    //sigma = calculate_sigma_2DEB_Bucket();
+    sigma = omega;
     PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
     PetscScalar Period = period_2DEB_Bucket();
     PetscPrintf(PETSC_COMM_SELF,"Period %6.4e\n", Period);

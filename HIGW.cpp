@@ -6057,7 +6057,7 @@ extern void Simulate_WA_Forced(const Mat &A, const Mat &B, const Mat &M1_small, 
         // Compute the Forcing term and replace the pressure variable from the previous time step (since these are not used)
         // Forcing at half time Step
         PetscScalar Forcing = 0.0;
-        //if (t < (3.0/4.0*Number_Of_TimeSteps))
+        if (t < (3.0/4.0*Number_Of_TimeSteps))
             { Forcing = F0*sin(omega*(time+DeltaT/2.0));}
         PetscScalar Fx[N_Nodes];
         for (unsigned int k=0;k<N_Nodes; k++)
