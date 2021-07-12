@@ -4,6 +4,7 @@
 #include <petscksp.h>
 #include <vector>
 #include <iostream>
+#include <memory>
 /*--------------------------------------------------------------------------*/
 class Elements
 {
@@ -105,8 +106,7 @@ class Vertex3D: public Vertex
     {
     }
 };
-
-
+extern void print(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices);
 /*--------------------------------------------------------------------------*/
 class VertexCoordinates2D
 {

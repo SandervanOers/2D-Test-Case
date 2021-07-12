@@ -25,6 +25,32 @@ double Vertex::getzCoordinate() const
 Vertex::~Vertex()
 {
 }
+extern void print(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices)
+{
+    std::cout << "List of Vertices "  << std::endl;
+    unsigned int d = List_Of_Vertices.front()->getDIM();
+    switch(d)
+    {
+        case 1:
+            std::cout << "ID : x"  << std::endl;
+            for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
+                std::cout << (*i)->getID() << ": " << (*i)->getxCoordinate() << std::endl;
+        break;
+        case 2:
+            std::cout << "ID : x y"  << std::endl;
+            for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
+                std::cout << (*i)->getID() << ": " << (*i)->getxCoordinate() << " " << (*i)->getyCoordinate() << std::endl;
+        break;
+        case 3:
+            std::cout << "ID : x y z"  << std::endl;
+            for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
+                std::cout << (*i)->getID() << ": " << (*i)->getxCoordinate() << " " << (*i)->getyCoordinate() << " " << (*i)->getzCoordinate() << std::endl;
+        break;
+        default:
+            std::cout << "Wrong dimensions of vertices." << std::endl;
+    }
+
+}
 /*--------------------------------------------------------------------------*/
 VertexCoordinates3D::VertexCoordinates3D(unsigned int IDg, double xC, double yC, double zC):
     ID(IDg), xCoordinate(xC), yCoordinate(yC), zCoordinate(zC) {}
