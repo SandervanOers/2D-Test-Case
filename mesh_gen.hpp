@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <set>
 
+#include <memory>
+
 #include "Elements.hpp"
 #include "gmsh_io.hpp"
 /*--------------------------------------------------------------------------*/
@@ -76,7 +78,7 @@ void set_theta_Uniform(std::vector<Boundaries2D> &List_Of_Boundaries2D, const do
 /*--------------------------------------------------------------------------*/
 void set_theta_Uniform(std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries2D, const double &theta);
 /*--------------------------------------------------------------------------*/
-void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, std::vector<VertexCoordinates2D> &List_Of_Vertices, std::vector<Squares2D> &List_Of_Elements, int &element_num, int &node_num);
+void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, std::vector<Squares2D> &List_Of_Elements, int &element_num, int &node_num);
 /*--------------------------------------------------------------------------*/
 void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZS, Mat &EToV, std::vector<VertexCoordinates3D> &List_Of_Vertices, std::vector<Cuboid> &List_Of_Elements, int &element_num,  int &node_num);
 /*--------------------------------------------------------------------------*/
@@ -88,14 +90,14 @@ void Calculate_CuboidFaceNormals(const std::vector<Cuboid> &List_Of_Elements, st
 /*--------------------------------------------------------------------------*/
 void create_ListInternalBoundaries(const unsigned int &Number_Of_Elements, Mat &EToE, Mat &EToF, std::vector<InternalBoundariesCuboid> &List_Of_Boundaries);
 /*--------------------------------------------------------------------------*/
-void Calculate_Jacobian_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
+void Calculate_Jacobian_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices);
 /*--------------------------------------------------------------------------*/
 //void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<VertexCoordinates2D> &List_Of_Vertices, const double &r_p, const double &s_p, double &Jacobian, double &drdx, double &drdy, double &dsdx, double &dsdy);
 /*--------------------------------------------------------------------------*/
-void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_Elements, std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
+void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_Elements, std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices);
 /*--------------------------------------------------------------------------*/
 std::string mesh_name_trapezoid(const unsigned int n);
 /*--------------------------------------------------------------------------*/
-void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
+void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices);
 /*--------------------------------------------------------------------------*/
 #endif

@@ -4,6 +4,7 @@
 #include <petscksp.h>
 #include <iostream>
 #include <iomanip>
+#include <memory>
 
 #include "Elements.hpp"
 #include "Legendre_Gauss_Lobatto.hpp"
@@ -56,9 +57,9 @@ extern void Simulate_IC(const Mat &A, const Mat &B, const Mat &M1_small, const M
 /*--------------------------------------------------------------------------*/
 extern double calculate_Error2D(const Vec &Exact, const Vec &Solution, const unsigned int &Norm_Type, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes);
 /*--------------------------------------------------------------------------*/
-extern double calculate_Error2D_Quad(const Vec &Exact, const Vec &Solution, const unsigned int &Norm_Type, const std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices, const unsigned int &N_Nodes);
+extern double calculate_Error2D_Quad(const Vec &Exact, const Vec &Solution, const unsigned int &Norm_Type, const std::vector<Squares2D> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const unsigned int &N_Nodes);
 /*--------------------------------------------------------------------------*/
-void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<VertexCoordinates2D> &List_Of_Vertices, const double &r_p, const double &s_p, double &Jacobian, double &drdx, double &drdy, double &dsdx, double &dsdy, double &x, double &y);
+void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const double &r_p, const double &s_p, double &Jacobian, double &drdx, double &drdy, double &dsdx, double &dsdy, double &x, double &y);
 /*--------------------------------------------------------------------------*/
 void Calculate_Jacobian_Cuboid(const Cuboid &Element, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const double &r_p, const double &s_p, const double &t_p, double &det_J, double &drdx, double &drdy, double &drdz, double &dsdx, double &dsdy, double &dsdz, double &dtdx, double &dtdy, double &dtdz, double &x, double &y, double &z);
 /*--------------------------------------------------------------------------*/
@@ -82,7 +83,7 @@ extern void compute_InitialCondition_WA(const std::vector<Squares2D> &List_Of_El
 /*--------------------------------------------------------------------------*/
 // EB //
 /*--------------------------------------------------------------------------*/
-void create_Matrices_Quads_EB(const std::vector<VertexCoordinates2D> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat);
+void create_Matrices_Quads_EB(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat);
 /*--------------------------------------------------------------------------*/
 extern void compute_InitialCondition_EB(const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const double &rho_0_Deriv, const double &Fr, const double &kxmode, const double &kzmode, Vec &Initial_Condition, Vec &VecNodes, const unsigned int &Number_Of_Elements_Petsc, const unsigned int &Number_Of_TimeSteps_In_One_Period, const unsigned int &N_Petsc, const Mat &DIV);
 /*--------------------------------------------------------------------------*/

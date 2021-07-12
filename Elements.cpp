@@ -1,5 +1,77 @@
 #include "Elements.hpp"
 /*--------------------------------------------------------------------------*/
+Vertex::Vertex(unsigned int IDg, unsigned int DIMg, double xC, double yC, double zC):
+    ID(IDg), DIM(DIMg), xCoordinate(xC), yCoordinate(yC), zCoordinate(zC) {}
+unsigned int Vertex::getID() const
+{
+    return ID;
+}
+unsigned int Vertex::getDIM() const
+{
+    return DIM;
+}
+double Vertex::getxCoordinate() const
+{
+    return xCoordinate;
+}
+double Vertex::getyCoordinate() const
+{
+    return yCoordinate;
+}
+double Vertex::getzCoordinate() const
+{
+    return zCoordinate;
+}
+Vertex::~Vertex()
+{
+}
+/*--------------------------------------------------------------------------*/
+VertexCoordinates3D::VertexCoordinates3D(unsigned int IDg, double xC, double yC, double zC):
+    ID(IDg), xCoordinate(xC), yCoordinate(yC), zCoordinate(zC) {}
+
+unsigned int VertexCoordinates3D::getID() const
+{
+    return ID;
+}
+double VertexCoordinates3D::getxCoordinate() const
+{
+    return xCoordinate;
+}
+double VertexCoordinates3D::getyCoordinate() const
+{
+    return yCoordinate;
+}
+double VertexCoordinates3D::getzCoordinate() const
+{
+    return zCoordinate;
+}
+VertexCoordinates3D::~VertexCoordinates3D()
+{
+}
+/*--------------------------------------------------------------------------*/
+VertexCoordinates2D::VertexCoordinates2D(unsigned int IDg, double xC, double yC, bool Internal):
+    ID(IDg), xCoordinate(xC), yCoordinate(yC), InternalVertex(Internal) {}
+
+unsigned int VertexCoordinates2D::getID() const
+{
+    return ID;
+}
+double VertexCoordinates2D::getxCoordinate() const
+{
+    return xCoordinate;
+}
+double VertexCoordinates2D::getyCoordinate() const
+{
+    return yCoordinate;
+}
+bool VertexCoordinates2D::isInternal() const
+{
+    return InternalVertex;
+}
+VertexCoordinates2D::~VertexCoordinates2D()
+{
+}
+/*--------------------------------------------------------------------------*/
 Elements::Elements(unsigned int IDg, double Jac, unsigned int IDl, unsigned int IDr, double xleft, double xright, unsigned int Order):
     ID(IDg), Jacobian(Jac), ID_Left_Boundary(IDl), ID_Right_Boundary(IDr), xCoordinateLeft(xleft), xCoordinateRight(xright), Order_Of_Polynomials(Order) {}
 
@@ -97,52 +169,6 @@ double Boundaries::getxCoordinate()
     return xCoordinate;
 }
 Boundaries::~Boundaries()
-{
-}
-/*--------------------------------------------------------------------------*/
-VertexCoordinates3D::VertexCoordinates3D(unsigned int IDg, double xC, double yC, double zC):
-    ID(IDg), xCoordinate(xC), yCoordinate(yC), zCoordinate(zC) {}
-
-unsigned int VertexCoordinates3D::getID() const
-{
-    return ID;
-}
-double VertexCoordinates3D::getxCoordinate() const
-{
-    return xCoordinate;
-}
-double VertexCoordinates3D::getyCoordinate() const
-{
-    return yCoordinate;
-}
-double VertexCoordinates3D::getzCoordinate() const
-{
-    return zCoordinate;
-}
-VertexCoordinates3D::~VertexCoordinates3D()
-{
-}
-/*--------------------------------------------------------------------------*/
-VertexCoordinates2D::VertexCoordinates2D(unsigned int IDg, double xC, double yC, bool Internal):
-    ID(IDg), xCoordinate(xC), yCoordinate(yC), InternalVertex(Internal) {}
-
-unsigned int VertexCoordinates2D::getID() const
-{
-    return ID;
-}
-double VertexCoordinates2D::getxCoordinate() const
-{
-    return xCoordinate;
-}
-double VertexCoordinates2D::getyCoordinate() const
-{
-    return yCoordinate;
-}
-bool VertexCoordinates2D::isInternal() const
-{
-    return InternalVertex;
-}
-VertexCoordinates2D::~VertexCoordinates2D()
 {
 }
 /*--------------------------------------------------------------------------*/

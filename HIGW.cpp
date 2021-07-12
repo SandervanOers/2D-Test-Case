@@ -12,7 +12,7 @@ void printFullMatrixInfo(Mat& matrix, const std::string& name)
 	printf("N = %d, N = %d, block_size = %d, memory = %u, assemblies = %d, mallocs = %d, matrix nonzeros (SeqBAIJ format) = %d, allocated nonzeros= %d\n", m, n, (int)info.block_size, (unsigned int)info.memory, (int)info.assemblies, (int)info.mallocs,(int)info.nz_used,(int)info.nz_allocated);
 }
 /*--------------------------------------------------------------------------*/
-void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &NMat, Mat &NDerivMat)
+void create_Matrices(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &NMat, Mat &NDerivMat)
 {
     double Np = (N+1)*(N+1);
     //Mat Ex, ExT, Ey, EyT;
@@ -561,7 +561,7 @@ void create_Matrices(const std::vector<VertexCoordinates2D> &List_Of_Vertices, c
 
 }
 /*--------------------------------------------------------------------------*//*--------------------------------------------------------------------------*/
-void create_Matrices_Quads(const std::vector<VertexCoordinates2D> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &NMat, Mat &NDerivMat)
+void create_Matrices_Quads(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &NMat, Mat &NDerivMat)
 {
     double Np = (N+1)*(N+1);
     //Mat Ex, ExT, Ey, EyT;
@@ -1111,7 +1111,7 @@ void create_Matrices_Quads(const std::vector<VertexCoordinates2D> &List_Of_Verti
 
 }
 /*--------------------------------------------------------------------------*//*--------------------------------------------------------------------------*/
-void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
+void create_Matrices_Quads_Full(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
 {
     double Np = (N+1)*(N+1);
     //Mat Ex, ExT, Ey, EyT;
@@ -1361,10 +1361,10 @@ void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_
             ri_left = JacobiGL(0, 0, Order_Polynomials_left);
             ri_right = JacobiGL(0, 0, Order_Polynomials_right);
 
-            double x1 = List_Of_Vertices[(*f).get_Vertex_V1()].getxCoordinate();
-            double y1 = List_Of_Vertices[(*f).get_Vertex_V1()].getyCoordinate();
-            double x2 = List_Of_Vertices[(*f).get_Vertex_V2()].getxCoordinate();
-            double y2 = List_Of_Vertices[(*f).get_Vertex_V2()].getyCoordinate();
+            double x1 = List_Of_Vertices[(*f).get_Vertex_V1()]->getxCoordinate();
+            double y1 = List_Of_Vertices[(*f).get_Vertex_V1()]->getyCoordinate();
+            double x2 = List_Of_Vertices[(*f).get_Vertex_V2()]->getxCoordinate();
+            double y2 = List_Of_Vertices[(*f).get_Vertex_V2()]->getyCoordinate();
 
             double dx = (x2-x1);
             double dy = (y2-y1);
@@ -1501,7 +1501,7 @@ void create_Matrices_Quads_Full(const std::vector<VertexCoordinates2D> &List_Of_
 
 }
 /*--------------------------------------------------------------------------*//*--------------------------------------------------------------------------*/
-void create_Matrices_Quads_Full_IC(const std::vector<VertexCoordinates2D> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
+void create_Matrices_Quads_Full_IC(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
 {
     double Np = (N+1)*(N+1);
     //Mat Ex, ExT, Ey, EyT;
@@ -1751,10 +1751,10 @@ void create_Matrices_Quads_Full_IC(const std::vector<VertexCoordinates2D> &List_
             ri_left = JacobiGL(0, 0, Order_Polynomials_left);
             ri_right = JacobiGL(0, 0, Order_Polynomials_right);
 
-            double x1 = List_Of_Vertices[(*f).get_Vertex_V1()].getxCoordinate();
-            double y1 = List_Of_Vertices[(*f).get_Vertex_V1()].getyCoordinate();
-            double x2 = List_Of_Vertices[(*f).get_Vertex_V2()].getxCoordinate();
-            double y2 = List_Of_Vertices[(*f).get_Vertex_V2()].getyCoordinate();
+            double x1 = List_Of_Vertices[(*f).get_Vertex_V1()]->getxCoordinate();
+            double y1 = List_Of_Vertices[(*f).get_Vertex_V1()]->getyCoordinate();
+            double x2 = List_Of_Vertices[(*f).get_Vertex_V2()]->getxCoordinate();
+            double y2 = List_Of_Vertices[(*f).get_Vertex_V2()]->getyCoordinate();
 
             double dx = (x2-x1);
             double dy = (y2-y1);
@@ -1891,7 +1891,7 @@ void create_Matrices_Quads_Full_IC(const std::vector<VertexCoordinates2D> &List_
 
 }
 /*--------------------------------------------------------------------------*/
-void create_Matrices_Quads_Full_WA(const std::vector<VertexCoordinates2D> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
+void create_Matrices_Quads_Full_WA(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
 {
     double Np = (N+1)*(N+1);
     //Mat Ex, ExT, Ey, EyT;
@@ -2141,10 +2141,10 @@ void create_Matrices_Quads_Full_WA(const std::vector<VertexCoordinates2D> &List_
             ri_left = JacobiGL(0, 0, Order_Polynomials_left);
             ri_right = JacobiGL(0, 0, Order_Polynomials_right);
 
-            double x1 = List_Of_Vertices[(*f).get_Vertex_V1()].getxCoordinate();
-            double y1 = List_Of_Vertices[(*f).get_Vertex_V1()].getyCoordinate();
-            double x2 = List_Of_Vertices[(*f).get_Vertex_V2()].getxCoordinate();
-            double y2 = List_Of_Vertices[(*f).get_Vertex_V2()].getyCoordinate();
+            double x1 = List_Of_Vertices[(*f).get_Vertex_V1()]->getxCoordinate();
+            double y1 = List_Of_Vertices[(*f).get_Vertex_V1()]->getyCoordinate();
+            double x2 = List_Of_Vertices[(*f).get_Vertex_V2()]->getxCoordinate();
+            double y2 = List_Of_Vertices[(*f).get_Vertex_V2()]->getyCoordinate();
 
             double dx = (x2-x1);
             double dy = (y2-y1);
@@ -2281,7 +2281,7 @@ void create_Matrices_Quads_Full_WA(const std::vector<VertexCoordinates2D> &List_
 
 }
 /*--------------------------------------------------------------------------*/
-void create_Matrices_Quads_EB(const std::vector<VertexCoordinates2D> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
+void create_Matrices_Quads_EB(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
 {
     double Np = (N+1)*(N+1);
     //Mat Ex, ExT, Ey, EyT;
@@ -6857,7 +6857,7 @@ extern double calculate_Error2D(const Vec &Exact, const Vec &Solution, const uns
 
 }
 /*--------------------------------------------------------------------------*/
-extern double calculate_Error2D_Quad(const Vec &Exact, const Vec &Solution, const unsigned int &Norm_Type, const std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices, const unsigned int &N_Nodes)
+extern double calculate_Error2D_Quad(const Vec &Exact, const Vec &Solution, const unsigned int &Norm_Type, const std::vector<Squares2D> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const unsigned int &N_Nodes)
 {
     std::cout << "Start Elemental Calculations " << std::endl;
     PetscScalar *exact_a, *sol_a;
@@ -6977,16 +6977,16 @@ extern double calculate_Error2D_Quad(const Vec &Exact, const Vec &Solution, cons
 
 }
 /*--------------------------------------------------------------------------*/
-void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<VertexCoordinates2D> &List_Of_Vertices, const double &r_p, const double &s_p, double &Jacobian, double &drdx, double &drdy, double &dsdx, double &dsdy, double &x, double &y)
+void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const double &r_p, const double &s_p, double &Jacobian, double &drdx, double &drdy, double &dsdx, double &dsdy, double &x, double &y)
 {
-    double x1 = List_Of_Vertices[Quad.getVertex_V1()].getxCoordinate();
-    double y1 = List_Of_Vertices[Quad.getVertex_V1()].getyCoordinate();
-    double x2 = List_Of_Vertices[Quad.getVertex_V2()].getxCoordinate();
-    double y2 = List_Of_Vertices[Quad.getVertex_V2()].getyCoordinate();
-    double x3 = List_Of_Vertices[Quad.getVertex_V3()].getxCoordinate();
-    double y3 = List_Of_Vertices[Quad.getVertex_V3()].getyCoordinate();
-    double x4 = List_Of_Vertices[Quad.getVertex_V4()].getxCoordinate();
-    double y4 = List_Of_Vertices[Quad.getVertex_V4()].getyCoordinate();
+    double x1 = List_Of_Vertices[Quad.getVertex_V1()]->getxCoordinate();
+    double y1 = List_Of_Vertices[Quad.getVertex_V1()]->getyCoordinate();
+    double x2 = List_Of_Vertices[Quad.getVertex_V2()]->getxCoordinate();
+    double y2 = List_Of_Vertices[Quad.getVertex_V2()]->getyCoordinate();
+    double x3 = List_Of_Vertices[Quad.getVertex_V3()]->getxCoordinate();
+    double y3 = List_Of_Vertices[Quad.getVertex_V3()]->getyCoordinate();
+    double x4 = List_Of_Vertices[Quad.getVertex_V4()]->getxCoordinate();
+    double y4 = List_Of_Vertices[Quad.getVertex_V4()]->getyCoordinate();
 
     //double Area = 0.5*abs(x1*y2+x2*y3+x3*y4+x4*y1-x2*y1-x3*y2-x4*y3-x1*y4);
 

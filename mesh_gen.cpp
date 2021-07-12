@@ -413,7 +413,7 @@ void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Ma
 
 
 /*--------------------------------------------------------------------------*/
-void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, std::vector<VertexCoordinates2D> &List_Of_Vertices, std::vector<Squares2D> &List_Of_Elements, int &element_num,  int &node_num)
+void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, std::vector<Squares2D> &List_Of_Elements, int &element_num,  int &node_num)
 {
       int *element_node;
       //int element_num;
@@ -464,8 +464,10 @@ void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, 
     {
         vx[i] = node_x[2*i];
         vy[i] = node_x[2*i+1];
-        VertexCoordinates2D V(ID_Vertices, node_x[2*i], node_x[2*i+1], 1);
-        List_Of_Vertices.push_back(V);
+        //VertexCoordinates2D V(ID_Vertices, node_x[2*i], node_x[2*i+1], 1);
+        //Vertex2D V(ID_Vertices, node_x[2*i], node_x[2*i+1]);
+        List_Of_Vertices.push_back(std::make_unique<Vertex2D>(ID_Vertices, node_x[2*i], node_x[2*i+1]));
+        //List_Of_Vertices.push_back(V);
         ID_Vertices++;
     }
     VecCreateSeqWithArray(PETSC_COMM_SELF,1,node_num,vx,&VXT);
@@ -487,14 +489,14 @@ void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, 
     {
         //std::cout << element_node[4*i] << " " << element_node[4*i+1] << " " << element_node[4*i+2] << " "<< element_node[4*i+3] << " " << std::endl;
 
-        double x1 = List_Of_Vertices[element_node[4*i]-1].getxCoordinate();
-        double y1 = List_Of_Vertices[element_node[4*i]-1].getyCoordinate();
-        double x2 = List_Of_Vertices[element_node[4*i+1]-1].getxCoordinate();
-        double y2 = List_Of_Vertices[element_node[4*i+1]-1].getyCoordinate();
-        double x3 = List_Of_Vertices[element_node[4*i+2]-1].getxCoordinate();
-        double y3 = List_Of_Vertices[element_node[4*i+2]-1].getyCoordinate();
-        double x4 = List_Of_Vertices[element_node[4*i+3]-1].getxCoordinate();
-        double y4 = List_Of_Vertices[element_node[4*i+3]-1].getyCoordinate();
+        double x1 = List_Of_Vertices[element_node[4*i]-1]->getxCoordinate();
+        double y1 = List_Of_Vertices[element_node[4*i]-1]->getyCoordinate();
+        double x2 = List_Of_Vertices[element_node[4*i+1]-1]->getxCoordinate();
+        double y2 = List_Of_Vertices[element_node[4*i+1]-1]->getyCoordinate();
+        double x3 = List_Of_Vertices[element_node[4*i+2]-1]->getxCoordinate();
+        double y3 = List_Of_Vertices[element_node[4*i+2]-1]->getyCoordinate();
+        double x4 = List_Of_Vertices[element_node[4*i+3]-1]->getxCoordinate();
+        double y4 = List_Of_Vertices[element_node[4*i+3]-1]->getyCoordinate();
 
 
         double xorigin = std::min({ x1, x2, x3, x4 });
@@ -1294,20 +1296,20 @@ void Calculate_Jacobian_Square(std::vector<Squares2D> &List_Of_Elements, const s
     }
 }
 /*--------------------------------------------------------------------------*/
-void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
+void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices)
 {
 
     // Assumes Square Quadrilaterals => J is constant
     for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
     {
-        double x1 = List_Of_Vertices[(*i).getVertex_V1()].getxCoordinate();
-        double y1 = List_Of_Vertices[(*i).getVertex_V1()].getyCoordinate();
-        double x2 = List_Of_Vertices[(*i).getVertex_V2()].getxCoordinate();
-        double y2 = List_Of_Vertices[(*i).getVertex_V2()].getyCoordinate();
-        double x3 = List_Of_Vertices[(*i).getVertex_V3()].getxCoordinate();
-        double y3 = List_Of_Vertices[(*i).getVertex_V3()].getyCoordinate();
-        double x4 = List_Of_Vertices[(*i).getVertex_V4()].getxCoordinate();
-        double y4 = List_Of_Vertices[(*i).getVertex_V4()].getyCoordinate();
+        double x1 = List_Of_Vertices[(*i).getVertex_V1()]->getxCoordinate();
+        double y1 = List_Of_Vertices[(*i).getVertex_V1()]->getyCoordinate();
+        double x2 = List_Of_Vertices[(*i).getVertex_V2()]->getxCoordinate();
+        double y2 = List_Of_Vertices[(*i).getVertex_V2()]->getyCoordinate();
+        double x3 = List_Of_Vertices[(*i).getVertex_V3()]->getxCoordinate();
+        double y3 = List_Of_Vertices[(*i).getVertex_V3()]->getyCoordinate();
+        double x4 = List_Of_Vertices[(*i).getVertex_V4()]->getxCoordinate();
+        double y4 = List_Of_Vertices[(*i).getVertex_V4()]->getyCoordinate();
 
         double Area = 0.5*abs(x1*y2+x2*y3+x3*y4-x2*y1-x3*y2-x4*y3-x1*y4);
         //std::cout << "Area = " << Area << std::endl;
@@ -1478,7 +1480,7 @@ void Calculate_CuboidFaceNormals(const std::vector<Cuboid> &List_Of_Elements, st
     }
 }
 /*--------------------------------------------------------------------------*/
-void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_Elements, std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
+void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_Elements, std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices)
 {
     //std::cout << "Boundary Jacobian " << std::endl;
 
@@ -1488,23 +1490,23 @@ void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_
         int left = (*f).getLeftElementID();
         int right = (*f).getRightElementID();
 
-        double left_x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getxCoordinate();
-        double left_y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getyCoordinate();
-        double left_x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getxCoordinate();
-        double left_y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getyCoordinate();
-        double left_x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getxCoordinate();
-        double left_y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getyCoordinate();
-        double left_x4 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getxCoordinate();
-        double left_y4 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getyCoordinate();
+        double left_x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()]->getxCoordinate();
+        double left_y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()]->getyCoordinate();
+        double left_x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()]->getxCoordinate();
+        double left_y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()]->getyCoordinate();
+        double left_x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()]->getxCoordinate();
+        double left_y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()]->getyCoordinate();
+        double left_x4 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()]->getxCoordinate();
+        double left_y4 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()]->getyCoordinate();
 
-        double right_x1 = List_Of_Vertices[List_Of_Elements[right].getVertex_V1()].getxCoordinate();
-        double right_y1 = List_Of_Vertices[List_Of_Elements[right].getVertex_V1()].getyCoordinate();
-        double right_x2 = List_Of_Vertices[List_Of_Elements[right].getVertex_V2()].getxCoordinate();
-        double right_y2 = List_Of_Vertices[List_Of_Elements[right].getVertex_V2()].getyCoordinate();
-        double right_x3 = List_Of_Vertices[List_Of_Elements[right].getVertex_V3()].getxCoordinate();
-        double right_y3 = List_Of_Vertices[List_Of_Elements[right].getVertex_V3()].getyCoordinate();
-        double right_x4 = List_Of_Vertices[List_Of_Elements[right].getVertex_V4()].getxCoordinate();
-        double right_y4 = List_Of_Vertices[List_Of_Elements[right].getVertex_V4()].getyCoordinate();
+        double right_x1 = List_Of_Vertices[List_Of_Elements[right].getVertex_V1()]->getxCoordinate();
+        double right_y1 = List_Of_Vertices[List_Of_Elements[right].getVertex_V1()]->getyCoordinate();
+        double right_x2 = List_Of_Vertices[List_Of_Elements[right].getVertex_V2()]->getxCoordinate();
+        double right_y2 = List_Of_Vertices[List_Of_Elements[right].getVertex_V2()]->getyCoordinate();
+        double right_x3 = List_Of_Vertices[List_Of_Elements[right].getVertex_V3()]->getxCoordinate();
+        double right_y3 = List_Of_Vertices[List_Of_Elements[right].getVertex_V3()]->getyCoordinate();
+        double right_x4 = List_Of_Vertices[List_Of_Elements[right].getVertex_V4()]->getxCoordinate();
+        double right_y4 = List_Of_Vertices[List_Of_Elements[right].getVertex_V4()]->getyCoordinate();
         //std::cout << "Left Element:  (" << left_x1 << ", " << left_y1 << "); (" << left_x2 << ", " << left_y2 << "); (" << left_x3 << ", " << left_y3 << "); (" << left_x4 << ", " << left_y4 << ")" << std::endl;
         //std::cout << "Right Element: (" << right_x1 << ", " << right_y1 << "); (" << right_x2 << ", " << right_y2 << "); (" << right_x3 << ", " << right_y3 << "); (" << right_x4 << ", " << right_y4 << ")" << std::endl;
 

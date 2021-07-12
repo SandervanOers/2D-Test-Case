@@ -1261,7 +1261,7 @@ void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, s
     VecDestroy(&Y);
 }
 /*--------------------------------------------------------------------------*/
-void set_Node_Coordinates_Uniform_Square2D(std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices, const unsigned int &N)
+void set_Node_Coordinates_Uniform_Square2D(std::vector<Squares2D> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const unsigned int &N)
 {
     Vec R, S;
     // Compute Nodes on a Reference Element (Quadrilateral)
@@ -1275,14 +1275,14 @@ void set_Node_Coordinates_Uniform_Square2D(std::vector<Squares2D> &List_Of_Eleme
     // Compute the physical location of each node on each element
     for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
     {
-        double x_v1 = List_Of_Vertices[(*i).getVertex_V1()].getxCoordinate();
-        double y_v1 = List_Of_Vertices[(*i).getVertex_V1()].getyCoordinate();
-        double x_v2 = List_Of_Vertices[(*i).getVertex_V2()].getxCoordinate();
-        double y_v2 = List_Of_Vertices[(*i).getVertex_V2()].getyCoordinate();
-        double x_v3 = List_Of_Vertices[(*i).getVertex_V3()].getxCoordinate();
-        double y_v3 = List_Of_Vertices[(*i).getVertex_V3()].getyCoordinate();
-        double x_v4 = List_Of_Vertices[(*i).getVertex_V4()].getxCoordinate();
-        double y_v4 = List_Of_Vertices[(*i).getVertex_V4()].getyCoordinate();
+        double x_v1 = List_Of_Vertices[(*i).getVertex_V1()]->getxCoordinate();
+        double y_v1 = List_Of_Vertices[(*i).getVertex_V1()]->getyCoordinate();
+        double x_v2 = List_Of_Vertices[(*i).getVertex_V2()]->getxCoordinate();
+        double y_v2 = List_Of_Vertices[(*i).getVertex_V2()]->getyCoordinate();
+        double x_v3 = List_Of_Vertices[(*i).getVertex_V3()]->getxCoordinate();
+        double y_v3 = List_Of_Vertices[(*i).getVertex_V3()]->getyCoordinate();
+        double x_v4 = List_Of_Vertices[(*i).getVertex_V4()]->getxCoordinate();
+        double y_v4 = List_Of_Vertices[(*i).getVertex_V4()]->getyCoordinate();
 
         for(unsigned int k = 0; k < size_r; k++)
         {

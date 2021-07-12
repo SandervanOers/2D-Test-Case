@@ -31,8 +31,8 @@ int main(int argc,char **args)
     PetscInt    N_Petsc = 0, N_Q=0;
     PetscScalar nu = 1;//
     PetscInt    Dimensions = 2;
-    PetscScalar F0 = 3.5*pow(10.0,-6.0);
-    PetscScalar omega = 0.16*5.57;
+    PetscScalar F0 = 3.4*pow(10.0,-6.0);
+    PetscScalar omega = 0.16*5.57;//0.16*5.57;
     PetscScalar Fr = 1;//0.56;//0.0291;//
     PetscScalar Re = 1.8*pow(10.0,4.0);
     PetscScalar gamma = 0.0;// PETSC_PI/20.0;
@@ -111,18 +111,20 @@ int main(int argc,char **args)
 
     std::vector<Squares2D> List_Of_Elements;
     std::vector<InternalBoundariesSquares2D> List_Of_Boundaries;
-    std::vector<VertexCoordinates2D> List_Of_Vertices;
+    //std::vector<VertexCoordinates2D> List_Of_Vertices;
+    //std::vector<Vertex*> List_Of_Vertices;
+    std::vector<std::unique_ptr<Vertex>> List_Of_Vertices;
+
     Vec VX, VY;
     Mat EToV;
     int element_num, node_num;
     load_msh_mesh2D(mesh_name, VX, VY, EToV, List_Of_Vertices, List_Of_Elements, element_num, node_num);
 
-    /*
-    std::cout << "List of Vertices "  << std::endl;
-    std::cout << "ID : x y"  << std::endl;
-    for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
-        std::cout << (*i).getID() << ": " << (*i).getxCoordinate() << " " << (*i).getyCoordinate() << std::endl;
-    */
+    //std::cout << "List of Vertices "  << std::endl;
+    //std::cout << "ID : x y"  << std::endl;
+    //for(auto i = List_Of_Vertices.begin(); i < List_Of_Vertices.end(); i++)
+    //    std::cout << (*i).getID() << ": " << (*i).getxCoordinate() << " " << (*i).getyCoordinate() << std::endl;
+
 
     /*
     std::cout << "VX = " << std::endl;

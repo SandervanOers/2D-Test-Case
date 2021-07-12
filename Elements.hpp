@@ -63,6 +63,51 @@ class Boundaries
 
 };
 /*--------------------------------------------------------------------------*/
+class Vertex
+{
+    protected:
+        unsigned int ID;
+        double xCoordinate;
+        double yCoordinate;
+        double zCoordinate;
+        unsigned int DIM;
+        Vertex(unsigned int IDg, unsigned int DIMg, double xC, double yC, double zC);
+
+    public:
+        virtual unsigned int getID() const;
+        virtual unsigned int getDIM() const;
+        virtual double getxCoordinate() const;
+        virtual double getyCoordinate() const;
+        virtual double getzCoordinate() const;
+
+        virtual ~Vertex();
+
+};
+class Vertex1D: public Vertex
+{
+    public:
+    Vertex1D(unsigned int IDg, double xC): Vertex{ IDg, 1, xC, 0.0, 0.0}
+    {
+    }
+};
+class Vertex2D: public Vertex
+{
+    public:
+    Vertex2D(unsigned int IDg, double xC, double yC): Vertex{ IDg, 2, xC, yC, 0.0}
+    {
+    }
+
+};
+class Vertex3D: public Vertex
+{
+    public:
+    Vertex3D(unsigned int IDg, double xC, double yC, double zC): Vertex{ IDg, 3, xC, yC, zC}
+    {
+    }
+};
+
+
+/*--------------------------------------------------------------------------*/
 class VertexCoordinates2D
 {
     unsigned int ID;
