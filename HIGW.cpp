@@ -2654,7 +2654,7 @@ void create_Matrices_Quads_EB(const std::vector<std::unique_ptr<Vertex>> &List_O
 
 }
 /*--------------------------------------------------------------------------*/
-void create_Matrices_Cuboids(const std::vector<VertexCoordinates3D> &List_Of_Vertices, const std::vector<InternalBoundariesCuboid> &List_Of_Boundaries, const std::vector<Cuboid> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Nx_e, const unsigned int &Ny_e, const unsigned int &Nz_e, const unsigned int &N_Q, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
+/*void create_Matrices_Cuboids(const std::vector<VertexCoordinates3D> &List_Of_Vertices, const std::vector<InternalBoundariesCuboid> &List_Of_Boundaries, const std::vector<Cuboid> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Nx_e, const unsigned int &Ny_e, const unsigned int &Nz_e, const unsigned int &N_Q, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
 {
     // estimate the number of nonzeros
     double N = std::max({Nx_e,Ny_e,Nz_e});
@@ -3055,7 +3055,7 @@ void create_Matrices_Cuboids(const std::vector<VertexCoordinates3D> &List_Of_Ver
 
             //std::cout << "qp = " << std::endl;
             //    VecView(QuadraturePoints, PETSC_VIEWER_STDOUT_SELF);
-            */
+            * /
             VecDestroy(&ri_x_left);
             VecDestroy(&ri_y_left);
             VecDestroy(&ri_x_right);
@@ -3070,7 +3070,7 @@ void create_Matrices_Cuboids(const std::vector<VertexCoordinates3D> &List_Of_Ver
     MatAssemblyBegin(ET, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(ET, MAT_FINAL_ASSEMBLY);
 }
-
+*/
 /*--------------------------------------------------------------------------*/
 extern void create_Compressible_System_MidPoint(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &NMat, const Mat &NDerivMat, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, Mat &A, Mat &B)
 {
@@ -7097,6 +7097,7 @@ void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<s
         }
 }*/
 /*--------------------------------------------------------------------------*/
+/*
 void Calculate_Jacobian_Cuboid(const Cuboid &Element, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const double &r_p, const double &s_p, const double &t_p, double &det_J, double &drdx, double &drdy, double &drdz, double &dsdx, double &dsdy, double &dsdz, double &dtdx, double &dtdy, double &dtdz, double &x, double &y, double &z)
 {
         double x0 = List_Of_Vertices[Element.getVertex_V1()].getxCoordinate();
@@ -7164,7 +7165,7 @@ void Calculate_Jacobian_Cuboid(const Cuboid &Element, const std::vector<VertexCo
         dtdy = -(dxdr*dzds-dxds*dzdr)/det_J;
         dtdz = (dxdr*dyds-dxds*dydr)/det_J;
         //std::cout << "det_Jacobian = " << det_J << std::endl;
-}
+}*/
 /*--------------------------------------------------------------------------*/
 /*void Calculate_SurfaceJacobian_Cuboid(const Cuboid &Element, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const double &r_p, const double &s_p, double &det_J, const unsigned int &face)
 {

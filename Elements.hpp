@@ -6,64 +6,6 @@
 #include <iostream>
 #include <memory>
 /*--------------------------------------------------------------------------*/
-class Elements
-{
-    unsigned int ID;
-    double Jacobian;
-    unsigned int ID_Left_Boundary;
-    unsigned int ID_Right_Boundary;
-    double xCoordinateLeft;
-    double xCoordinateRight;
-    unsigned int Order_Of_Polynomials;
-    Mat MassMatrix;
-    Mat MassMatrixOverRho0;
-    std::vector<double> vertex_coordinates;
-    public:
-        Elements(unsigned int IDg, double Jacobian, unsigned int ID_Left_Boundary, unsigned int ID_Right_Boundary, double xCoordinateLeft, double xCoordinateRight, unsigned int Order_Of_Polynomials);
-        //Elements(const Elements&);
-        //Elements& operator=(const Elements& that);
-        unsigned int getID();
-        unsigned int getLeftBoundaryID();
-        unsigned int getRightBoundaryID();
-        double get_xCoordinateLeft();
-        double get_xCoordinateRight();
-        unsigned int getOrderOfPolynomials();
-        double getJacobian();
-
-        void set_VertexCoordinates(double x);
-        std::vector<double> get_VertexCoordinates();
-
-        void set_MassMatrix(Mat M);
-        void set_MassMatrixOverRho0(Mat M1);
-        void forget_MassMatrix();
-        Mat get_MassMatrix();
-        Mat get_MassMatrixOverRho0();
-
-        ~Elements();
-};
-/*--------------------------------------------------------------------------*/
-class Boundaries
-{
-    unsigned int ID;
-    int ID_Left_Element;
-    int ID_Right_Element;
-    bool InternalBoundary;
-    double xCoordinate;
-    //Mat MassMatrix;     // G_ij = \int l_i l_j d\Gamma
-    //Mat MassMatrixTimesRho0;
-    //double Jacibian;
-    public:
-        Boundaries(unsigned int IDg, int Left_Element, int Right_Element, bool isInternal, double x);
-        unsigned int getID();
-        int getLeftElementID();
-        int getRightElementID();
-        bool isInternal();
-        double getxCoordinate();
-
-        ~Boundaries();
-
-};
-/*--------------------------------------------------------------------------*/
 class Vertex
 {
     protected:
@@ -108,43 +50,144 @@ class Vertex3D: public Vertex
 };
 extern void print(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices);
 /*--------------------------------------------------------------------------*/
-class VertexCoordinates2D
+class Boundary
 {
-    unsigned int ID;
-    double xCoordinate;
-    double yCoordinate;
-    bool InternalVertex;
+    protected:
+        unsigned int ID;
+        unsigned int DIM;
+        double nx;
+        double ny;
+        double nz;
+        int ID_Left_Element;
+        int ID_Right_Element;
+        unsigned int Type_Left;  // 1 2 3 4 5
+        unsigned int Type_Right; // 1 2 3 4 6
+        double theta;
+        double Jacobian;
+        Boundary(unsigned int IDg, unsigned int DIMg, int ID_El_L, int ID_El_R, int Type_L, int Type_R);
 
     public:
-        VertexCoordinates2D(unsigned int IDg, double xC, double yC, bool Internal);
-        unsigned int getID() const;
-        double getxCoordinate() const;
-        double getyCoordinate() const;
-        bool isInternal() const;
+        virtual unsigned int getID() const;
+        virtual unsigned int getDIM() const;
+        virtual int getLeftElementID() const;
+        virtual int getRightElementID() const;
+        virtual unsigned int getTypeLeft() const;
+        virtual unsigned int getTypeRight() const;
+        virtual void setJacobian(double J);
+        virtual double getJacobian() const;
+        virtual void set_nx(double normalx);
+        virtual void set_ny(double normaly);
+        virtual void set_nz(double normalz);
+        virtual double get_nx() const;
+        virtual double get_ny() const;
+        virtual double get_nz() const;
+        virtual void set_theta(double T);
+        virtual double get_theta() const;
+
+        bool operator < (const Boundary& other) const {return ID < other.ID; }
 
 
-        ~VertexCoordinates2D();
+        virtual ~Boundary();
 };
-/*--------------------------------------------------------------------------*/
-class VertexCoordinates3D
+class Boundary1D: public Boundary
+{
+    public:
+        Boundary1D(unsigned int IDg, int ID_El_L, int ID_El_R, int Type_L, int Type_R): Boundary{ IDg, 1, ID_El_L, ID_El_R, Type_L, Type_R}
+        {
+        }
+};
+class Boundary2D: public Boundary
+{
+    public:
+        Boundary2D(unsigned int IDg, int ID_El_L, int ID_El_R, int Type_L, int Type_R): Boundary{ IDg, 2, ID_El_L, ID_El_R, Type_L, Type_R}
+        {
+        }
+};
+class Boundary3D: public Boundary
+{
+    public:
+        Boundary3D(unsigned int IDg, int ID_El_L, int ID_El_R, int Type_L, int Type_R): Boundary{ IDg, 3, ID_El_L, ID_El_R, Type_L, Type_R}
+        {
+        }
+};
+extern void print(const std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries);
+/*--------------------------------------------------------------------------*//*--------------------------------------------------------------------------*/
+      /* Gmsh Ordering
+        Line:                 Line3:          Line4:
+
+              v
+              ^
+              |
+              |
+        0-----+-----1 --> u   0----2----1     0---2---3---1
+
+        Quadrangle:            Quadrangle8:            Quadrangle9:
+
+              v
+              ^
+              |
+        3-----------2          3-----6-----2           3-----6-----2
+        |     |     |          |           |           |           |
+        |     |     |          |           |           |           |
+        |     +---- | --> u    7           5           7     8     5
+        |           |          |           |           |           |
+        |           |          |           |           |           |
+        0-----------1          0-----4-----1           0-----4-----1
+
+        Hexahedron:             Hexahedron20:          Hexahedron27:
+
+               v
+        3----------2            3----13----2           3----13----2
+        |\     ^   |\           |\         |\          |\         |\
+        | \    |   | \          | 15       | 14        |15    24  | 14
+        |  \   |   |  \         9  \       11 \        9  \ 20    11 \
+        |   7------+---6        |   7----19+---6       |   7----19+---6
+        |   |  +-- |-- | -> u   |   |      |   |       |22 |  26  | 23|
+        0---+---\--1   |        0---+-8----1   |       0---+-8----1   |
+         \  |    \  \  |         \  17      \  18       \ 17    25 \  18
+          \ |     \  \ |         10 |        12|        10 |  21    12|
+           \|      w  \|           \|         \|          \|         \|
+            4----------5            4----16----5           4----16----5
+
+
+        * /
+class Elements
 {
     unsigned int ID;
-    double xCoordinate;
-    double yCoordinate;
-    double zCoordinate;
-    bool InternalVertex;
-
+    double Jacobian;
+    unsigned int ID_Left_Boundary;
+    unsigned int ID_Right_Boundary;
+    double xCoordinateLeft;
+    double xCoordinateRight;
+    unsigned int Order_Of_Polynomials;
+    Mat MassMatrix;
+    Mat MassMatrixOverRho0;
+    std::vector<double> vertex_coordinates;
     public:
-        VertexCoordinates3D(unsigned int IDg, double xC, double yC, double zC);
-        unsigned int getID() const;
-        double getxCoordinate() const;
-        double getyCoordinate() const;
-        double getzCoordinate() const;
+        Elements(unsigned int IDg, double Jacobian, unsigned int ID_Left_Boundary, unsigned int ID_Right_Boundary, double xCoordinateLeft, double xCoordinateRight, unsigned int Order_Of_Polynomials);
+        //Elements(const Elements&);
+        //Elements& operator=(const Elements& that);
+        unsigned int getID();
+        unsigned int getLeftBoundaryID();
+        unsigned int getRightBoundaryID();
+        double get_xCoordinateLeft();
+        double get_xCoordinateRight();
+        unsigned int getOrderOfPolynomials();
+        double getJacobian();
 
+        void set_VertexCoordinates(double x);
+        std::vector<double> get_VertexCoordinates();
 
-        ~VertexCoordinates3D();
+        void set_MassMatrix(Mat M);
+        void set_MassMatrixOverRho0(Mat M1);
+        void forget_MassMatrix();
+        Mat get_MassMatrix();
+        Mat get_MassMatrixOverRho0();
+
+        ~Elements();
 };
 /*--------------------------------------------------------------------------*/
+
 class Elements2D
 {
     unsigned int ID;

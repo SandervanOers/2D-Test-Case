@@ -52,52 +52,80 @@ extern void print(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices)
 
 }
 /*--------------------------------------------------------------------------*/
-VertexCoordinates3D::VertexCoordinates3D(unsigned int IDg, double xC, double yC, double zC):
-    ID(IDg), xCoordinate(xC), yCoordinate(yC), zCoordinate(zC) {}
-
-unsigned int VertexCoordinates3D::getID() const
+Boundary::Boundary(unsigned int IDg, unsigned int DIMg, int ID_El_L, int ID_El_R, int Type_L, int Type_R):
+    ID(IDg), DIM(DIMg), ID_Left_Element(ID_El_L), ID_Right_Element(ID_El_R), Type_Left(Type_L), Type_Right(Type_R) {}
+unsigned int Boundary::getID() const
 {
     return ID;
 }
-double VertexCoordinates3D::getxCoordinate() const
+unsigned int Boundary::getDIM() const
 {
-    return xCoordinate;
+    return DIM;
 }
-double VertexCoordinates3D::getyCoordinate() const
+int Boundary::getLeftElementID() const
 {
-    return yCoordinate;
+    return ID_Left_Element;
 }
-double VertexCoordinates3D::getzCoordinate() const
+int Boundary::getRightElementID() const
 {
-    return zCoordinate;
+    return ID_Right_Element;
 }
-VertexCoordinates3D::~VertexCoordinates3D()
+unsigned int Boundary::getTypeLeft() const
 {
+    return Type_Left;
 }
-/*--------------------------------------------------------------------------*/
-VertexCoordinates2D::VertexCoordinates2D(unsigned int IDg, double xC, double yC, bool Internal):
-    ID(IDg), xCoordinate(xC), yCoordinate(yC), InternalVertex(Internal) {}
+unsigned int Boundary::getTypeRight() const
+{
+    return Type_Right;
+}
+void Boundary::setJacobian(double J)
+{
+    Jacobian = J;
+}
+double Boundary::getJacobian() const
+{
+    return Jacobian;
+}
+void Boundary::set_nx(double normalx)
+{
+    nx = normalx;
+}
+void Boundary::set_ny(double normaly)
+{
+    ny = normaly;
+}
+void Boundary::set_nz(double normalz)
+{
+    nz = normalz;
+}
+double Boundary::get_nx() const
+{
+    return nx;
+}
+double Boundary::get_ny() const
+{
+    return ny;
+}
+double Boundary::get_nz() const
+{
+    return nz;
+}
+void Boundary::set_theta(double T)
+{
+    theta = T;
+}
+double Boundary::get_theta() const
+{
+    return theta;
+}
 
-unsigned int VertexCoordinates2D::getID() const
-{
-    return ID;
-}
-double VertexCoordinates2D::getxCoordinate() const
-{
-    return xCoordinate;
-}
-double VertexCoordinates2D::getyCoordinate() const
-{
-    return yCoordinate;
-}
-bool VertexCoordinates2D::isInternal() const
-{
-    return InternalVertex;
-}
-VertexCoordinates2D::~VertexCoordinates2D()
+        //bool operator < (const Boundary& other) const {return ID < other.ID; }
+
+Boundary::~Boundary()
 {
 }
 /*--------------------------------------------------------------------------*/
+/*
 Elements::Elements(unsigned int IDg, double Jac, unsigned int IDl, unsigned int IDr, double xleft, double xright, unsigned int Order):
     ID(IDg), Jacobian(Jac), ID_Left_Boundary(IDl), ID_Right_Boundary(IDr), xCoordinateLeft(xleft), xCoordinateRight(xright), Order_Of_Polynomials(Order) {}
 
@@ -169,34 +197,7 @@ Mat Elements::get_MassMatrixOverRho0()
 }
 Elements::~Elements()
 {
-}
-/*--------------------------------------------------------------------------*/
-Boundaries::Boundaries(unsigned int IDg, int Left_Element, int Right_Element, bool isInternal, double x):
-    ID(IDg), ID_Left_Element(Left_Element), ID_Right_Element(Right_Element), InternalBoundary(isInternal), xCoordinate(x) {}
-
-unsigned int Boundaries::getID()
-{
-    return ID;
-}
-int Boundaries::getLeftElementID()
-{
-    return ID_Left_Element;
-}
-int Boundaries::getRightElementID()
-{
-    return ID_Right_Element;
-}
-bool Boundaries::isInternal()
-{
-    return InternalBoundary;
-}
-double Boundaries::getxCoordinate()
-{
-    return xCoordinate;
-}
-Boundaries::~Boundaries()
-{
-}
+}*/
 /*--------------------------------------------------------------------------*/
 Elements2D::Elements2D(unsigned int IDg, unsigned int ID_B1, unsigned int ID_B2, unsigned int ID_B3, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int N_Faces):
     ID(IDg), ID_Boundary_V1V2(ID_B1), ID_Boundary_V2V3(ID_B2), ID_Boundary_V3V1(ID_B3), ID_Vertex_V1(ID_V1), ID_Vertex_V2(ID_V2),ID_Vertex_V3(ID_V3), Number_Of_Faces(N_Faces) {}

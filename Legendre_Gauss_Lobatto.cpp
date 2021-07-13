@@ -1185,82 +1185,6 @@ Vec Simplex2DP(const Vec &A, const Vec &B, const unsigned int &i, const unsigned
     return P;
 }
 /*--------------------------------------------------------------------------*/
-void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices, unsigned int N)
-{
-    // Compute the nodes for a equilateral element
-    Vec X, Y;
-    Nodes2D(N, X, Y);
-    // Convert nodes to a reference element
-    Vec R, S;
-    XYtoRS(X, Y, R, S);
-
-    PetscScalar *r_a, *s_a;
-    VecGetArray(R, &r_a);
-    VecGetArray(S, &s_a);
-    PetscInt size_r;
-    VecGetSize(R, &size_r);
-    // Compute the physical location of each node on each element
-    for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
-    {
-        //std::cout << (*i).getID() << " " << List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate() << " " << List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate() << " " << List_Of_Vertices[(*i).getVertex_V3()-1].getxCoordinate() << std::endl;
-        double x_v1 = List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate();
-        double y_v1 = List_Of_Vertices[(*i).getVertex_V1()-1].getyCoordinate();
-        double x_v2 = List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate();
-        double y_v2 = List_Of_Vertices[(*i).getVertex_V2()-1].getyCoordinate();
-        double x_v3 = List_Of_Vertices[(*i).getVertex_V3()-1].getxCoordinate();
-        double y_v3 = List_Of_Vertices[(*i).getVertex_V3()-1].getyCoordinate();
-
-        for(unsigned int k = 0; k < size_r; k++)
-        {
-            double x = 0.5*(-(r_a[k]+s_a[k])*x_v1+(1.0+r_a[k])*x_v2+(1.0+s_a[k])*x_v3);
-            double y = 0.5*(-(r_a[k]+s_a[k])*y_v1+(1.0+r_a[k])*y_v2+(1.0+s_a[k])*y_v3);
-
-            (*i).set_node_coordinates_x(x);
-            (*i).set_node_coordinates_y(y);
-
-            unsigned int type_node = 0;
-
-            // Boundary Elements
-            if (abs(s_a[k]+1.0) < NODETOL || N == 0)
-            {
-                // face 1
-                unsigned int ID_B1 = (*i).getBoundary_B1()-1;
-                List_Of_Boundaries2D[ID_B1].set_node_coordinates_x(x);
-                List_Of_Boundaries2D[ID_B1].set_node_coordinates_y(y);
-                type_node = 1;
-                (*i).set_node_on_boundary_1(k);
-            }
-            if (abs(r_a[k]+1.0) < NODETOL || N == 0)
-            {
-                // face 3
-                unsigned int ID_B3 = (*i).getBoundary_B3()-1;
-                List_Of_Boundaries2D[ID_B3].set_node_coordinates_x(x);
-                List_Of_Boundaries2D[ID_B3].set_node_coordinates_y(y);
-                type_node = 3;                      // Changed
-                (*i).set_node_on_boundary_3(k);     // Changed
-            }
-            if (abs(s_a[k]+r_a[k]) < NODETOL || N == 0)
-            {
-                // face 2
-                unsigned int ID_B2 = (*i).getBoundary_B2()-1;
-                List_Of_Boundaries2D[ID_B2].set_node_coordinates_x(x);
-                List_Of_Boundaries2D[ID_B2].set_node_coordinates_y(y);
-                type_node = 2;                      // Changed
-                (*i).set_node_on_boundary_2(k);     // Changed
-            }
-            (*i).set_node_on_boundary(type_node);
-
-        }
-    }
-    VecRestoreArray(R, &r_a);
-    VecRestoreArray(S, &s_a);
-
-    VecDestroy(&R);
-    VecDestroy(&S);
-    VecDestroy(&X);
-    VecDestroy(&Y);
-}
-/*--------------------------------------------------------------------------*/
 void set_Node_Coordinates_Uniform_Square2D(std::vector<Squares2D> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const unsigned int &N)
 {
     Vec R, S;
@@ -1342,88 +1266,7 @@ void set_Node_Coordinates_Uniform_Square2D(std::vector<Squares2D> &List_Of_Eleme
     VecDestroy(&S);
 }
 /*--------------------------------------------------------------------------*/
-void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
-{
-    unsigned int Nold = 1000;
-    Vec X, Y, R, S;
-    // Compute the physical location of each node on each element
-    for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
-    {
-        unsigned int N = (*i).get_Order_Of_Polynomials();
-        if (N != Nold)
-        {
-            // Compute the nodes for a equilateral element
-            //Vec X, Y;
-            Nodes2D(N, X, Y);
-            // Convert nodes to a reference element
-            //Vec R, S;
-            XYtoRS(X, Y, R, S);
-        }
-        PetscScalar *r_a, *s_a;
-        VecGetArray(R, &r_a);
-        VecGetArray(S, &s_a);
-        PetscInt size_r;
-        VecGetSize(R, &size_r);
-
-        //std::cout << (*i).getID() << " " << List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate() << " " << List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate() << " " << List_Of_Vertices[(*i).getVertex_V3()-1].getxCoordinate() << std::endl;
-        double x_v1 = List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate();
-        double y_v1 = List_Of_Vertices[(*i).getVertex_V1()-1].getyCoordinate();
-        double x_v2 = List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate();
-        double y_v2 = List_Of_Vertices[(*i).getVertex_V2()-1].getyCoordinate();
-        double x_v3 = List_Of_Vertices[(*i).getVertex_V3()-1].getxCoordinate();
-        double y_v3 = List_Of_Vertices[(*i).getVertex_V3()-1].getyCoordinate();
-
-        for(unsigned int k = 0; k < size_r; k++)
-        {
-            double x = 0.5*(-(r_a[k]+s_a[k])*x_v1+(1.0+r_a[k])*x_v2+(1.0+s_a[k])*x_v3);
-            double y = 0.5*(-(r_a[k]+s_a[k])*y_v1+(1.0+r_a[k])*y_v2+(1.0+s_a[k])*y_v3);
-
-            (*i).set_node_coordinates_x(x);
-            (*i).set_node_coordinates_y(y);
-            unsigned int type_node = 0;
-
-            // Boundary Elements
-            if (abs(s_a[k]+1.0) < NODETOL || N == 0)
-            {
-                // face 1
-                unsigned int ID_B1 = (*i).getBoundary_B1()-1;
-                List_Of_Boundaries2D[ID_B1].set_node_coordinates_x(x);
-                List_Of_Boundaries2D[ID_B1].set_node_coordinates_y(y);
-                type_node = 1;
-                (*i).set_node_on_boundary_1(k);
-            }
-            if (abs(r_a[k]+1.0) < NODETOL || N == 0)
-            {
-                // face 3
-                unsigned int ID_B3 = (*i).getBoundary_B3()-1;
-                List_Of_Boundaries2D[ID_B3].set_node_coordinates_x(x);
-                List_Of_Boundaries2D[ID_B3].set_node_coordinates_y(y);
-                type_node = 3;                      // Changed
-                (*i).set_node_on_boundary_3(k);     // Changed
-            }
-            if (abs(s_a[k]+r_a[k]) < NODETOL || N == 0)
-            {
-                // face 2
-                unsigned int ID_B2 = (*i).getBoundary_B2()-1;
-                List_Of_Boundaries2D[ID_B2].set_node_coordinates_x(x);
-                List_Of_Boundaries2D[ID_B2].set_node_coordinates_y(y);
-                type_node = 2;                      // Changed
-                (*i).set_node_on_boundary_2(k);     // Changed
-            }
-            (*i).set_node_on_boundary(type_node);
-        }
-        VecRestoreArray(R, &r_a);
-        VecRestoreArray(S, &s_a);
-        Nold = N;
-    }
-
-        VecDestroy(&R);
-        VecDestroy(&S);
-        VecDestroy(&X);
-        VecDestroy(&Y);
-}
-/*--------------------------------------------------------------------------*/
-void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
+/*void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
 {
     // Efficient for a few elements
     // More elements => More expensive
@@ -1520,7 +1363,7 @@ void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elemen
     }
         VecDestroy(&R);
         VecDestroy(&S);
-}
+}*/
 /*--------------------------------------------------------------------------*/
 void store_Nodes_Reference_Triangle()
 {
@@ -2509,6 +2352,7 @@ void NodesCuboid(unsigned int Nx, unsigned int Ny, unsigned int Nz, Vec &XX, Vec
         VecDestroy(&Z);
 }
 /*--------------------------------------------------------------------------*/
+/*
 void set_Node_Coordinates_Cuboid(std::vector<Cuboid> &List_Of_Elements, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const unsigned int &Nx, const unsigned int &Ny, const unsigned int &Nz)
 {
     Vec R, S, T;
@@ -2526,7 +2370,7 @@ void set_Node_Coordinates_Cuboid(std::vector<Cuboid> &List_Of_Elements, const st
     std::cout << "T = " << std::endl;
     VecView(T, viewer_dense);
     PetscViewerDestroy(&viewer_dense);
-    */
+    * /
 
     PetscScalar *r_a, *s_a, *t_a;
     VecGetArray(R, &r_a);
@@ -2562,7 +2406,7 @@ void set_Node_Coordinates_Cuboid(std::vector<Cuboid> &List_Of_Elements, const st
         double x_v8 = List_Of_Vertices[(*i).getVertex_V8()].getxCoordinate();
         double y_v8 = List_Of_Vertices[(*i).getVertex_V8()].getyCoordinate();
         double z_v8 = List_Of_Vertices[(*i).getVertex_V8()].getzCoordinate();
-        */
+        * /
 
         for(unsigned int k = 0; k < size_r; k++)
         {
@@ -2613,5 +2457,5 @@ void set_Node_Coordinates_Cuboid(std::vector<Cuboid> &List_Of_Elements, const st
     VecDestroy(&R);
     VecDestroy(&S);
     VecDestroy(&T);
-}
+}*/
 /*--------------------------------------------------------------------------*/

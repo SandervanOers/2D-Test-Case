@@ -110,9 +110,8 @@ int main(int argc,char **args)
     //mesh_name = "Mesh/Bucket_ConformingNew_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
 
     std::vector<Squares2D> List_Of_Elements;
+    s//td::vector<std::unique_ptr<Boundary>> List_Of_Boundaries;
     std::vector<InternalBoundariesSquares2D> List_Of_Boundaries;
-    //std::vector<VertexCoordinates2D> List_Of_Vertices;
-    //std::vector<Vertex*> List_Of_Vertices;
     std::vector<std::unique_ptr<Vertex>> List_Of_Vertices;
 
     Vec VX, VY;

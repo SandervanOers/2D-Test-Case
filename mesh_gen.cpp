@@ -1,5 +1,6 @@
 #include "mesh_gen.hpp"
 /*--------------------------------------------------------------------------*/
+/*
 void load_msh_mesh(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat &EToV, std::vector<VertexCoordinates3D> &List_Of_Vertices, std::vector<Cuboid> &List_Of_Elements, int &element_num,  int &node_num)
 {
 
@@ -184,7 +185,7 @@ void load_msh_mesh(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat 
     MatDuplicate(EToVT, MAT_COPY_VALUES, &EToV);
     MatDestroy(&EToVT);
 
-*/
+* /
     //  i4mat_transpose_print_some ( element_order, element_num, element_node, 1, 1, element_order, 10, "  Connectivity for first 10 elements:" );
     //
     //  Clean up.
@@ -194,9 +195,9 @@ void load_msh_mesh(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat 
 
 
     }
-
+*/
 /*--------------------------------------------------------------------------*/
-void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat &EToV, std::vector<VertexCoordinates3D> &List_Of_Vertices, std::vector<Cuboid> &List_Of_Elements, int &element_num,  int &node_num)
+/*void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat &EToV, std::vector<VertexCoordinates3D> &List_Of_Vertices, std::vector<Cuboid> &List_Of_Elements, int &element_num,  int &node_num)
 {
       int *element_node;
       //int element_num;
@@ -306,7 +307,7 @@ void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Ma
         double dist_2 = sqrt((x2-xorigin)*(x2-xorigin)+(y2-yorigin)*(y2-yorigin));
         double dist_3 = sqrt((x3-xorigin)*(x3-xorigin)+(y3-yorigin)*(y3-yorigin));
         double dist_4 = sqrt((x4-xorigin)*(x4-xorigin)+(y4-yorigin)*(y4-yorigin));
-        double min = dist_1;*/
+        double min = dist_1;* /
         int flag = 0;
 
         /*
@@ -333,7 +334,7 @@ void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Ma
         std::cout << dist_1 << " " << dist_2 << " " << dist_3 << " " << dist_4 << std::endl;
         std::cout << "min = " << min << " => flag = " << flag << std::endl;
         std::cout << std::endl;
-        */
+        * /
 
 
 
@@ -390,7 +391,7 @@ void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Ma
             4----------5            4----16----5           4----16----5
 
 
-        */
+        * /
 
 
 
@@ -411,7 +412,7 @@ void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Ma
 
     }
 
-
+*/
 /*--------------------------------------------------------------------------*/
 void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, std::vector<Squares2D> &List_Of_Elements, int &element_num,  int &node_num)
 {
@@ -464,10 +465,7 @@ void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, 
     {
         vx[i] = node_x[2*i];
         vy[i] = node_x[2*i+1];
-        //VertexCoordinates2D V(ID_Vertices, node_x[2*i], node_x[2*i+1], 1);
-        //Vertex2D V(ID_Vertices, node_x[2*i], node_x[2*i+1]);
         List_Of_Vertices.push_back(std::make_unique<Vertex2D>(ID_Vertices, node_x[2*i], node_x[2*i+1]));
-        //List_Of_Vertices.push_back(V);
         ID_Vertices++;
     }
     VecCreateSeqWithArray(PETSC_COMM_SELF,1,node_num,vx,&VXT);
@@ -591,144 +589,6 @@ void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, 
 
   ///
     }
-
-
-/*--------------------------------------------------------------------------*/
-void Compute_Vertex_Coordinates_Uniform_Rectangle_2D(const double &xmin, const double &xmax, const double &ymin, const double &ymax, const unsigned int &Number_Of_Elements_X, const unsigned int &Number_Of_Elements_Y, std::vector<VertexCoordinates2D> &List_Of_Vertices, std::vector<Boundaries2D> &List_Of_Boundaries, std::vector<Elements2D> &List_Of_Elements)
-{
-    // First Create Squares, then halve the squares to get triangles
-    unsigned int ID_Vertices = 1;
-    unsigned int ID_Boundaries = 1;
-    unsigned int ID_Elements = 1;
-
-
-    bool isInternal_Vertix = 0;
-    bool isInternal_Boundary = 0;
-
-    unsigned int Nx = Number_Of_Elements_X/2+1;
-    unsigned int Ny = Number_Of_Elements_Y/2+1;
-
-    //std::cout << "Nx = " << Nx << std::endl;
-    //std::cout << "Ny = " << Ny << std::endl;
-    unsigned int Total_Number_Of_Boundary_Elements = (Nx-1)*Ny+Nx*(Ny-1)+(Nx-1)*(Ny-1);
-    unsigned int Total_Number_Of_Square_Elements = (Nx-1)*(Ny-1);
-    //std::cout << "Total_Number_Of_Square_Elements = " << Total_Number_Of_Square_Elements << std::endl;
-    unsigned int Total_Number_Of_Triangular_Elements = Number_Of_Elements_X/2*Number_Of_Elements_Y/2*2;
-    //std::cout << "Total_Number_Of_Triangular_Elements = " << Total_Number_Of_Triangular_Elements << std::endl;
-
-    //std::cout << "Total_Number_Of_Boundary_Elements = " << Total_Number_Of_Boundary_Elements << std::endl;
-    for (unsigned int j = 1; j <= Ny; j++)
-    {
-        double yvalue1 = (ymax-ymin)*(double)(j-1)/(Ny-1)+ymin;
-        for (unsigned int i = 1; i <= Nx; i++)
-        {
-            double xvalue1 = (xmax-xmin)*(double)(i-1)/(Nx-1)+xmin;
-
-            if (yvalue1 == ymin || yvalue1 == ymax || xvalue1 == xmin || xvalue1 == xmax )
-            {
-                isInternal_Vertix = 0;
-            }
-            else
-            {
-                isInternal_Vertix = 1;
-            }
-
-            VertexCoordinates2D V(ID_Vertices, xvalue1, yvalue1, isInternal_Vertix);
-            List_Of_Vertices.push_back(V);
-            ID_Vertices++;
-        }
-    }
-
-    for (unsigned int I = 1; I <= Total_Number_Of_Square_Elements; I++)
-    {
-        unsigned int Y = floor((I-1)/(Nx-1));
-        unsigned int Is = (I-1)%(Nx-1) + 1;
-        unsigned int S[4] = {I+Y, I+1+Y, I+Nx+Y, I+1+Nx+Y};
-
-        unsigned int B1[3] = {Is+Y*(3*Nx-2), Is+Y*(3*Nx-2)+2*Nx-1, Is+Y*(3*Nx-2)+Nx-1};
-        unsigned int B2[3] = {Is+(Y+1)*(3*Nx-2), Is+Y*(3*Nx-2)+2*Nx-1, Is+Y*(3*Nx-2)+Nx};
-
-        //std::cout << "I = " << I << ", Y = " << Y << ", Is = " << Is << std::endl;
-        //std::cout << "S = " << S[0] << " " << S[1] << " " << S[2] << " " << S[3] << std::endl;
-
-        // top boundaries
-        if (List_Of_Vertices[S[2]-1].getyCoordinate() == ymax) // Type == 1
-        {
-            // External
-            Boundaries2D Boundary5(B2[0], 0, S[2], S[3], -1, ID_Elements+1, 1); // Changed
-            List_Of_Boundaries.push_back(Boundary5);
-        }
-        else
-        {
-            // Internal
-            Boundaries2D Boundary5(B2[0], 1, S[2], S[3], ID_Elements+2*(Nx-1), ID_Elements+1, 1); // Changed
-            List_Of_Boundaries.push_back(Boundary5);
-        }
-
-        // right boundaries
-        if (List_Of_Vertices[S[3]-1].getxCoordinate() == xmax) // Type == 3
-        {
-            // External
-            Boundaries2D Boundary5(B2[2], 0, S[3], S[1], -1, ID_Elements+1, 3); // Changed
-            List_Of_Boundaries.push_back(Boundary5);
-        }
-        else
-        {
-            // Internal
-            Boundaries2D Boundary5(B2[2], 1, S[3], S[1], ID_Elements+2, ID_Elements+1, 3); // Changed
-            List_Of_Boundaries.push_back(Boundary5);
-        }
-        // bottom boundaries
-        if (List_Of_Vertices[S[1]-1].getyCoordinate() == ymin)
-        {
-            // External
-            Boundaries2D Boundary5(B1[0], 0, S[0], S[1], ID_Elements, -1, 1); // Type == 1
-            List_Of_Boundaries.push_back(Boundary5);
-        }
-        else
-        {
-            // Internal
-            //Boundaries2D Boundary5(B1[0], 1, S[0], S[1], ID_Elements, -1);
-            //List_Of_Boundaries.push_back(Boundary5);
-        }
-        // left boundaries
-        if (List_Of_Vertices[S[0]-1].getxCoordinate() == xmin)
-        {
-            // External
-            Boundaries2D Boundary5(B1[2], 0, S[2], S[0], ID_Elements, -1, 3); // Type == 3
-            List_Of_Boundaries.push_back(Boundary5);
-        }
-
-        // Internal Boundaries
-        // diagonal boundaries
-        {
-            Boundaries2D Boundary5(B1[1], 1, S[1], S[2], ID_Elements, ID_Elements+1, 2); // Type == 2
-            List_Of_Boundaries.push_back(Boundary5);
-        }
-
-
-
-
-
-        Elements2D T1(ID_Elements, B1[0], B1[1], B1[2], S[0], S[1], S[2], 3);
-        //List_Of_Boundaries[B1[0]-1].setType(1);
-        //List_Of_Boundaries[B1[1]-1].setType(2);
-        //List_Of_Boundaries[B1[2]-1].setType(3);
-        ID_Elements++;
-        List_Of_Elements.push_back(T1);
-        Elements2D T2(ID_Elements, B2[0], B2[1], B2[2], S[3], S[2], S[1], 3);
-        //List_Of_Boundaries[B2[0]-1].setType(1);
-        //List_Of_Boundaries[B2[1]-1].setType(2);
-        //List_Of_Boundaries[B2[2]-1].setType(3);
-        ID_Elements++;
-        List_Of_Elements.push_back(T2);
-
-    }
-
-    std::sort(List_Of_Boundaries.begin(), List_Of_Boundaries.end());
-
-}
-
 /*--------------------------------------------------------------------------*/
 extern Vec mesh_generation_1D_VX(const double &xmin, const double &xmax, const unsigned int &Number_Of_Elements)
 {
@@ -1170,45 +1030,7 @@ void Connect2D(const Mat &EToV, const unsigned int &Number_Of_Elements, const un
 
 }
 /*--------------------------------------------------------------------------*/
-void Calculate_Jacobian(std::vector<Elements2D> &List_Of_Elements2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
-{
-    for(auto i = List_Of_Elements2D.begin(); i < List_Of_Elements2D.end(); i++)
-    {
-        double x1 = List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate();
-        double y1 = List_Of_Vertices[(*i).getVertex_V1()-1].getyCoordinate();
-        double x2 = List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate();
-        double y2 = List_Of_Vertices[(*i).getVertex_V2()-1].getyCoordinate();
-        double x3 = List_Of_Vertices[(*i).getVertex_V3()-1].getxCoordinate();
-        double y3 = List_Of_Vertices[(*i).getVertex_V3()-1].getyCoordinate();
-
-        double Area = 0.5*abs(x1*y2+x2*y3+x3*y1-x2*y1-x3*y2-x1*y3);
-
-        double dxdr = (x2-x1)/2.0;
-        double dydr = (y2-y1)/2.0;
-        double dxds = (x3-x1)/2.0;
-        double dyds = (y3-y1)/2.0;
-
-        double centroid_x = (x1+x2+x3)/3;
-        double centroid_y = (y1+y2+y3)/3;
-
-        double Jacobian = dxdr*dyds-dxds*dydr;
-        (*i).setJacobian(Jacobian);
-        (*i).setArea(Area);
-        (*i).setCentroidX(centroid_x);
-        (*i).setCentroidY(centroid_y);
-
-        double drdx = dyds/Jacobian;
-        double drdy = -dxds/Jacobian;
-        double dsdx = -dydr/Jacobian;
-        double dsdy = dxdr/Jacobian;
-        (*i).set_rx(drdx);
-        (*i).set_ry(drdy);
-        (*i).set_sx(dsdx);
-        (*i).set_sy(dsdy);
-    }
-}
-/*--------------------------------------------------------------------------*/
-void Calculate_Jacobian_RectangularCuboid(std::vector<Cuboid> &List_Of_Elements, const std::vector<VertexCoordinates3D> &List_Of_Vertices)
+/*void Calculate_Jacobian_RectangularCuboid(std::vector<Cuboid> &List_Of_Elements, const std::vector<VertexCoordinates3D> &List_Of_Vertices)
 {
     // Assumes Rectangular Cuboids => J is constant
     for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
@@ -1254,47 +1076,7 @@ void Calculate_Jacobian_RectangularCuboid(std::vector<Cuboid> &List_Of_Elements,
 
         std::cout << "Element " << (*i).getID() << ", det J = " << det_Jacobian << std::endl;
     }
-}
-/*--------------------------------------------------------------------------*/
-void Calculate_Jacobian_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
-{
-
-    // Assumes Square Quadrilaterals => J is constant
-    for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
-    {
-
-
-        double x1 = List_Of_Vertices[(*i).getVertex_V1()].getxCoordinate();
-        double y1 = List_Of_Vertices[(*i).getVertex_V1()].getyCoordinate();
-        double x2 = List_Of_Vertices[(*i).getVertex_V2()].getxCoordinate();
-        double y2 = List_Of_Vertices[(*i).getVertex_V2()].getyCoordinate();
-        double x3 = List_Of_Vertices[(*i).getVertex_V3()].getxCoordinate();
-        double y3 = List_Of_Vertices[(*i).getVertex_V3()].getyCoordinate();
-        double x4 = List_Of_Vertices[(*i).getVertex_V4()].getxCoordinate();
-        double y4 = List_Of_Vertices[(*i).getVertex_V4()].getyCoordinate();
-
-        //double Area1 = 0.5*abs(x1*y2+x2*y3+x3*y1-x2*y1-x3*y2-x1*y3);
-        //double Area2 = 0.5*abs(x1*y3+x3*y4+x4*y1-x3*y1-x4*y3-x1*y4);
-        double Area = 0.5*abs(x1*y2+x2*y3+x3*y4-x2*y1-x3*y2-x4*y3-x1*y4);
-
-        double dxdr = (x2+x3-x1-x4)/4.0;
-        double dxds = (x3+x4-x2-x1)/4.0;
-        double dydr = (y2+y3-y1-y4)/4.0;
-        double dyds = (y3+y4-y2-y1)/4.0;
-
-        double Jacobian = dxdr*dyds-dxds*dydr;
-        (*i).setJacobian(Jacobian);
-
-        double drdx = dyds/Jacobian;
-        double drdy = -dxds/Jacobian;
-        double dsdx = -dydr/Jacobian;
-        double dsdy = dxdr/Jacobian;
-        (*i).set_rx(drdx);
-        (*i).set_ry(drdy);
-        (*i).set_sx(dsdx);
-        (*i).set_sy(dsdy);
-    }
-}
+}*/
 /*--------------------------------------------------------------------------*/
 void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices)
 {
@@ -1347,7 +1129,7 @@ void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::
 
 }*/
 /*--------------------------------------------------------------------------*/
-void Calculate_CuboidFaceNormals(const std::vector<Cuboid> &List_Of_Elements, std::vector<InternalBoundariesCuboid> &List_Of_Boundaries, const std::vector<VertexCoordinates3D> &List_Of_Vertices)
+/*void Calculate_CuboidFaceNormals(const std::vector<Cuboid> &List_Of_Elements, std::vector<InternalBoundariesCuboid> &List_Of_Boundaries, const std::vector<VertexCoordinates3D> &List_Of_Vertices)
 {
     for(auto f = List_Of_Boundaries.begin(); f < List_Of_Boundaries.end(); f++)
     {
@@ -1475,10 +1257,10 @@ void Calculate_CuboidFaceNormals(const std::vector<Cuboid> &List_Of_Elements, st
         std::cout << "x[1] = " << x[1] << ", x[0] = " << x[0] << "y[1] = " << y[1] << ", y[0] = " << y[0] << std::endl;
         std::cout << "J = " << Jacobian << ". nx = " << dy/Length << ", ny = " << -dx/Length << std::endl;
         std::cout << "Length = " << Length << std::endl;
-        */
+        * /
 
     }
-}
+}*/
 /*--------------------------------------------------------------------------*/
 void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_Elements, std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices)
 {
@@ -1581,35 +1363,6 @@ void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_
         std::cout << "J = " << Jacobian << ". nx = " << dy/Length << ", ny = " << -dx/Length << std::endl;
         std::cout << "Length = " << Length << std::endl;
         */
-
-    }
-}
-/*--------------------------------------------------------------------------*/
-void Calculate_Jacobian_boundaries(std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices)
-{
-    for(auto i = List_Of_Boundaries2D.begin(); i < List_Of_Boundaries2D.end(); i++)
-    {
-        double x1 = List_Of_Vertices[(*i).getVertex_V1()-1].getxCoordinate();
-        double y1 = List_Of_Vertices[(*i).getVertex_V1()-1].getyCoordinate();
-        double x2 = List_Of_Vertices[(*i).getVertex_V2()-1].getxCoordinate();
-        double y2 = List_Of_Vertices[(*i).getVertex_V2()-1].getyCoordinate();
-
-        double dx = (x2-x1);
-        double dy = (y2-y1);
-        double Length = sqrt(dx*dx+dy*dy);
-
-        unsigned int Type = (*i).getType();
-        double ReferenceLength = 2.0;
-        if (Type == 2)
-        {
-            ReferenceLength = 2.0*sqrt(2.0);
-        }
-
-        double Jacobian = Length/ReferenceLength;
-        (*i).setJacobian(Jacobian);
-        //std::cout << (*i).getID() << " " << Type << " (" << (dy)/Length << ", " << -(dx)/Length << ")" << std::endl;
-        (*i).setNormalX(dy/Length);
-        (*i).setNormalY(-dx/Length);
 
     }
 }
