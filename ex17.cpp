@@ -103,6 +103,7 @@ int main(int argc,char **args)
 
     //mesh_name = mesh_name_trapezoid(Number_Of_Elements_Petsc);
     mesh_name = "Mesh/Trapezoid_Sensor_5mm.msh";
+    //mesh_name = "Mesh/Trapezoid_Sensor_2p5mm.msh";
     //mesh_name = "Mesh/square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh";
     //mesh_name = "Mesh/Bucket_TopRight_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
     //mesh_name = "Mesh/Bucket_TopLeft_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
@@ -110,8 +111,8 @@ int main(int argc,char **args)
     //mesh_name = "Mesh/Bucket_ConformingNew_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
 
     std::vector<Squares2D> List_Of_Elements;
-    s//td::vector<std::unique_ptr<Boundary>> List_Of_Boundaries;
-    std::vector<InternalBoundariesSquares2D> List_Of_Boundaries;
+    std::vector<std::unique_ptr<Boundary>> List_Of_Boundaries;
+    //std::vector<InternalBoundariesSquares2D> List_Of_Boundaries;
     std::vector<std::unique_ptr<Vertex>> List_Of_Vertices;
 
     Vec VX, VY;

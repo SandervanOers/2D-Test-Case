@@ -65,12 +65,6 @@ void RStoAB(const Vec &R, const Vec &S, Vec &A, Vec &B);
 /*--------------------------------------------------------------------------*/
 Vec Simplex2DP(const Vec &A, const Vec &B, const unsigned int &i, const unsigned int &j);
 /*--------------------------------------------------------------------------*/
-//void set_Node_Coordinates_Uniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices, unsigned int N);
-/*--------------------------------------------------------------------------*/
-//void set_Node_Coordinates_NonUniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
-/*--------------------------------------------------------------------------*/
-//void set_Node_Coordinates_ReadNonUniform(std::vector<Elements2D> &List_Of_Elements2D, std::vector<Boundaries2D> &List_Of_Boundaries2D, const std::vector<VertexCoordinates2D> &List_Of_Vertices);
-/*--------------------------------------------------------------------------*/
 void store_Nodes_Reference_Triangle();
 /*--------------------------------------------------------------------------*/
 extern void Read_RS_Coordinates_Reference_Triangle(const unsigned int &N, Vec &R, Vec &S);
