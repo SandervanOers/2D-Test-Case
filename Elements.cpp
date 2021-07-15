@@ -118,11 +118,16 @@ double Boundary::get_theta() const
 {
     return theta;
 }
-
-        //bool operator < (const Boundary& other) const {return ID < other.ID; }
-
 Boundary::~Boundary()
 {
+}
+extern void print(const std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries)
+{
+    std::cout << "List of Boundaries "  << std::endl;
+
+            std::cout << "ID : Left Element ID Right Element ID Type Left Face Type Right Face"  << std::endl;
+            for(auto i = List_Of_Boundaries.begin(); i < List_Of_Boundaries.end(); i++)
+                std::cout << (*i)->getID() << ": " << (*i)->getLeftElementID() << " " << (*i)->getRightElementID() << " " << (*i)-> getTypeLeft() << " " << (*i)->getTypeRight() << std::endl;
 }
 /*--------------------------------------------------------------------------*/
 Cuboid::Cuboid(unsigned int IDg, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int ID_V4, unsigned int ID_V5, unsigned int ID_V6, unsigned int ID_V7, unsigned int ID_V8):

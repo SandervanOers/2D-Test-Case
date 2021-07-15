@@ -23,17 +23,17 @@ int main(int argc,char **args)
     auto t1 = std::chrono::high_resolution_clock::now();
     // Read in options from command line
     // Bucket
-    PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=100, Method=1;
+    PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=100, Method=1; // Method is meant for time integrator: Midpoint vs Stormer-Verlet vs Third Order
     PetscInt   Number_Of_Periods = 64; // 48 periods forced, 16 decay
     PetscInt   kmode=1;
     PetscScalar N2 = (0.37*5.57)*(0.37*5.57);
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 0, N_Q=0;
-    PetscScalar nu = 1;//
+    PetscScalar nu = 1;
     PetscInt    Dimensions = 2;
     PetscScalar F0 = 3.4*pow(10.0,-6.0);
-    PetscScalar omega = 0.16*5.57;//0.16*5.57;
-    PetscScalar Fr = 1;//0.56;//0.0291;//
+    PetscScalar omega = 0.14*5.57;//0.16*5.57;
+    PetscScalar Fr = 1;
     PetscScalar Re = 1.8*pow(10.0,4.0);
     PetscScalar gamma = 0.0;// PETSC_PI/20.0;
     /*// Read in options from command line
@@ -112,13 +112,13 @@ int main(int argc,char **args)
 
     std::vector<Squares2D> List_Of_Elements;
     std::vector<std::unique_ptr<Boundary>> List_Of_Boundaries;
-    //std::vector<InternalBoundariesSquares2D> List_Of_Boundaries;
-    std::vector<std::unique_ptr<Vertex>> List_Of_Vertices;
+    std::vector<std::unique_ptr<Vertex>>   List_Of_Vertices;
 
-    Vec VX, VY;
+    //Vec VX, VY;
     Mat EToV;
     int element_num, node_num;
-    load_msh_mesh2D(mesh_name, VX, VY, EToV, List_Of_Vertices, List_Of_Elements, element_num, node_num);
+    //load_msh_mesh2D(mesh_name, VX, VY, EToV, List_Of_Vertices, List_Of_Elements, element_num, node_num);
+    load_msh_mesh2D(mesh_name, EToV, List_Of_Vertices, List_Of_Elements, element_num, node_num);
 
     //print(List_Of_Vertices);
 
@@ -139,8 +139,10 @@ int main(int argc,char **args)
     MatDestroy(&EToE);
     MatDestroy(&EToF);
     MatDestroy(&EToV);
-    VecDestroy(&VX);
-    VecDestroy(&VY);
+    //VecDestroy(&VX);
+    //VecDestroy(&VY);
+
+    //print(List_Of_Boundaries);
 
     /*
     std::cout << "List of Elements "  << std::endl;

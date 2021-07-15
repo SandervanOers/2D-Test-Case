@@ -414,7 +414,8 @@ void load_msh_mesh(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat 
 
 */
 /*--------------------------------------------------------------------------*/
-void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, std::vector<Squares2D> &List_Of_Elements, int &element_num,  int &node_num)
+//void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, std::vector<Squares2D> &List_Of_Elements, int &element_num,  int &node_num)
+void load_msh_mesh2D(const std::string &mesh_name, Mat &EToV, std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, std::vector<Squares2D> &List_Of_Elements, int &element_num,  int &node_num)
 {
       int *element_node;
       //int element_num;
@@ -458,28 +459,28 @@ void load_msh_mesh2D(const std::string &mesh_name, Vec &VX, Vec &VY, Mat &EToV, 
 
     unsigned int ID_Vertices = 0;
     unsigned int ID_Elements = 0;
-    PetscScalar vx[node_num];
-    PetscScalar vy[node_num];
+    //PetscScalar vx[node_num];
+    //PetscScalar vy[node_num];
     Vec VXT, VYT;
     for (int i = 0; i < node_num; i++)
     {
-        vx[i] = node_x[2*i];
-        vy[i] = node_x[2*i+1];
+        //vx[i] = node_x[2*i];
+        //vy[i] = node_x[2*i+1];
         List_Of_Vertices.push_back(std::make_unique<Vertex2D>(ID_Vertices, node_x[2*i], node_x[2*i+1]));
         ID_Vertices++;
     }
-    VecCreateSeqWithArray(PETSC_COMM_SELF,1,node_num,vx,&VXT);
-    VecCreateSeqWithArray(PETSC_COMM_SELF,1,node_num,vy,&VYT);
-    VecAssemblyBegin(VXT);
-    VecAssemblyEnd(VXT);
-    VecAssemblyBegin(VYT);
-    VecAssemblyEnd(VYT);
-    VecDuplicate(VXT, &VX);
-    VecDuplicate(VYT, &VY);
-    VecCopy(VXT, VX);
-    VecCopy(VYT, VY);
-    VecDestroy(&VXT);
-    VecDestroy(&VYT);
+    //VecCreateSeqWithArray(PETSC_COMM_SELF,1,node_num,vx,&VXT);
+    //VecCreateSeqWithArray(PETSC_COMM_SELF,1,node_num,vy,&VYT);
+    //VecAssemblyBegin(VXT);
+    //VecAssemblyEnd(VXT);
+    //VecAssemblyBegin(VYT);
+    //VecAssemblyEnd(VYT);
+    //VecDuplicate(VXT, &VX);
+    //VecDuplicate(VYT, &VY);
+    //VecCopy(VXT, VX);
+    //VecCopy(VYT, VY);
+    //VecDestroy(&VXT);
+    //VecDestroy(&VYT);
 
     Mat EToVT;
     PetscScalar etov[element_num*4]; //4 = element_order
@@ -1048,7 +1049,6 @@ void Connect2D(const Mat &EToV, const unsigned int &Number_Of_Elements, const un
 /*--------------------------------------------------------------------------*/
 void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices)
 {
-
     // Assumes Square Quadrilaterals => J is constant
     for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
     {
@@ -1201,11 +1201,9 @@ void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::
     }
 }*/
 /*--------------------------------------------------------------------------*/
-//void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_Elements, std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices)
 void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_Elements, std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices)
 {
     //std::cout << "Boundary Jacobian " << std::endl;
-
     for(auto f = List_Of_Boundaries.begin(); f < List_Of_Boundaries.end(); f++)
     {
         //std::cout << std::endl;
