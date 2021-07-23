@@ -26,13 +26,15 @@ int main(int argc,char **args)
     PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=100, Method=1; // Method is meant for time integrator: Midpoint vs Stormer-Verlet vs Third Order
     PetscInt   Number_Of_Periods = 64; // 48 periods forced, 16 decay
     PetscInt   kmode=1;
-    PetscScalar N2 = (0.37*5.57)*(0.37*5.57);
+    //PetscScalar N2 = (0.37*5.57)*(0.37*5.57);
+    PetscScalar N2 = (0.37*5.7558)*(0.37*5.7558);
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 0, N_Q=0;
     PetscScalar nu = 1;
     PetscInt    Dimensions = 2;
     PetscScalar F0 = 3.4*pow(10.0,-6.0);
-    PetscScalar omega = 0.14*5.57;//0.16*5.57;
+    //PetscScalar omega = 0.14*5.57;//0.16*5.57;
+    PetscScalar omega = 0.14*5.7558;//0.16*5.57;
     PetscScalar Fr = 1;
     PetscScalar Re = 1.8*pow(10.0,4.0);
     PetscScalar gamma = 0.0;// PETSC_PI/20.0;
