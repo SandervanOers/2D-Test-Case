@@ -1,7 +1,6 @@
 #include "mesh_gen.hpp"
 /*--------------------------------------------------------------------------*/
-/*
-void load_msh_mesh(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat &EToV, std::vector<VertexCoordinates3D> &List_Of_Vertices, std::vector<Cuboid> &List_Of_Elements, int &element_num,  int &node_num)
+void load_msh_mesh(const std::string &mesh_name, Mat &EToV, std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, std::vector<std::unique_ptr<Element>> &List_Of_Elements, int &element_num,  int &node_num)
 {
 
       int *element_node;
@@ -13,8 +12,7 @@ void load_msh_mesh(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat 
     //
     //  Get the data size.
     //
-      gmsh_size_read ( gmsh_filename, node_num, m, element_num,
-        element_order );
+      gmsh_size_read ( gmsh_filename, node_num, m, element_num, element_order );
     //
     //  Print the sizes.
     //
@@ -41,100 +39,97 @@ void load_msh_mesh(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat 
 
     unsigned int ID_Vertices = 0;
     unsigned int ID_Elements = 0;
-    PetscScalar vx[node_num];
-    PetscScalar vy[node_num];
-    PetscScalar vz[node_num];
-    Vec VXT, VYT, VZT;
-    for (int i = 0; i < node_num; i++)
-    {
-        vx[i] = node_x[m*i];
-        vy[i] = 0.0;
-        vz[i] = 0.0;
-        if (m>1)
-        {
-        vy[i] = node_x[m*i+1];
-        }
-        if (m>2)
-        {
-        vy[i] = node_x[m*i+1];
-        vz[i] = node_x[m*i+2];
-        }
-
-        std::cout << i <<  " " << vx[i] << " " << vy[i] << " " << vz[i] << std::endl;
-        VertexCoordinates3D V(ID_Vertices, vx[i], vy[i], vz[i]);
-        List_Of_Vertices.push_back(V);
-        ID_Vertices++;
-    }
-
-    VecCreateSeqWithArray(PETSC_COMM_SELF,1,node_num,vx,&VXT);
-    VecCreateSeqWithArray(PETSC_COMM_SELF,1,node_num,vy,&VYT);
-    VecCreateSeqWithArray(PETSC_COMM_SELF,1,node_num,vz,&VZT);
-    VecAssemblyBegin(VXT);
-    VecAssemblyEnd(VXT);
-    VecAssemblyBegin(VYT);
-    VecAssemblyEnd(VYT);
-    VecAssemblyBegin(VZT);
-    VecAssemblyEnd(VZT);
-    VecDuplicate(VXT, &VX);
-    VecDuplicate(VYT, &VY);
-    VecDuplicate(VZT, &VZ);
-    VecCopy(VXT, VX);
-    VecCopy(VYT, VY);
-    VecCopy(VZT, VZ);
-    VecDestroy(&VXT);
-    VecDestroy(&VYT);
-    VecDestroy(&VZT);
-
-    Mat EToVT;
     unsigned int Number_Of_Vertices;
     switch(m)
     {
-        case 1:
-            Number_Of_Vertices = 2;
-            break;
-        case 2:
-            Number_Of_Vertices = 4;
-            break;
-        case 3:
-            Number_Of_Vertices = 8;
-            break;
-        default:
-            std::cout << "Something went wrong in the determination of the number of vertices" << std::endl;
-    }
-/*
-    PetscScalar etov[element_num*Number_Of_Vertices]; //8 = number of vertices
-    for (unsigned int i = 0; i < element_num; i++)
-    {
-        if (m == 1)
-            Cuboid S(ID_Elements, element_node[8*i]-1, element_node[8*i+(1)%8]-1, element_node[8*i+(2)%8]-1, element_node[8*i+(3)%8]-1, element_node[8*i+(4)%8]-1, element_node[8*i+(5)%8]-1, element_node[8*i+(6)%8]-1, element_node[8*i+(7)%8]-1);
-        else if (m == 2)
-            Cuboid S(ID_Elements, element_node[8*i]-1, element_node[8*i+(1)%8]-1, element_node[8*i+(2)%8]-1, element_node[8*i+(3)%8]-1, element_node[8*i+(4)%8]-1, element_node[8*i+(5)%8]-1, element_node[8*i+(6)%8]-1, element_node[8*i+(7)%8]-1);
-        else if (m == 1)
-            Cuboid S(ID_Elements, element_node[8*i]-1, element_node[8*i+(1)%8]-1, element_node[8*i+(2)%8]-1, element_node[8*i+(3)%8]-1, element_node[8*i+(4)%8]-1, element_node[8*i+(5)%8]-1, element_node[8*i+(6)%8]-1, element_node[8*i+(7)%8]-1);
-        end
-        ID_Elements++;
-        List_Of_Elements.push_back(S);
+      case 1:
+      {
+        Number_Of_Vertices = 2;
+        PetscScalar etov[element_num*Number_Of_Vertices];
 
+        for (int i = 0; i < node_num; i++)
+          {
+            List_Of_Vertices.push_back(std::make_unique<Vertex1D>(ID_Vertices, node_x[m*i]));
+            ID_Vertices++;
+          }
+          for (unsigned int i = 0; i < element_num; i++)
+            {
+              List_Of_Elements.push_back(std::make_unique<Element1D>(ID_Elements, element_node[Number_Of_Vertices*i]-1, element_node[Number_Of_Vertices*i+1]-1));
+              ID_Elements++;
+              etov[Number_Of_Vertices*i] = (PetscScalar)element_node[Number_Of_Vertices*i]-1;
+              etov[Number_Of_Vertices*i+1] = (PetscScalar)element_node[Number_Of_Vertices*i+1]-1;
+            }
+            Mat EToVT;
+            MatCreateSeqDense(PETSC_COMM_SELF, Number_Of_Vertices, element_num, etov, &EToVT);
+            MatAssemblyBegin(EToVT, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(EToVT, MAT_FINAL_ASSEMBLY);
+            MatTranspose(EToVT, MAT_INPLACE_MATRIX, &EToVT);
+            MatDuplicate(EToVT, MAT_COPY_VALUES, &EToV);
+            MatDestroy(&EToVT);
+        break;
+      }
+      case 2:
+      {
+        Number_Of_Vertices = 4;
+        PetscScalar etov[element_num*Number_Of_Vertices];
 
-       //std::cout << element_node[4*i+flag]-1 << " " << element_node[4*i+(flag+1)%4]-1 << " " << element_node[4*i+(flag+2)%4]-1 << " " << element_node[4*i+(flag+3)%4]-1 << std::endl;
-        Squares2D S(ID_Elements, element_node[4*i+flag]-1, element_node[4*i+(flag+1)%4]-1, element_node[4*i+(flag+2)%4]-1, element_node[4*i+(flag+3)%4]-1);
-        ID_Elements++;
-        List_Of_Elements.push_back(S);
+        for (int i = 0; i < node_num; i++)
+          {
+            List_Of_Vertices.push_back(std::make_unique<Vertex2D>(ID_Vertices, node_x[m*i], node_x[m*i+1]));
+            ID_Vertices++;
+          }
+          for (unsigned int i = 0; i < element_num; i++)
+            {
+              List_Of_Elements.push_back(std::make_unique<Element2D>(ID_Elements, element_node[Number_Of_Vertices*i]-1, element_node[Number_Of_Vertices*i+1%Number_Of_Vertices]-1, element_node[Number_Of_Vertices*i+2%Number_Of_Vertices]-1, element_node[Number_Of_Vertices*i+3%Number_Of_Vertices]-1));
+              ID_Elements++;
+              etov[Number_Of_Vertices*i] = (PetscScalar)element_node[Number_Of_Vertices*i]-1;
+              etov[Number_Of_Vertices*i+1] = (PetscScalar)element_node[Number_Of_Vertices*i+1]-1;
+              etov[Number_Of_Vertices*i+2] = (PetscScalar)element_node[Number_Of_Vertices*i+2]-1;
+              etov[Number_Of_Vertices*i+3] = (PetscScalar)element_node[Number_Of_Vertices*i+3]-1;
+            }
+            Mat EToVT;
+            MatCreateSeqDense(PETSC_COMM_SELF, Number_Of_Vertices, element_num, etov, &EToVT);
+            MatAssemblyBegin(EToVT, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(EToVT, MAT_FINAL_ASSEMBLY);
+            MatTranspose(EToVT, MAT_INPLACE_MATRIX, &EToVT);
+            MatDuplicate(EToVT, MAT_COPY_VALUES, &EToV);
+            MatDestroy(&EToVT);
+        break;
+      }
+      case 3:
+      {
+        Number_Of_Vertices = 8;
+        PetscScalar etov[element_num*Number_Of_Vertices];
 
-        etov[4*i+1] = (PetscScalar)element_node[4*i+(flag+1)%4]-1;
-        etov[4*i+2] = (PetscScalar)element_node[4*i+(flag+2)%4]-1;
-        etov[4*i+3] = (PetscScalar)element_node[4*i+(flag+3)%4]-1;
-        etov[4*i] = (PetscScalar)element_node[4*i+flag]-1;
-
-
-        etov[Number_Of_Vertices*i+1] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+1)%8]-1;
-        etov[Number_Of_Vertices*i+2] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+2)%8]-1;
-        etov[Number_Of_Vertices*i+3] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+3)%8]-1;
-        etov[Number_Of_Vertices*i+4] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+4)%8]-1;
-        etov[Number_Of_Vertices*i+5] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+5)%8]-1;
-        etov[Number_Of_Vertices*i+6] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+6)%8]-1;
-        etov[Number_Of_Vertices*i+7] = (PetscScalar)element_node[Number_Of_Vertices*i+(flag+7)%8]-1;
-        etov[Number_Of_Vertices*i]   = (PetscScalar)element_node[Number_Of_Vertices*i+flag]-1;
+        for (int i = 0; i < node_num; i++)
+          {
+            List_Of_Vertices.push_back(std::make_unique<Vertex3D>(ID_Vertices, node_x[m*i], node_x[m*i+1], node_x[m*i+2]));
+            ID_Vertices++;
+          }
+          for (unsigned int i = 0; i < element_num; i++)
+            {
+              List_Of_Elements.push_back(std::make_unique<Element3D>(ID_Elements, element_node[Number_Of_Vertices*i]-1, element_node[Number_Of_Vertices*i+1]-1, element_node[Number_Of_Vertices*i+2]-1, element_node[Number_Of_Vertices*i+3]-1, element_node[Number_Of_Vertices*i+4]-1, element_node[Number_Of_Vertices*i+5]-1, element_node[Number_Of_Vertices*i+6]-1, element_node[Number_Of_Vertices*i+7]-1));
+              ID_Elements++;
+              etov[Number_Of_Vertices*i] = (PetscScalar)element_node[Number_Of_Vertices*i]-1;
+              etov[Number_Of_Vertices*i+1] = (PetscScalar)element_node[Number_Of_Vertices*i+1]-1;
+              etov[Number_Of_Vertices*i+2] = (PetscScalar)element_node[Number_Of_Vertices*i+2]-1;
+              etov[Number_Of_Vertices*i+3] = (PetscScalar)element_node[Number_Of_Vertices*i+3]-1;
+              etov[Number_Of_Vertices*i+4] = (PetscScalar)element_node[Number_Of_Vertices*i+4]-1;
+              etov[Number_Of_Vertices*i+5] = (PetscScalar)element_node[Number_Of_Vertices*i+5]-1;
+              etov[Number_Of_Vertices*i+6] = (PetscScalar)element_node[Number_Of_Vertices*i+6]-1;
+              etov[Number_Of_Vertices*i+7] = (PetscScalar)element_node[Number_Of_Vertices*i+7]-1;
+            }
+            Mat EToVT;
+            MatCreateSeqDense(PETSC_COMM_SELF, Number_Of_Vertices, element_num, etov, &EToVT);
+            MatAssemblyBegin(EToVT, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(EToVT, MAT_FINAL_ASSEMBLY);
+            MatTranspose(EToVT, MAT_INPLACE_MATRIX, &EToVT);
+            MatDuplicate(EToVT, MAT_COPY_VALUES, &EToV);
+            MatDestroy(&EToVT);
+        break;
+      }
+      default:
+          std::cout << "Something went wrong in the determination of the vertices" << std::endl;
     }
 
        /* Gmsh Ordering
@@ -178,14 +173,6 @@ void load_msh_mesh(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat 
         * /
 
 
-    MatCreateSeqDense(PETSC_COMM_SELF, 8, element_num, etov, &EToVT);
-    MatAssemblyBegin(EToVT, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(EToVT, MAT_FINAL_ASSEMBLY);
-    MatTranspose(EToVT, MAT_INPLACE_MATRIX, &EToVT);
-    MatDuplicate(EToVT, MAT_COPY_VALUES, &EToV);
-    MatDestroy(&EToVT);
-
-* /
     //  i4mat_transpose_print_some ( element_order, element_num, element_node, 1, 1, element_order, 10, "  Connectivity for first 10 elements:" );
     //
     //  Clean up.
@@ -193,9 +180,8 @@ void load_msh_mesh(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat 
       delete[] element_node;
       delete[] node_x;
 
-
-    }
 */
+}
 /*--------------------------------------------------------------------------*/
 /*void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat &EToV, std::vector<VertexCoordinates3D> &List_Of_Vertices, std::vector<Cuboid> &List_Of_Elements, int &element_num,  int &node_num)
 {

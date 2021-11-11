@@ -2040,8 +2040,8 @@ extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const 
 	MatScale(Laplacian, nu*1.0/Re); // nu = 0 or 1
 
 	std::cout << "1/Reynolds Number = " << nu*1.0/Re << std::endl;
-    //std::cout << "Laplacian = " << std::endl;
-    //MatView(Laplacian, PETSC_VIEWER_STDOUT_SELF);
+    std::cout << "Laplacian = " << std::endl;
+    MatView(Laplacian, PETSC_VIEWER_STDOUT_SELF);
 
     Mat VectorLaplacian;
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, 2*N_Nodes, 10*6*Np+1+3*Np*Np, NULL, &VectorLaplacian);
@@ -2103,6 +2103,11 @@ extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const 
     MatDestroy(&DIV_TEMP2);
     MatDestroy(&Identity3);
     MatDestroy(&VectorLaplacian);
+      std::cout << "ALaplacian = " << std::endl;
+      MatView(ALaplacian, PETSC_VIEWER_STDOUT_SELF);
+
+        std::cout << "BF1 = " << std::endl;
+        MatView(BF1, PETSC_VIEWER_STDOUT_SELF);
 
     /*
     Analytically:
