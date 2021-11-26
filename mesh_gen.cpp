@@ -172,7 +172,7 @@ void load_msh_mesh(const std::string &mesh_name, Mat &EToV, std::vector<std::uni
 
         * /
 
-
+*/
     //  i4mat_transpose_print_some ( element_order, element_num, element_node, 1, 1, element_order, 10, "  Connectivity for first 10 elements:" );
     //
     //  Clean up.
@@ -180,7 +180,7 @@ void load_msh_mesh(const std::string &mesh_name, Mat &EToV, std::vector<std::uni
       delete[] element_node;
       delete[] node_x;
 
-*/
+
 }
 /*--------------------------------------------------------------------------*/
 /*void load_msh_mesh3D(const std::string &mesh_name, Vec &VX, Vec &VY, Vec &VZ, Mat &EToV, std::vector<VertexCoordinates3D> &List_Of_Vertices, std::vector<Cuboid> &List_Of_Elements, int &element_num,  int &node_num)

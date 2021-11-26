@@ -91,4 +91,12 @@ extern void Simulate_WA_Forced_Continuous(const Mat &A, const Mat &B, const Mat 
 /*--------------------------------------------------------------------------*/
 extern void compute_InitialCondition_EB_Bucket(const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const double &rho_0_Deriv, const double &Fr, const double &kxmode, const double &kzmode, Vec &Initial_Condition, const unsigned int &Number_Of_Elements_Petsc, const unsigned int &Number_Of_TimeSteps_In_One_Period, const unsigned int &N_Petsc, const Mat &DIV);
 /*--------------------------------------------------------------------------*/
+extern void create_rot_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &M2_small, const Mat &NMat, const Mat &NDerivMat, const Vec &Forcing_a, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, const double &nu, Mat &A, Mat &B, Mat &DIV, const double &Re, const double &Fr, const double &gamma);
+/*--------------------------------------------------------------------------*/
+extern double calculate_Hamiltonian2D_kin(const Mat &M1, const Vec &Solution, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes);
+/*--------------------------------------------------------------------------*/
+extern void Simulate_rot(const Mat &A, const Mat &B, const Mat &M1_small, const Mat &M2_small, const Mat &DIV, const Vec &Initial_Condition, const Vec &VecNodes, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Number_Of_TimeSteps, const double &DeltaT, Vec &Sol, const unsigned int &Number_Of_Variables, const double &F0, const double &omega);
+/*--------------------------------------------------------------------------*/
+extern void compute_InitialCondition_rot_WA(const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const double &rho_0_Deriv, const double &Fr, const double &kxmode, const double &kzmode, Vec &Initial_Condition, Vec &VecNodes, const unsigned int &Number_Of_Elements_Petsc, const unsigned int &Number_Of_TimeSteps_In_One_Period, const unsigned int &N_Petsc, const Mat &DIV);
+/*--------------------------------------------------------------------------*/
 #endif

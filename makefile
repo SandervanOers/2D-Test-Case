@@ -146,6 +146,20 @@ OBJS18 = ex18.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elemen
 ex18: ${OBJS18} chkopts
 	-${CLINKER} -o ex18 ${OBJS18} ${PETSC_KSP_LIB} ${SLEPC_LIB}
 	${RM} ${OBJS18}	
+	
+ex19.o: ex19.cpp
+OBJS19 = ex19.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o Cubature2D.o CubatureData2D.o gmsh_io.o
+
+ex19: ${OBJS19} chkopts
+	-${CLINKER} -o ex19 ${OBJS19} ${PETSC_KSP_LIB} ${SLEPC_LIB}
+	${RM} ${OBJS19}	
+	
+exrot01.o: exrot01.cpp
+OBJSexrot01 = exrot01.o initial_cond.o mesh_gen.o Legendre_Gauss_Lobatto.o HIGW.o Elements.o Cubature2D.o CubatureData2D.o gmsh_io.o
+
+exrot01: ${OBJSexrot01} chkopts
+	-${CLINKER} -o exrot01 ${OBJSexrot01} ${PETSC_KSP_LIB} ${SLEPC_LIB}
+	${RM} ${OBJSexrot01}	
 #----------------------------------------------------------------------------
 runex1:
 	-@${MPIEXEC} -n 1 ./ex1 -ksp_monitor_short -ksp_gmres_cgs_refinement_type refine_always > ex1_1.tmp 2>&1;	  \

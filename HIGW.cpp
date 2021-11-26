@@ -2151,6 +2151,7 @@ extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const 
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 10*6*Np+1+9*Np*Np,  NULL, &A); // Check Factor 10 // Change from Triangles to Quadrilaterals
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 4*N_Nodes, 4*N_Nodes, 10*6*Np+1+9*Np*Np,  NULL, &B);
     std::cout << "Global Matrices Preallocated" << std::endl;
+
     for (unsigned int i = 0; i < 2*N_Nodes; i++)
     {
         double dummy=0;
@@ -2331,6 +2332,420 @@ extern void create_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const 
             {
                 MatSetValue(A, 	3*N_Nodes+i,     	cols[j],     0.5*dummy, 		ADD_VALUES);
                 MatSetValue(B, 	3*N_Nodes+i,     	cols[j],     -0.5*dummy, 		ADD_VALUES);
+            }
+        }
+        MatRestoreRow(ADivLaplacian, i, &numberOfNonZeros, &cols, &values);
+
+    }
+    MatDestroy(&BF1);
+    MatDestroy(&F1);
+    MatDestroy(&C);
+    MatDestroy(&C2);
+    MatDestroy(&D1);
+    MatDestroy(&D2);
+    MatDestroy(&Laplacian);
+    MatDestroy(&ADivLaplacian);
+    MatDestroy(&ALaplacian);
+    MatDestroy(&ALaplacian_h);
+    MatDestroy(&AF);
+
+    std::cout << " Global Matrices Constructed" << std::endl;
+    MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY);
+}
+/*--------------------------------------------------------------------------*/
+extern void create_rot_WA_System_Forced_MidPoint(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &M2_small, const Mat &NMat, const Mat &NDerivMat, const Vec &Forcing_a, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, const double &nu, Mat &A, Mat &B, Mat &DIV, const double &Re, const double &Fr, const double &gamma)
+{
+    double Np = (N+1)*(N+1);
+    std::cout << "Start Global Matrices Construction" << std::endl;
+
+    double gamma1 = gamma;
+    double gamma2 = gamma;
+    /*
+    [I+cos(gamma) 0 dx] [U^n+1]               [I 0   ax  ] [U^n]
+    [0 I+sin(theta)  dz] [W^n+1]            = [0 I   az  ] [W^n]
+    [cos(gamma)*dx sin(gamma)*dz L] [P^n+1]   [0 0 dx+dz] [F^n+1/2]
+    */
+    double fillBF = 1;
+
+    std::cout << "gamma = " << gamma << std::endl;
+    Mat F;
+    MatCreateSeqAIJ(PETSC_COMM_SELF,2*N_Nodes,N_Nodes,1, NULL, &F);
+
+    PetscScalar *F_a;
+    VecGetArray(Forcing_a, &F_a);
+    for (unsigned int i = 0; i < N_Nodes; i++)
+    {
+        MatSetValue(F, i, i, F_a[i], INSERT_VALUES);
+        MatSetValue(F, N_Nodes+i, i, F_a[N_Nodes+i], INSERT_VALUES);
+    }
+    VecRestoreArray(Forcing_a, &F_a);
+    MatAssemblyBegin(F,MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(F,MAT_FINAL_ASSEMBLY);
+
+    Mat F1;//, F_TEMP1, F_TEMP2;
+    //MatMatMult(F, invM_small, MAT_INITIAL_MATRIX, fillBF, &F_TEMP1);
+    //MatMatMult(F_TEMP1, M1_small, MAT_INITIAL_MATRIX, fillBF, &F_TEMP2);
+    //MatMatMult(invM, F_TEMP2, MAT_INITIAL_MATRIX, fillBF, &F1);
+    MatMatMult(invM, F, MAT_INITIAL_MATRIX, fillBF, &F1);
+    //MatDestroy(&F_TEMP1);
+    //MatDestroy(&F_TEMP2);
+    MatDestroy(&F);
+
+    Mat BF1, BF1_TEMP1, BF1_TEMP2;
+    MatMatMult(E, invM_small, MAT_INITIAL_MATRIX, fillBF, &BF1_TEMP1);
+    MatMatMult(BF1_TEMP1, M1_small, MAT_INITIAL_MATRIX, fillBF, &BF1_TEMP2);
+    MatMatMult(invM, BF1_TEMP2, MAT_INITIAL_MATRIX, fillBF, &BF1);
+    MatDestroy(&BF1_TEMP1);
+    MatDestroy(&BF1_TEMP2);
+
+    /*
+    Mat BF2, BF2_TEMP1, BF2_TEMP2;
+    MatMatMult(E, invM_small, MAT_INITIAL_MATRIX, fillBF, &BF2_TEMP1);
+    MatMatMult(BF2_TEMP1, M2_small, MAT_INITIAL_MATRIX, fillBF, &BF2_TEMP2);
+    MatMatMult(invM, BF2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &BF2);
+    MatDestroy(&BF2_TEMP1);
+    MatDestroy(&BF2_TEMP2);
+    MatDestroy(&BF2);
+    */
+
+    // Not needed since we scale both sides of the equation (= constructed incompressibility)
+    Mat DIV_TEMP1, DIV_TEMP2;
+    MatMatMult(ET, invM, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP1);
+    MatMatMult(DIV_TEMP1, M1, MAT_INITIAL_MATRIX, fillBF, &DIV_TEMP2);
+    MatMatMult(invM_small, DIV_TEMP2, MAT_INITIAL_MATRIX, fillBF, &DIV);
+    MatDestroy(&DIV_TEMP1);
+
+    Mat C, C_TEMP1, C_TEMP2;
+    MatMatMult(NMat, invM_small, MAT_INITIAL_MATRIX, fillBF, &C_TEMP1);
+    MatMatMult(C_TEMP1, M1_small, MAT_INITIAL_MATRIX, fillBF, &C_TEMP2);
+    MatMatMult(invM_small, C_TEMP2, MAT_INITIAL_MATRIX, fillBF, &C);
+    MatDestroy(&C_TEMP1);
+    MatDestroy(&C_TEMP2);
+
+    Mat C2, C2_TEMP1, C2_TEMP2;
+    MatMatMult(NMat, invM_small, MAT_INITIAL_MATRIX, fillBF, &C2_TEMP1);
+    MatMatMult(C2_TEMP1, M2_small, MAT_INITIAL_MATRIX, fillBF, &C2_TEMP2);
+    MatMatMult(invM_small, C2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &C2);
+    MatDestroy(&C2_TEMP1);
+    MatDestroy(&C2_TEMP2);
+
+    Mat D1, D1_TEMP1, D1_TEMP2;
+    MatMatMult(NDerivMat, invM_small, MAT_INITIAL_MATRIX, fillBF, &D1_TEMP1);
+    MatMatMult(D1_TEMP1, M1_small, MAT_INITIAL_MATRIX, fillBF, &D1_TEMP2);
+    MatMatMult(invM_small, D1_TEMP2, MAT_INITIAL_MATRIX, fillBF, &D1);
+    MatDestroy(&D1_TEMP1);
+    MatDestroy(&D1_TEMP2);
+
+    Mat D2, D2_TEMP1, D2_TEMP2;
+    MatMatMult(NDerivMat, invM_small, MAT_INITIAL_MATRIX, fillBF, &D2_TEMP1);
+    MatMatMult(D2_TEMP1, M2_small, MAT_INITIAL_MATRIX, fillBF, &D2_TEMP2);
+    MatMatMult(invM_small, D2_TEMP2, MAT_INITIAL_MATRIX, fillBF, &D2);
+    MatDestroy(&D2_TEMP1);
+    MatDestroy(&D2_TEMP2);
+	//MatScale(D2, 1.0/Fr/Fr);
+
+    Mat Identity3;
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, 2*N_Nodes, Np, NULL, &Identity3);
+    for (unsigned int i = 0; i < N_Nodes; i++)
+    {
+        //double dummy=0;
+        //const PetscInt* cols;
+        //const PetscScalar* values;
+        //PetscInt 	numberOfNonZeros;
+        //MatGetRow(D2, i, &numberOfNonZeros, &cols, &values);
+        //for (int j=0;j<N_Nodes;++j)
+        //{
+            //dummy = (values[j]);
+            //if (dummy!=0.0)
+            //{
+                MatSetValue(Identity3, 	i,     i,     cos(gamma2), 	ADD_VALUES);
+                MatSetValue(Identity3, 	N_Nodes+i,     N_Nodes+i,     sin(gamma1), 	ADD_VALUES);
+            //}
+        //}
+        //MatRestoreRow(D2, i, &numberOfNonZeros, &cols, &values);
+    }
+    MatAssemblyBegin(Identity3,MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(Identity3,MAT_FINAL_ASSEMBLY);
+
+
+    Mat Laplacian;
+	MatMatMult(DIV, BF1, MAT_INITIAL_MATRIX, 1, &Laplacian);
+	MatScale(Laplacian, nu*1.0/Re); // nu = 0 or 1
+
+	std::cout << "1/Reynolds Number = " << nu*1.0/Re << std::endl;
+    //std::cout << "Laplacian = " << std::endl;
+    //MatView(Laplacian, PETSC_VIEWER_STDOUT_SELF);
+
+    Mat VectorLaplacian;
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, 2*N_Nodes, 10*6*Np+1+3*Np*Np, NULL, &VectorLaplacian);
+    ///MatCreateSeqAIJ(PETSC_COMM_WORLD, 2*N_Nodes, N_Nodes, (10*6*Np+1+3*Np*Np)*2, NULL, &VectorLaplacian);
+    for (unsigned int i = 0; i < N_Nodes; i++)
+    {
+        double dummy=0;
+        const PetscInt* cols;
+        const PetscScalar* values;
+        PetscInt 	numberOfNonZeros;
+        MatGetRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(VectorLaplacian, 	i,             cols[j],     dummy, 	ADD_VALUES);
+                ///MatSetValue(VectorLaplacian, 	N_Nodes+i,             cols[j],     dummy, 	ADD_VALUES);
+                MatSetValue(VectorLaplacian, 	N_Nodes+i,     N_Nodes+cols[j],     dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
+    }
+    MatAssemblyBegin(VectorLaplacian,MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(VectorLaplacian,MAT_FINAL_ASSEMBLY);
+
+    //std::cout << "DIV = " << std::endl;
+    //MatView(DIV, PETSC_VIEWER_STDOUT_SELF);
+
+    //std::cout << "VectorLaplacian = " << std::endl;
+    //MatView(VectorLaplacian, PETSC_VIEWER_STDOUT_SELF);
+
+    // invM_small Not needed since we scale both sides of the equation (= constructed incompressibility)
+    Mat ALaplacian, ALaplacian_h, ADivLaplacian, AF;
+	MatMatMult(DIV_TEMP2, VectorLaplacian, MAT_INITIAL_MATRIX, 1, &ADivLaplacian);
+
+	/*MatMatMult(DIV, VectorLaplacian, MAT_INITIAL_MATRIX, 1, &ADivLaplacian);
+	Mat ADivLaplacian2;
+    Mat DIVT;
+    MatTranspose(DIV, MAT_INITIAL_MATRIX,&DIVT);
+	MatMatMult(VectorLaplacian, DIVT, MAT_INITIAL_MATRIX, 1, &ADivLaplacian2);
+
+	std::cout << "ADivLaplacian = " << std::endl;
+    MatView(ADivLaplacian, PETSC_VIEWER_STDOUT_SELF);
+	std::cout << "ADivLaplacian2 = " << std::endl;
+    MatView(ADivLaplacian2, PETSC_VIEWER_STDOUT_SELF);
+
+	MatAXPY(ADivLaplacian2, -1.0, ADivLaplacian, DIFFERENT_NONZERO_PATTERN);
+
+	PetscScalar Tr;
+	MatGetTrace(ADivLaplacian2,&Tr);
+	std::cout << "Trace = " << Tr << std::endl;
+	MatDestroy(&ADivLaplacian2);
+	MatDestroy(&DIVT);
+*/
+	MatMatMult(DIV_TEMP2, BF1, MAT_INITIAL_MATRIX, 1, &ALaplacian);
+	MatMatMult(DIV_TEMP2, F1, MAT_INITIAL_MATRIX, 1, &AF);
+	MatMatMult(DIV_TEMP2, Identity3, MAT_INITIAL_MATRIX, 1, &ALaplacian_h);
+    MatDestroy(&DIV_TEMP2);
+    MatDestroy(&Identity3);
+    MatDestroy(&VectorLaplacian);
+      //std::cout << "ALaplacian = " << std::endl;
+      //MatView(ALaplacian, PETSC_VIEWER_STDOUT_SELF);
+
+        //std::cout << "BF1 = " << std::endl;
+        //MatView(BF1, PETSC_VIEWER_STDOUT_SELF);
+
+    /*
+    Analytically:
+    div . u = 0 for an incompressible fluid
+    The viscous terms in the momentum equations are du/dt = ... + nu * Delta u
+    When computing the pressure, to ensure the divergende of the velocity stays zero, we compute
+    d div u / dt = 0 = div(... + nu * Delta u)
+    divergence and laplacian operators commute, so div (Delta u) = Delta (div u) = 0
+
+
+    This holds analytically. Numerically the operator DL = DIV*Laplacian is nonzero.
+    The velocity is approximately nonzero.
+
+    We need to include this term in the computation of the new pressure,
+    otherwise the divergence of the velocity becomes nonzero.
+    */
+
+    /// Pass DIV_TEMP2 instead of DIV to compute L infinity norm of divergence
+/*
+    //std::cout << "ADivLaplacian = " << std::endl;
+    //MatView(ADivLaplacian, PETSC_VIEWER_STDOUT_SELF);
+
+
+    // invM_small Not needed since we scale both sides of the equation (= constructed incompressibility)
+    Mat ALaplacian, ALaplacian_h, ADivLaplacian, AF;
+	MatMatMult(DIV, VectorLaplacian, MAT_INITIAL_MATRIX, 1, &ADivLaplacian);
+	///MatMatMult(DIV, VectorLaplacian, MAT_INITIAL_MATRIX, 1, &ADivLaplacian);
+	//PetscScalar Tr;
+	//MatGetTrace(ADivLaplacian,&Tr);
+	//std::cout << "Trace = " << Tr << std::endl;
+
+	MatMatMult(DIV, BF1, MAT_INITIAL_MATRIX, 1, &ALaplacian);
+	MatMatMult(DIV, F1, MAT_INITIAL_MATRIX, 1, &AF);
+	MatMatMult(DIV, Identity3, MAT_INITIAL_MATRIX, 1, &ALaplacian_h);
+    MatDestroy(&DIV_TEMP2);
+    MatDestroy(&Identity3);
+    MatDestroy(&VectorLaplacian);
+*/
+
+    // factor 4 = Number of Variables
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 3*N_Nodes, 3*N_Nodes, 10*6*Np+1+9*Np*Np,  NULL, &A); // Check Factor 10 // Change from Triangles to Quadrilaterals
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, 3*N_Nodes, 3*N_Nodes, 10*6*Np+1+9*Np*Np,  NULL, &B);
+    std::cout << "Global Matrices Preallocated" << std::endl;
+    std::cout << "DeltaT = " << DeltaT << std::endl;
+
+    for (unsigned int i = 0; i < 2*N_Nodes; i++)
+    {
+        double dummy=0;
+        const PetscInt* cols;
+        const PetscScalar* values;
+        PetscInt 	numberOfNonZeros;
+        // grad P^n+1
+        MatGetRow(BF1, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            //if (abs(dummy)>1e-10)
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     2*N_Nodes+cols[j],    -DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(BF1, i, &numberOfNonZeros, &cols, &values);
+        // a
+        MatGetRow(F1, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(B, 	i,    2*N_Nodes+cols[j],    DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(F1, i, &numberOfNonZeros, &cols, &values);
+    }
+    std::cout <<"BF1 done" << std::endl;
+    for (unsigned int i = 0; i < N_Nodes; i++)
+    {
+        double dummy=0;
+        const PetscInt* cols;
+        const PetscScalar* values;
+        PetscInt 	numberOfNonZeros;
+
+        // Fill Diagonals
+
+        // time derivative + rotation
+        MatSetValue(A, i, i, 1.0, ADD_VALUES);
+        MatSetValue(A, i, i, cos(gamma2)/2.0*DeltaT, ADD_VALUES);
+        MatSetValue(A, N_Nodes+i, N_Nodes+i, 1.0, ADD_VALUES);
+        MatSetValue(A, N_Nodes+i, N_Nodes+i, sin(gamma1)/2.0*DeltaT, ADD_VALUES);
+
+        MatSetValue(B, i, i, 1.0, ADD_VALUES);
+        MatSetValue(B, i, i, -cos(gamma2)/2.0*DeltaT, ADD_VALUES);
+        MatSetValue(B, N_Nodes+i, N_Nodes+i, 1.0, ADD_VALUES);
+        MatSetValue(B, N_Nodes+i, N_Nodes+i, -sin(gamma1)/2.0*DeltaT, ADD_VALUES);
+
+        // Viscous terms
+        MatGetRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(A, 	N_Nodes+i,     N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	N_Nodes+i,     N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(Laplacian, i, &numberOfNonZeros, &cols, &values);
+
+        /* // Density terms
+        MatGetRow(D1, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	2*N_Nodes+i,    cols[j],    0.5*DeltaT*dummy*sin(gamma), 	ADD_VALUES);
+                MatSetValue(B, 	2*N_Nodes+i,     cols[j],    -0.5*DeltaT*dummy*sin(gamma), 	ADD_VALUES);
+                MatSetValue(A, 	2*N_Nodes+i,     N_Nodes+cols[j],    0.5*DeltaT*dummy*cos(gamma), 	ADD_VALUES);
+                MatSetValue(B, 	2*N_Nodes+i,     N_Nodes+cols[j],    -0.5*DeltaT*dummy*cos(gamma), 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(D1, i, &numberOfNonZeros, &cols, &values);
+        MatGetRow(D2, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0.0)
+            {
+                MatSetValue(A, 	i,     2*N_Nodes+cols[j],     -0.5*DeltaT*dummy*sin(gamma), 	ADD_VALUES);
+                MatSetValue(B, 	i,     2*N_Nodes+cols[j],     0.5*DeltaT*dummy*sin(gamma), 	ADD_VALUES);
+                MatSetValue(A, 	N_Nodes+i,     2*N_Nodes+cols[j],     -0.5*DeltaT*dummy*cos(gamma), 	ADD_VALUES);
+                MatSetValue(B, 	N_Nodes+i,     2*N_Nodes+cols[j],     0.5*DeltaT*dummy*cos(gamma), 	ADD_VALUES);
+
+                //MatSetValue(A, 	N_Nodes+i,     3*N_Nodes+cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+                //MatSetValue(B, 	N_Nodes+i,     3*N_Nodes+cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(D2, i, &numberOfNonZeros, &cols, &values);
+        */
+        /*
+        MatGetRow(DIV, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            //if (dummy!=0.0)
+            if (abs(dummy)>1e-10)
+            {
+                //MatSetValue(A, 	2*N_Nodes+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                //MatSetValue(B, 	2*N_Nodes+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+
+                //MatSetValue(A, 	3*N_Nodes+i,     cols[j],     -0.5*DeltaT*dummy, 	ADD_VALUES);
+                //MatSetValue(B, 	3*N_Nodes+i,     cols[j],     0.5*DeltaT*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(DIV, i, &numberOfNonZeros, &cols, &values);
+        */
+
+        MatGetRow(ALaplacian_h, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0)
+            {
+                MatSetValue(A, 	2*N_Nodes+i,     cols[j],     -0.5*dummy, 	ADD_VALUES);
+                MatSetValue(B, 	2*N_Nodes+i,     cols[j],     0.5*dummy, 	ADD_VALUES);
+            }
+        }
+        MatRestoreRow(ALaplacian_h, i, &numberOfNonZeros, &cols, &values);
+        // div grad P
+        MatGetRow(ALaplacian, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0)
+            {
+                MatSetValue(A, 	2*N_Nodes+i,     	2*N_Nodes+cols[j],     dummy, 		ADD_VALUES);
+            }
+        }
+        MatRestoreRow(ALaplacian, i, &numberOfNonZeros, &cols, &values);
+
+        MatGetRow(AF, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0)
+            {
+                MatSetValue(B, 	2*N_Nodes+i,     	2*N_Nodes+cols[j],     -dummy, 		ADD_VALUES);
+            }
+        }
+        MatRestoreRow(AF, i, &numberOfNonZeros, &cols, &values);
+
+        MatGetRow(ADivLaplacian, i, &numberOfNonZeros, &cols, &values);
+        for (int j=0;j<numberOfNonZeros;++j)
+        {
+            dummy = (values[j]);
+            if (dummy!=0)
+            {
+                MatSetValue(A, 	2*N_Nodes+i,     	cols[j],     0.5*dummy, 		ADD_VALUES);
+                MatSetValue(B, 	2*N_Nodes+i,     	cols[j],     -0.5*dummy, 		ADD_VALUES);
             }
         }
         MatRestoreRow(ADivLaplacian, i, &numberOfNonZeros, &cols, &values);
@@ -3132,6 +3547,133 @@ extern void compute_InitialCondition_WA(const std::vector<Squares2D> &List_Of_El
 
             //value = Exact_Solution_p_2DWA(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode, Fr);
             VecSetValue(Initial_Condition, 3*N_Nodes + pos + n, value, INSERT_VALUES);
+            //std::cout << "ID = " << ID << ", n = " << n << ", pos = " << pos << ", xCoor[n] = " << xCoor[n] << ", zCoor[n] = " << zCoor[n] << ", p = " << value << std::endl;
+
+            fprintf(f, "%1u \t %u \t %1.16e \t %1.16e \t %1.16e \n", n, pos, xCoor[n], zCoor[n], value);
+        }
+
+    }
+    fclose(f);
+    VecAssemblyBegin(Initial_Condition);
+    VecAssemblyEnd(Initial_Condition);
+    VecAssemblyBegin(Velocity);
+    VecAssemblyEnd(Velocity);
+    VecAssemblyBegin(VecNodes);
+    VecAssemblyEnd(VecNodes);
+    VecAssemblyBegin(VecNodesVel);
+    VecAssemblyEnd(VecNodesVel);
+
+    compute_Divergence_Velocity(Initial_Condition, N_Nodes, DIV);
+    correctInitialProjectionOfVelocity(N_Nodes, Velocity, DIV);
+
+	PetscScalar* XTEMP;
+	VecGetArray(Velocity, &XTEMP);
+    PetscInt ix[2*N_Nodes];
+    for (unsigned int k=0;k<2*N_Nodes; k++)
+    {
+        ix[k] = k;
+    }
+    VecSetValues(Initial_Condition, 2*N_Nodes, ix, XTEMP , INSERT_VALUES);
+	VecRestoreArray(Velocity, &XTEMP);
+    VecAssemblyBegin(Initial_Condition);
+    VecAssemblyEnd(Initial_Condition);
+    compute_Divergence_Velocity(Initial_Condition, N_Nodes, DIV);
+    VecDestroy(&Velocity);
+    /*
+    std::cout << "Forcing" << std::endl;
+    compute_Divergence_Velocity(VecNodes, N_Nodes, DIV);
+    correctInitialProjectionOfVelocity(N_Nodes, VecNodesVel, DIV);
+	PetscScalar* XTEMP2;
+	VecGetArray(VecNodesVel, &XTEMP2);
+    VecSetValues(VecNodes, 2*N_Nodes, ix, XTEMP2, INSERT_VALUES);
+	VecRestoreArray(VecNodesVel, &XTEMP2);
+    VecAssemblyBegin(VecNodes);
+    VecAssemblyEnd(VecNodes);
+    compute_Divergence_Velocity(VecNodes, N_Nodes, DIV);
+    */
+    VecDestroy(&VecNodesVel);
+}
+/*--------------------------------------------------------------------------*/
+extern void compute_InitialCondition_rot_WA(const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const double &rho_0_Deriv, const double &Fr, const double &kxmode, const double &kzmode, Vec &Initial_Condition, Vec &VecNodes, const unsigned int &Number_Of_Elements_Petsc, const unsigned int &Number_Of_TimeSteps_In_One_Period, const unsigned int &N_Petsc, const Mat &DIV)
+{
+    PetscScalar   sigma;
+    sigma = calculate_sigma_2DWA(rho_0_Deriv, kxmode, kzmode, Fr);
+    //PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
+    std::cout << "Computing Initial Condition " << std::endl;
+    // Initial Condition
+    // Size = sum_i Np_i, i = 1 .. Nel
+    Vec VecNodesVel;
+    VecCreateSeq(PETSC_COMM_WORLD, 3*N_Nodes,&Initial_Condition);
+    VecCreateSeq(PETSC_COMM_WORLD, 3*N_Nodes,&VecNodes);
+    VecCreateSeq(PETSC_COMM_WORLD, 2*N_Nodes,&VecNodesVel);
+    Vec Velocity;
+    VecCreateSeq(PETSC_COMM_WORLD, 2*N_Nodes, &Velocity);
+
+    char szFileName[255] = {0};
+
+
+    std::string store_solution = "Solution/Coordinates_n"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+"N"+std::to_string(N_Petsc)+"Ts"+std::to_string(Number_Of_TimeSteps_In_One_Period)+".txt";
+    const char *store_solution_char = store_solution.c_str();
+    //FILE *f = fopen("Solution/Coordinates.txt", "w");
+    FILE *f = fopen(store_solution_char, "w");
+    fprintf(f, "n \t pos \t xCoor \t zCoor \t p value \n");
+    for (auto k = List_Of_Elements.begin(); k < List_Of_Elements.end(); k++)
+    {
+        unsigned int Np = (*k).get_Number_Of_Nodes();
+        unsigned int ID = (*k).getID();
+        unsigned int pos = (*k).getPosition();
+        std::vector<double> xCoor, zCoor;
+        xCoor = (*k).get_node_coordinates_x();
+        zCoor = (*k).get_node_coordinates_y();
+        double t = 0;
+        /*
+        double xleft = 0.0;
+        if (Np > 1)
+        {
+            xleft = 1.0e-12;
+        }
+        else
+        {
+            xleft = 0.1;
+        }
+        */
+        for (unsigned int n = 0; n < Np; n++)
+        {
+            VecSetValue(VecNodesVel, pos + n, 0.0,  INSERT_VALUES);
+            VecSetValue(VecNodesVel, N_Nodes + pos + n, 0.0, INSERT_VALUES);
+            //VecSetValue(VecNodes, pos + n, 0.0,  INSERT_VALUES);
+            //VecSetValue(VecNodes, N_Nodes + pos + n, 0.0, INSERT_VALUES);
+            VecSetValue(VecNodes, pos + n, 1.0,  INSERT_VALUES);
+            VecSetValue(VecNodes, N_Nodes + pos + n, 0, INSERT_VALUES);
+            //std::cout << xCoor[n] << std::endl;
+
+            VecSetValue(VecNodes, 2*N_Nodes + pos + n, 0.0, INSERT_VALUES);
+            /*
+            if (xCoor[n] < xleft)
+            {
+                VecSetValue(VecNodes, 2*N_Nodes + pos + n, sin(2.0*PETSC_PI*zCoor[n]/0.75), INSERT_VALUES);
+            }
+            else
+            {
+                VecSetValue(VecNodes, 2*N_Nodes + pos + n, 0, INSERT_VALUES);
+            }
+            */
+            //VecSetValue(VecNodes, 3*N_Nodes + pos + n, 0, INSERT_VALUES);
+
+
+            double value = 0.0;//-PETSC_PI*sin(PETSC_PI*xCoor[n])*cos(PETSC_PI*zCoor[n]);//Exact_Solution_mx_2DWA(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode, Fr);
+            VecSetValue(Velocity, pos + n, value, INSERT_VALUES);
+            VecSetValue(Initial_Condition, pos + n, value, INSERT_VALUES);
+
+            //value = PETSC_PI*cos(PETSC_PI*xCoor[n])*sin(PETSC_PI*zCoor[n]);//Exact_Solution_mz_2DWA(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode, Fr);
+            VecSetValue(Velocity, N_Nodes+pos + n, value, INSERT_VALUES);
+            VecSetValue(Initial_Condition, N_Nodes + pos + n, value, INSERT_VALUES);
+
+            value = 0.0;//Exact_Solution_r_2DWA(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode, Fr);
+            VecSetValue(Initial_Condition, 2*N_Nodes + pos + n, value, INSERT_VALUES);
+
+            //value = Exact_Solution_p_2DWA(xCoor[n], zCoor[n], t, rho_0_Deriv, sigma, kxmode, kzmode, Fr);
+            //VecSetValue(Initial_Condition, 3*N_Nodes + pos + n, value, INSERT_VALUES);
             //std::cout << "ID = " << ID << ", n = " << n << ", pos = " << pos << ", xCoor[n] = " << xCoor[n] << ", zCoor[n] = " << zCoor[n] << ", p = " << value << std::endl;
 
             fprintf(f, "%1u \t %u \t %1.16e \t %1.16e \t %1.16e \n", n, pos, xCoor[n], zCoor[n], value);
@@ -4085,6 +4627,119 @@ extern void Simulate_EB(const Mat &A, const Mat &B, const Mat &M1_small, const M
     std::cout << "Final   "  ; compute_Divergence_Velocity(Sol, N_Nodes, DIV);
 }
 /*--------------------------------------------------------------------------*/
+extern void Simulate_rot(const Mat &A, const Mat &B, const Mat &M1_small, const Mat &M2_small, const Mat &DIV, const Vec &Initial_Condition, const Vec &VecNodes, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Number_Of_TimeSteps, const double &DeltaT, Vec &Sol, const unsigned int &Number_Of_Variables, const double &F0, const double &omega)
+{
+    double H0 = calculate_Hamiltonian2D_kin(M1_small, Initial_Condition, List_Of_Elements, N_Nodes);
+    std::cout << "Initial Energy = " << std::setprecision(16) << H0 << std::endl;
+
+    std::cout << "Start Simulations " << std::endl;
+
+    KSP ksp;
+    PC pc;
+    KSPCreate(PETSC_COMM_WORLD,&ksp);
+    KSPSetOperators(ksp,A,A);
+    KSPGetPC(ksp,&pc);
+    KSPSetUp(ksp);
+    KSPSetTolerances(ksp, 1e-14, 1e-14, 1e30, PETSC_DEFAULT);
+
+    //KSPSetType(ksp,KSPPREONLY);
+    //KSPSetType(ksp,KSPCG);
+    KSPSetType(ksp,KSPGMRES);
+    //KSPSetType(ksp,KSPBCGS);
+    KSPSetInitialGuessNonzero(ksp,PETSC_TRUE);
+
+    KSPGetPC(ksp,&pc);
+    //PCSetType(pc,PCLU);
+    PCSetType(pc,PCILU);
+    //PCSetType(pc,PCNONE);
+    //PCSetType(pc,PCSOR);
+
+    KSPSetFromOptions(ksp);
+
+    Vec QX;
+    VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &Sol);
+    VecCreateSeq(PETSC_COMM_WORLD, Number_Of_Variables*N_Nodes, &QX);
+    VecCopy(Initial_Condition, Sol);
+
+    char szFileName[255] = {0};
+        PetscViewer viewer2;
+        sprintf(szFileName, "Solution/solution%d.txt", 0);
+        PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
+        VecView(Sol, viewer2);
+        PetscViewerDestroy(&viewer2);
+    double H1 = H0;
+
+    //PetscPrintf(PETSC_COMM_SELF,"Size Global Matrices %6.4e\n",(double)sigma);
+    // MatView(A, viewer_info);
+
+    //VecView(VecNodes, PETSC_VIEWER_STDOUT_SELF);
+    FILE *f = fopen("Solution/Energy.txt", "w");
+    //fprintf(f, "%1.16e \t %1.16e \t %1.16e\n", 0.0, H0, M0);
+    // Solve Linear System
+    std::cout << "Start Time Stepping" << std::endl;
+    double time = 0.0;
+    std::cout << "Forcing Amplitude = " << F0 << std::endl;
+
+
+    double Hold = H0;
+
+    PetscInt ix[N_Nodes];
+    for (unsigned int k=0;k<N_Nodes; k++)
+        ix[k] = 2*N_Nodes+k;
+
+
+    for (unsigned int t = 0; t < Number_Of_TimeSteps; t++)
+    {
+        time = (t)*DeltaT;//(t+1)*DeltaT;
+        fprintf(f, "%1.16e \t %1.16e \n", time, H1);
+
+
+        // Compute the Forcing term and replace the pressure variable from the previous time step (since these are not used)
+        // Forcing at half time Step
+        PetscScalar Forcing = 0.0;
+        if (t <= (Number_Of_TimeSteps)) //3.0/4.0*
+            { Forcing = F0*sin(omega*(time+DeltaT/2.0));}
+        PetscScalar Fx[N_Nodes];
+        for (unsigned int k=0;k<N_Nodes; k++)
+            {Fx[k] = Forcing;}
+        VecSetValues(Sol,N_Nodes,ix,Fx,INSERT_VALUES);
+        VecAssemblyBegin(Sol);
+        VecAssemblyEnd(Sol);
+
+        MatMult(B, Sol, QX);
+        KSPSolve(ksp, QX, Sol);
+
+        H1 = calculate_Hamiltonian2D_kin(M1_small, Sol, List_Of_Elements, N_Nodes);
+
+        //std::cout << "Energy Diff= " << std::setprecision(16) << H1-Hold <<std::endl;
+        Hold = H1;
+        //double MaxV = compute_Max_Velocity(Sol, N_Nodes);
+        //std::cout << floor(t/100) << ": Max Velocity mean = " << MaxV << " = "  << MaxV*56.5 << " [mm/s] " << std::endl;
+       // std::cout << "QX = " << std::endl;
+        //VecView(QX, PETSC_VIEWER_STDOUT_SELF);
+        //std::cout << "Solution = " << std::endl;
+        //VecView(Sol, PETSC_VIEWER_STDOUT_SELF);
+        PetscViewer viewer2;
+        sprintf(szFileName, "Solution/solution%d.txt", t+1);
+        PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
+        VecView(Sol, viewer2);
+        PetscViewerDestroy(&viewer2);
+        //compute_Divergence_Velocity(Sol, N_Nodes, DIV);
+
+    }
+    fprintf(f, "%1.16e \t %1.16e\n", time, H1);
+    fclose(f);
+    std::cout << "Final Time = " << time << std::endl;
+    std::cout << "End Time Stepping" << std::endl;
+    KSPDestroy(&ksp);
+    VecDestroy(&QX);
+    std::cout << "Initial Energy    = " << std::setprecision(16) << H0 << std::endl;
+    std::cout << "Final Energy      = " << std::setprecision(16) << H1 << std::endl;
+    std::cout << "Difference Energy = " << std::setprecision(16) << H1-H0 << std::endl;
+    std::cout << "Initial " ; compute_Divergence_Velocity(Initial_Condition, N_Nodes, DIV);
+    std::cout << "Final   "  ; compute_Divergence_Velocity(Sol, N_Nodes, DIV);
+}
+/*--------------------------------------------------------------------------*/
 extern Mat MassMatrix_local(const Mat &V)
 {
     Mat Product;
@@ -4246,6 +4901,43 @@ extern double calculate_Hamiltonian2D_IC(const Mat &M1, const Mat &M2, const Vec
 
         MatDestroy(&M1_Elemental);
         MatDestroy(&M2_Elemental);
+        ISDestroy(&isrow);
+    }
+    VecRestoreArray(Solution, &XTemp);
+    return H;
+}
+/*--------------------------------------------------------------------------*/
+extern double calculate_Hamiltonian2D_kin(const Mat &M1, const Vec &Solution, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes)
+{
+    double H = 0.0;
+    PetscScalar *XTemp;
+    VecGetArray(Solution, &XTemp);
+
+    for (auto k = List_Of_Elements.begin(); k < List_Of_Elements.end(); k++)
+    {
+        unsigned int Np = (*k).get_Number_Of_Nodes();
+        unsigned int pos = (*k).getPosition();
+
+        // Get Submatrix from M1
+        Mat M1_Elemental;
+        IS isrow;
+        ISCreateStride(PETSC_COMM_WORLD, Np, pos, 1, &isrow);
+        MatGetSubMatrix(M1,isrow, isrow,MAT_INITIAL_MATRIX, &M1_Elemental);
+
+        for (unsigned int i = 0; i < Np; i++)
+        {
+            for (unsigned int j = 0; j < Np; j++)
+            {
+                double massij1;
+                const PetscInt idxn[1] = {i};
+
+                MatGetValues(M1_Elemental, 1, idxn, 1,  idxn, &massij1);
+                H += 0.5*massij1*(XTemp[pos+i]*XTemp[pos+j] + XTemp[N_Nodes+pos+i]*XTemp[N_Nodes+pos+j]); // Kinetic Energy
+
+            }
+        }
+
+        MatDestroy(&M1_Elemental);
         ISDestroy(&isrow);
     }
     VecRestoreArray(Solution, &XTemp);

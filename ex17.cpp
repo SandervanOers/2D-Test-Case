@@ -22,19 +22,16 @@ int main(int argc,char **args)
 
     auto t1 = std::chrono::high_resolution_clock::now();
     // Read in options from command line
-    // Bucket
     PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=100, Method=1; // Method is meant for time integrator: Midpoint vs Stormer-Verlet vs Third Order
     PetscInt   Number_Of_Periods = 64; // 48 periods forced, 16 decay
     PetscInt   kmode=1;
-    //PetscScalar N2 = (0.37*5.57)*(0.37*5.57);
     PetscScalar N2 = (0.37*5.7558)*(0.37*5.7558);
     PetscScalar   theta = 0.5;
     PetscInt    N_Petsc = 0, N_Q=0;
     PetscScalar nu = 1;
     PetscInt    Dimensions = 2;
     PetscScalar F0 = 3.4*pow(10.0,-6.0);
-    //PetscScalar omega = 0.14*5.57;//0.16*5.57;
-    PetscScalar omega = 0.14*5.7558;//0.16*5.57;
+    PetscScalar omega = 0.16*5.7558;
     PetscScalar Fr = 1;
     PetscScalar Re = 1.8*pow(10.0,4.0);
     PetscScalar gamma = 0.0;// PETSC_PI/20.0;
@@ -104,9 +101,9 @@ int main(int argc,char **args)
     std::string mesh_name;
 
     //mesh_name = mesh_name_trapezoid(Number_Of_Elements_Petsc);
-    mesh_name = "Mesh/Trapezoid_Sensor_5mm.msh";
+    //mesh_name = "Mesh/Trapezoid_Sensor_5mm.msh";
     //mesh_name = "Mesh/Trapezoid_Sensor_2p5mm.msh";
-    //mesh_name = "Mesh/square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh";
+    mesh_name = "Mesh/square_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh";
     //mesh_name = "Mesh/Bucket_TopRight_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
     //mesh_name = "Mesh/Bucket_TopLeft_"+std::to_string(Number_Of_Elements_Petsc)+".msh";
     //mesh_name = "Mesh/bucket_"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+".msh";
@@ -122,7 +119,8 @@ int main(int argc,char **args)
     //load_msh_mesh2D(mesh_name, VX, VY, EToV, List_Of_Vertices, List_Of_Elements, element_num, node_num);
     load_msh_mesh2D(mesh_name, EToV, List_Of_Vertices, List_Of_Elements, element_num, node_num);
 
-    //print(List_Of_Vertices);
+    print(List_Of_Vertices);
+    print(List_Of_Boundaries);
 
 
     /*
@@ -192,7 +190,7 @@ int main(int argc,char **args)
 
 
     //sigma = omega;
-    PetscScalar DeltaT = 2.0*PETSC_PI/(double)Number_Of_TimeSteps_In_One_Period/sigma;
+    PetscScalar DeltaT = 2.0*PETSC_PI/(double)Number_Of_TimeSteps_In_One_Period;//sigma;
 
 
     unsigned int Number_Of_TimeSteps = Number_Of_TimeSteps_In_One_Period*Number_Of_Periods;
@@ -229,10 +227,10 @@ int main(int argc,char **args)
 
     //std::cout << "Store Global Matrices" << std::endl;
     /// TO DO
-    //std::cout << "A = " << std::endl;
-    //MatView(A, viewer_dense);
-    //std::cout << "B = " << std::endl;
-    //MatView(B, viewer_dense);
+    std::cout << "A = " << std::endl;
+    MatView(A, viewer_dense);
+    std::cout << "B = " << std::endl;
+    MatView(B, viewer_dense);
            // PetscViewer    viewerstore;
             //PetscViewerPushFormat(viewerstore,PETSC_VIEWER_ASCII_MATLAB);
            // std::string name = "A_N2_h16x16.dat";
@@ -260,6 +258,8 @@ int main(int argc,char **args)
     //compute_InitialCondition_EB_Bucket(List_Of_Elements, N_Nodes, rho_0_Deriv, Fr, kxmode, kzmode, Initial_Condition, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, DIV);
 
 
+    std::cout << "VecNodes = " << std::endl;
+    VecView(VecNodes, viewer_dense);
     Vec Sol;
     //Number_Of_TimeSteps = 10*Number_Of_TimeSteps_In_One_Period;
     //Simulate_WA_Forced_Continuous(A, B, M1_small, M2_small, DIV, Initial_Condition, List_Of_Elements, N_Nodes, Number_Of_TimeSteps, DeltaT, Sol, 4, F0, omega);
@@ -360,5 +360,3 @@ int main(int argc,char **args)
     PetscFinalize();
     return 1;
 }
-
-
