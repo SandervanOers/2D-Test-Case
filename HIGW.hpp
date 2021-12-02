@@ -55,7 +55,6 @@ void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<s
 /*--------------------------------------------------------------------------*/
 //void Calculate_Jacobian_Cuboid(const Cuboid &Element, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const double &r_p, const double &s_p, const double &t_p, double &det_J, double &drdx, double &drdy, double &drdz, double &dsdx, double &dsdy, double &dsdz, double &dtdx, double &dtdy, double &dtdz, double &x, double &y, double &z);
 /*--------------------------------------------------------------------------*/
-//void create_Matrices_Cuboids(const std::vector<VertexCoordinates3D> &List_Of_Vertices, const std::vector<InternalBoundariesCuboid> &List_Of_Boundaries, const std::vector<Cuboid> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Nx_e, const unsigned int &Ny_e, const unsigned int &Nz_e, const unsigned int &N_Q, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat);
 /*--------------------------------------------------------------------------*/
 void printFullMatrixInfo(Mat& matrix, const std::string& name);
 /*--------------------------------------------------------------------------*/
@@ -98,5 +97,7 @@ extern double calculate_Hamiltonian2D_kin(const Mat &M1, const Vec &Solution, co
 extern void Simulate_rot(const Mat &A, const Mat &B, const Mat &M1_small, const Mat &M2_small, const Mat &DIV, const Vec &Initial_Condition, const Vec &VecNodes, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Number_Of_TimeSteps, const double &DeltaT, Vec &Sol, const unsigned int &Number_Of_Variables, const double &F0, const double &omega);
 /*--------------------------------------------------------------------------*/
 extern void compute_InitialCondition_rot_WA(const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const double &rho_0_Deriv, const double &Fr, const double &kxmode, const double &kzmode, Vec &Initial_Condition, Vec &VecNodes, const unsigned int &Number_Of_Elements_Petsc, const unsigned int &Number_Of_TimeSteps_In_One_Period, const unsigned int &N_Petsc, const Mat &DIV);
+/*--------------------------------------------------------------------------*/
+extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries, const std::vector<std::unique_ptr<Element>> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Nx_e, const unsigned int &Ny_e, const unsigned int &Nz_e, const unsigned int &N_Q, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat);
 /*--------------------------------------------------------------------------*/
 #endif

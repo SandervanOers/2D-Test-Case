@@ -2,7 +2,6 @@
 /*--------------------------------------------------------------------------*/
 void load_msh_mesh(const std::string &mesh_name, Mat &EToV, std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, std::vector<std::unique_ptr<Element>> &List_Of_Elements, int &element_num,  int &node_num)
 {
-
       int *element_node;
       int element_order;
       std::string gmsh_filename = mesh_name;
@@ -179,6 +178,9 @@ void load_msh_mesh(const std::string &mesh_name, Mat &EToV, std::vector<std::uni
     //
       delete[] element_node;
       delete[] node_x;
+
+      // Check the ordering of the vertices. If right-handed -> jacobian is always positive
+      //Calculate_Jacobian_RectangularElements(List_Of_Elements, List_Of_Vertices);
 
 
 }
@@ -577,6 +579,277 @@ void load_msh_mesh2D(const std::string &mesh_name, Mat &EToV, std::vector<std::u
   ///
     }
 /*--------------------------------------------------------------------------*/
+void Connect(const Mat &EToV, const unsigned int &Number_Of_Elements, const unsigned int &Number_Of_Vertices, Mat &EToE, Mat &EToF, std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries)
+{
+
+    unsigned int Nfaces;
+    unsigned int Total_Faces;
+    unsigned int m =1;
+    switch(m)
+    {
+          case 1:
+          {
+            Nfaces = 2;
+            Total_Faces = Nfaces*Number_Of_Elements;
+
+            break;
+          }
+          case 2:
+          {
+            Nfaces = 4;
+            Total_Faces = Nfaces*Number_Of_Elements;
+
+            break;
+          }
+          case 3:
+          {
+            Nfaces = 6;
+            Total_Faces = Nfaces*Number_Of_Elements;
+
+            break;
+          }
+          default:
+              std::cout << "Something went wrong in the connection of the boundaries" << std::endl;
+        }
+}
+/*--------------------------------------------------------------------------*/
+void Connect_3D(const Mat &EToV, const unsigned int &Number_Of_Elements, const unsigned int &Number_Of_Vertices, Mat &EToE, Mat &EToF, std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries)
+{
+  unsigned int Nfaces = 6;
+  unsigned int Total_Faces = Nfaces*Number_Of_Elements;
+  MatCreateSeqDense(PETSC_COMM_WORLD, Number_Of_Elements, Nfaces, NULL, &EToE);
+  MatCreateSeqDense(PETSC_COMM_WORLD, Number_Of_Elements, Nfaces, NULL, &EToF);
+
+  PetscInt ir[1]={0};
+   // Store 1 .. 6 (=Nfaces) in each row of EtoF
+  PetscInt array_if[Nfaces];
+  PetscScalar iv_f[Nfaces];
+  for (PetscInt k=0;k<Nfaces; k++)
+  {
+      array_if[k] = k;
+      iv_f[k] = k;
+  }
+  for (PetscInt i=0; i<Number_Of_Elements; i++)
+  {
+      ir[0] = i;
+      MatSetValues(EToF, 1, ir, Nfaces, array_if, iv_f, INSERT_VALUES);
+  }
+
+   // Store 1 .. K in each column of EtoE
+  PetscInt array_ie[Number_Of_Elements];
+  PetscScalar iv[Number_Of_Elements];
+  for (PetscInt k=0;k<Number_Of_Elements; k++)
+  {
+      array_ie[k] = k;
+      iv[k] = k;
+  }
+  for (PetscInt i=0; i<Nfaces; i++)
+  {
+      ir[0] = i;
+      MatSetValues(EToE, Number_Of_Elements, array_ie, 1, ir, iv, INSERT_VALUES);
+  }
+
+  MatAssemblyBegin(EToF, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(EToF,   MAT_FINAL_ASSEMBLY);
+  MatAssemblyBegin(EToE, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(EToE,   MAT_FINAL_ASSEMBLY);
+
+  PetscInt sk = 0;
+  PetscInt ic[4]={0};
+  PetscInt i_insert[4]={0, 1, 2, 3};
+  // uniquely number each set of four faces by their node numbers
+  std::vector<std::vector<unsigned int>> spNodetoNode;
+
+  for (unsigned int f=0; f<Nfaces; f++)
+  {
+      if (f == 0)
+      {
+          ic[0] = 0;
+          ic[1] = 1;
+          ic[2] = 2;
+          ic[3] = 3;
+      }
+      else if (f == 1)
+      {
+          ic[0] = 4;
+          ic[1] = 5;
+          ic[2] = 6;
+          ic[3] = 7;
+      }
+      else if (f == 2)
+      {
+          ic[0] = 0;
+          ic[1] = 4;
+          ic[2] = 5;
+          ic[3] = 1;
+      }
+      else if (f == 3)
+      {
+          ic[0] = 3;
+          ic[1] = 7;
+          ic[2] = 6;
+          ic[3] = 2;
+      }
+      else if (f == 4)
+      {
+          //ic[0] = 0;
+          //ic[1] = 4;
+          //ic[2] = 7;
+          //ic[3] = 3;
+          ic[0] = 0;
+          ic[1] = 3;
+          ic[2] = 7;
+          ic[3] = 4;
+      }
+      else if (f == 5)
+      {
+          //ic[0] = 1;
+          //ic[1] = 5;
+          //ic[2] = 6;
+          //ic[3] = 2;
+          ic[0] = 1;
+          ic[1] = 2;
+          ic[2] = 6;
+          ic[3] = 5;
+      }
+      for (unsigned int k=0; k<Number_Of_Elements; k++)
+      {
+          //ir[0] = sk;
+          const PetscScalar *vals;
+          MatGetRow(EToV, k, NULL, NULL, &vals);
+          // We do not subtract one
+          PetscScalar v[4] = {vals[ic[0]], vals[ic[1]], vals[ic[2]], vals[ic[3]]};
+          std::sort(std::begin(v), std::end(v) );
+          unsigned int id = v[0]*Number_Of_Vertices*Number_Of_Vertices*Number_Of_Vertices+v[1]*Number_Of_Vertices*Number_Of_Vertices+v[2]*Number_Of_Vertices+v[3];
+          //std::cout << id << std::endl;
+          MatRestoreRow(EToV, k, NULL, NULL, &vals);
+          std::vector<unsigned int> Row {id, sk, array_ie[sk%Number_Of_Elements], array_if[sk/Number_Of_Elements]};
+          spNodetoNode.push_back(Row);
+          // [ id sk EtoE_a[sk] EtoF_a[sk]]
+          sk++;
+      }
+  }
+  sortrows(spNodetoNode,0);
+
+  std::cout << "spNodetoNode sorted = " << std::endl;
+  for ( const std::vector<unsigned int> &v : spNodetoNode )
+  {
+      for (unsigned int x : v )
+      {
+          std::cout << x << " " ;
+      }
+      std::cout << std::endl;
+  }
+
+  std::vector<unsigned int> indices;
+  //std::cout << "indices = " << std::endl;
+  int Xold = -1;
+  unsigned int Xnew, k = 0;
+  for ( const std::vector<unsigned int> &v : spNodetoNode )
+  {
+     Xnew = v[0];
+     if (k > 0)
+     {
+          if (Xold == Xnew)
+          {
+              indices.push_back(k-1);
+          }
+          Xold = Xnew;
+     }
+     k++;
+  }
+  //for (unsigned int x : indices ) std::cout << x << ' ';
+  //std::cout << std::endl;
+
+  std::vector<unsigned int> matchL2;
+  std::vector<unsigned int> matchR3;
+  std::vector<unsigned int> matchR4;
+  for (unsigned int kk = 0 ; kk < indices.size(); kk++)
+  {
+      matchL2.push_back(spNodetoNode[indices[kk]][1]);
+      matchR3.push_back(spNodetoNode[indices[kk]+1][2]);
+      matchR4.push_back(spNodetoNode[indices[kk]+1][3]);
+  }
+  for (unsigned int kk = 0 ; kk < indices.size(); kk++)
+  {
+
+      matchL2.push_back(spNodetoNode[indices[kk]+1][1]);
+      matchR3.push_back(spNodetoNode[indices[kk]][2]);
+      matchR4.push_back(spNodetoNode[indices[kk]][3]);
+  }
+  /*
+  std::cout << "matchL2 = " << std::endl;
+  for(const auto& value: matchL2) {
+  std::cout << value << "\n";
+  }
+  std::cout << std::endl;
+  std::cout << "matchR3 = " << std::endl;
+  for(const auto& value: matchR3) {
+  std::cout << value << "\n";
+  }
+  std::cout << std::endl;
+  std::cout << "matchR4 = " << std::endl;
+  for(const auto& value: matchR4) {
+  std::cout << value << "\n";
+  }
+  std::cout << std::endl;
+  */
+  for (unsigned int kk = 0 ; kk < matchL2.size(); kk++)
+  {
+      PetscInt row, col;
+      row = ((int)matchL2[kk])%((int)Number_Of_Elements);
+      col = floor(((int)matchL2[kk])/(int)Number_Of_Elements);
+      MatSetValue(EToE, row, col, matchR3[kk], INSERT_VALUES);
+      MatSetValue(EToF, row, col, matchR4[kk], INSERT_VALUES);
+  }
+  MatAssemblyBegin(EToF, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(EToF,   MAT_FINAL_ASSEMBLY);
+  MatAssemblyBegin(EToE, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(EToE,   MAT_FINAL_ASSEMBLY);
+
+  create_ListInternalBoundaries(Number_Of_Elements, EToE, EToF, List_Of_Boundaries);
+
+
+}
+/*--------------------------------------------------------------------------*/
+void create_ListInternalBoundaries(const unsigned int &Number_Of_Elements, Mat &EToE, Mat &EToF, std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries)
+{
+    unsigned int Nfaces = 6;
+    unsigned int TotalFaces = Nfaces * Number_Of_Elements;
+
+    std::set<BoundaryInfo, decltype(compare_BoundaryInfo)> SetType(compare_BoundaryInfo);
+    for (unsigned int i = 0; i < Number_Of_Elements; i++)
+    {
+        const PetscScalar *EToE_row, *EToF_row;
+        MatGetRow(EToE, i, NULL, NULL, &EToE_row);
+        MatGetRow(EToF, i, NULL, NULL, &EToF_row);
+        for (unsigned int j = 0; j < Nfaces; j++)
+        {
+            if (i==EToE_row[j])
+            {
+                // External Face
+            }
+            else
+            {
+                // Internal Face
+                BoundaryInfo BI(i, EToE_row[j], j, EToF_row[j]);
+                SetType.emplace(BI);
+            }
+        }
+        MatRestoreRow(EToE, i, NULL, NULL, &EToE_row);
+        MatRestoreRow(EToF, i, NULL, NULL, &EToF_row);
+    }
+    unsigned int ID_Boundary = 0;
+    for(const auto& it: SetType)
+    {
+        List_Of_Boundaries.push_back(std::make_unique<Boundary3D>(ID_Boundary, it.left, it.right, it.faceleft, it.faceright));
+        ID_Boundary++;
+    }
+
+}
+/*--------------------------------------------------------------------------*/
+
+
 /*void Connect3D(const Mat &EToV, const unsigned int &Number_Of_Elements, const unsigned int &Number_Of_Vertices, Mat &EToE, Mat &EToF, std::vector<InternalBoundariesCuboid> &List_Of_Boundaries)
 {
     unsigned int Nfaces = 6;
@@ -985,35 +1258,38 @@ void Connect2D(const Mat &EToV, const unsigned int &Number_Of_Elements, const un
 
 }
 /*--------------------------------------------------------------------------*/
-/*void Calculate_Jacobian_RectangularCuboid(std::vector<Cuboid> &List_Of_Elements, const std::vector<VertexCoordinates3D> &List_Of_Vertices)
+void Calculate_Jacobian_RectangularElements(std::vector<std::unique_ptr<Element>> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices)
 {
+
+    // only for 3D Cuboids
+
     // Assumes Rectangular Cuboids => J is constant
     for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
     {
-        double x0 = List_Of_Vertices[(*i).getVertex_V1()].getxCoordinate();
-        double y0 = List_Of_Vertices[(*i).getVertex_V1()].getyCoordinate();
-        double z0 = List_Of_Vertices[(*i).getVertex_V1()].getzCoordinate();
-        double x1 = List_Of_Vertices[(*i).getVertex_V2()].getxCoordinate();
-        double y1 = List_Of_Vertices[(*i).getVertex_V2()].getyCoordinate();
-        double z1 = List_Of_Vertices[(*i).getVertex_V2()].getzCoordinate();
-        double x2 = List_Of_Vertices[(*i).getVertex_V3()].getxCoordinate();
-        double y2 = List_Of_Vertices[(*i).getVertex_V3()].getyCoordinate();
-        double z2 = List_Of_Vertices[(*i).getVertex_V3()].getzCoordinate();
-        double x3 = List_Of_Vertices[(*i).getVertex_V4()].getxCoordinate();
-        double y3 = List_Of_Vertices[(*i).getVertex_V4()].getyCoordinate();
-        double z3 = List_Of_Vertices[(*i).getVertex_V4()].getzCoordinate();
-        double x4 = List_Of_Vertices[(*i).getVertex_V5()].getxCoordinate();
-        double y4 = List_Of_Vertices[(*i).getVertex_V5()].getyCoordinate();
-        double z4 = List_Of_Vertices[(*i).getVertex_V5()].getzCoordinate();
-        double x5 = List_Of_Vertices[(*i).getVertex_V6()].getxCoordinate();
-        double y5 = List_Of_Vertices[(*i).getVertex_V6()].getyCoordinate();
-        double z5 = List_Of_Vertices[(*i).getVertex_V6()].getzCoordinate();
-        double x6 = List_Of_Vertices[(*i).getVertex_V7()].getxCoordinate();
-        double y6 = List_Of_Vertices[(*i).getVertex_V7()].getyCoordinate();
-        double z6 = List_Of_Vertices[(*i).getVertex_V7()].getzCoordinate();
-        double x7 = List_Of_Vertices[(*i).getVertex_V8()].getxCoordinate();
-        double y7 = List_Of_Vertices[(*i).getVertex_V8()].getyCoordinate();
-        double z7 = List_Of_Vertices[(*i).getVertex_V8()].getzCoordinate();
+        double x0 = List_Of_Vertices[(*i)->getVertex_V1()]->getxCoordinate();
+        double y0 = List_Of_Vertices[(*i)->getVertex_V1()]->getyCoordinate();
+        double z0 = List_Of_Vertices[(*i)->getVertex_V1()]->getzCoordinate();
+        double x1 = List_Of_Vertices[(*i)->getVertex_V2()]->getxCoordinate();
+        double y1 = List_Of_Vertices[(*i)->getVertex_V2()]->getyCoordinate();
+        double z1 = List_Of_Vertices[(*i)->getVertex_V2()]->getzCoordinate();
+        double x2 = List_Of_Vertices[(*i)->getVertex_V3()]->getxCoordinate();
+        double y2 = List_Of_Vertices[(*i)->getVertex_V3()]->getyCoordinate();
+        double z2 = List_Of_Vertices[(*i)->getVertex_V3()]->getzCoordinate();
+        double x3 = List_Of_Vertices[(*i)->getVertex_V4()]->getxCoordinate();
+        double y3 = List_Of_Vertices[(*i)->getVertex_V4()]->getyCoordinate();
+        double z3 = List_Of_Vertices[(*i)->getVertex_V4()]->getzCoordinate();
+        double x4 = List_Of_Vertices[(*i)->getVertex_V5()]->getxCoordinate();
+        double y4 = List_Of_Vertices[(*i)->getVertex_V5()]->getyCoordinate();
+        double z4 = List_Of_Vertices[(*i)->getVertex_V5()]->getzCoordinate();
+        double x5 = List_Of_Vertices[(*i)->getVertex_V6()]->getxCoordinate();
+        double y5 = List_Of_Vertices[(*i)->getVertex_V6()]->getyCoordinate();
+        double z5 = List_Of_Vertices[(*i)->getVertex_V6()]->getzCoordinate();
+        double x6 = List_Of_Vertices[(*i)->getVertex_V7()]->getxCoordinate();
+        double y6 = List_Of_Vertices[(*i)->getVertex_V7()]->getyCoordinate();
+        double z6 = List_Of_Vertices[(*i)->getVertex_V7()]->getzCoordinate();
+        double x7 = List_Of_Vertices[(*i)->getVertex_V8()]->getxCoordinate();
+        double y7 = List_Of_Vertices[(*i)->getVertex_V8()]->getyCoordinate();
+        double z7 = List_Of_Vertices[(*i)->getVertex_V8()]->getzCoordinate();
 
 
         double dxdr = (-x0+x1+x2-x3-x4+x5+x6-x7)/8.0;
@@ -1029,9 +1305,9 @@ void Connect2D(const Mat &EToV, const unsigned int &Number_Of_Elements, const un
 
         double det_Jacobian = dzdt*(dxdr*dyds-dxds*dydr)-dzds*(dxdt*dydr-dxdr*dydt)+dzdr*(dxds*dydt-dxdt*dyds);
 
-        std::cout << "Element " << (*i).getID() << ", det J = " << det_Jacobian << std::endl;
+        std::cout << "Element " << (*i)->getID() << ", det J = " << det_Jacobian << std::endl;
     }
-}*/
+}
 /*--------------------------------------------------------------------------*/
 void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices)
 {
@@ -1299,25 +1575,25 @@ void set_Order_Polynomials_Uniform(std::vector<Squares2D> &List_Of_Elements2D, c
     }
 }
 /*--------------------------------------------------------------------------*/
-void set_Order_Polynomials_Uniform(std::vector<Cuboid> &List_Of_Elements, const unsigned int &Nx, const unsigned int &Ny, const unsigned int &Nz)
+void set_Order_Polynomials_Uniform(std::vector<std::unique_ptr<Element>> &List_Of_Elements, const unsigned int &Nx, const unsigned int &Ny, const unsigned int &Nz)
 {
     for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
     {
-        (*i).set_Order_Of_Polynomials_x(Nx); //(rand() % 3) + 1
-        (*i).set_Order_Of_Polynomials_y(Ny); //(rand() % 3) + 1
-        (*i).set_Order_Of_Polynomials_z(Nz); //(rand() % 3) + 1
+        (*i)->set_Order_Of_Polynomials_x(Nx); //(rand() % 3) + 1
+        (*i)->set_Order_Of_Polynomials_y(Ny); //(rand() % 3) + 1
+        (*i)->set_Order_Of_Polynomials_z(Nz); //(rand() % 3) + 1
         unsigned int Nnodes = (Nx+1)*(Ny+1)*(Nz+1);
-        (*i).set_Number_Of_Nodes(Nnodes);
+        (*i)->set_Number_Of_Nodes(Nnodes);
     }
 }
 /*--------------------------------------------------------------------------*/
-extern unsigned int get_Number_Of_Nodes(std::vector<Cuboid> &List_Of_Elements)
+extern unsigned int get_Number_Of_Nodes(std::vector<std::unique_ptr<Element>> &List_Of_Elements)
 {
     unsigned int Number_Of_Nodes = 0;
     for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
     {
-        (*i).set_pos(Number_Of_Nodes);
-        Number_Of_Nodes += (*i).get_Number_Of_Nodes();
+        (*i)->set_pos(Number_Of_Nodes);
+        Number_Of_Nodes += (*i)->get_Number_Of_Nodes();
     }
     return Number_Of_Nodes;
 }

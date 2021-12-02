@@ -12,6 +12,8 @@ void printFullMatrixInfo(Mat& matrix, const std::string& name)
 	printf("N = %d, N = %d, block_size = %d, memory = %u, assemblies = %d, mallocs = %d, matrix nonzeros (SeqBAIJ format) = %d, allocated nonzeros= %d\n", m, n, (int)info.block_size, (unsigned int)info.memory, (int)info.assemblies, (int)info.mallocs,(int)info.nz_used,(int)info.nz_allocated);
 }
 /*--------------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------------*/
 //void create_Matrices_Quads_EB(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const std::vector<InternalBoundariesSquares2D> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
 void create_Matrices_Quads_EB(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries, const std::vector<Squares2D> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &N, const unsigned int &N_Q, const double &rho_0_Deriv, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
 {
@@ -386,7 +388,7 @@ void create_Matrices_Quads_EB(const std::vector<std::unique_ptr<Vertex>> &List_O
 
 }
 /*--------------------------------------------------------------------------*/
-/*void create_Matrices_Cuboids(const std::vector<VertexCoordinates3D> &List_Of_Vertices, const std::vector<InternalBoundariesCuboid> &List_Of_Boundaries, const std::vector<Cuboid> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Nx_e, const unsigned int &Ny_e, const unsigned int &Nz_e, const unsigned int &N_Q, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
+extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries, const std::vector<std::unique_ptr<Element>> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Nx_e, const unsigned int &Ny_e, const unsigned int &Nz_e, const unsigned int &N_Q, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
 {
     // estimate the number of nonzeros
     double N = std::max({Nx_e,Ny_e,Nz_e});
@@ -403,15 +405,16 @@ void create_Matrices_Quads_EB(const std::vector<std::unique_ptr<Vertex>> &List_O
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 3*N_Nodes, 3*N_Nodes, 3*Np, NULL, &M2);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &NDerivMat);
 
+
     std::cout << "Start Elemental Calculations " << std::endl;
     for (auto e = List_Of_Elements.begin(); e < List_Of_Elements.end(); e++)
     {
-        unsigned int Np = (*e).get_Number_Of_Nodes();
-        unsigned int pos = (*e).get_pos();
+        unsigned int Np = (*e)->get_Number_Of_Nodes();
+        unsigned int pos = (*e)->get_pos();
 
-        unsigned int Nx = (*e).get_Order_Of_Polynomials_x();
-        unsigned int Ny = (*e).get_Order_Of_Polynomials_y();
-        unsigned int Nz = (*e).get_Order_Of_Polynomials_z();
+        unsigned int Nx = (*e)->get_Order_Of_Polynomials_x();
+        unsigned int Ny = (*e)->get_Order_Of_Polynomials_y();
+        unsigned int Nz = (*e)->get_Order_Of_Polynomials_z();
 
         unsigned int Order_Polynomials = std::max({Nx,Ny,Nz});
 
@@ -424,6 +427,7 @@ void create_Matrices_Quads_EB(const std::vector<std::unique_ptr<Vertex>> &List_O
             in[n] = n+pos;
         }
 
+        /*
         Mat M_Elemental;
         Mat invM_Elemental;
         MatCreateSeqAIJ(PETSC_COMM_WORLD, Np, Np, Np, NULL, &M_Elemental);
@@ -577,6 +581,8 @@ void create_Matrices_Quads_EB(const std::vector<std::unique_ptr<Vertex>> &List_O
         MatDestroy(&invM_Elemental);
                     /// Order 5, 9, 13, 17 give a nonzero difference
                     /// Independent of Order_Gaussian_Quadrature
+
+                    */
     }
     MatAssemblyBegin(M1, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(M1, MAT_FINAL_ASSEMBLY);
@@ -594,7 +600,7 @@ void create_Matrices_Quads_EB(const std::vector<std::unique_ptr<Vertex>> &List_O
     MatAssemblyEnd(invM, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(invM_small, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(invM_small, MAT_FINAL_ASSEMBLY);
-
+/*
     std::cout << "Start Boundary Calculations " << std::endl;
     for (auto f = List_Of_Boundaries.begin(); f < List_Of_Boundaries.end(); f++)
     {
@@ -801,8 +807,8 @@ void create_Matrices_Quads_EB(const std::vector<std::unique_ptr<Vertex>> &List_O
     MatAssemblyEnd(E, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(ET, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(ET, MAT_FINAL_ASSEMBLY);
+    */
 }
-*/
 /*--------------------------------------------------------------------------*/
 extern void create_Compressible_System_MidPoint(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &NMat, const Mat &NDerivMat, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, Mat &A, Mat &B)
 {

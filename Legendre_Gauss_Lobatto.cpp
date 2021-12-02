@@ -1185,6 +1185,98 @@ Vec Simplex2DP(const Vec &A, const Vec &B, const unsigned int &i, const unsigned
     return P;
 }
 /*--------------------------------------------------------------------------*/
+void set_Node_Coordinates_Uniform(std::vector<std::unique_ptr<Element>> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const unsigned int &Nx, const unsigned int &Ny, const unsigned int &Nz)
+{
+    Vec R, S, T;
+    // Compute Nodes on a Reference Element (Cuboid)
+    NodesCuboid(Nx, Ny, Nz, R, S, T);
+
+      PetscScalar *r_p, *s_p, *t_p;
+      VecGetArray(R, &r_p);
+      VecGetArray(S, &s_p);
+      VecGetArray(T, &t_p);
+      PetscInt size_r;
+      VecGetSize(R, &size_r);
+      // Compute the physical location of each node on each element
+      for(auto i = List_Of_Elements.begin(); i < List_Of_Elements.end(); i++)
+      {
+          double x0 = List_Of_Vertices[(*i)->getVertex_V1()]->getxCoordinate();
+          double y0 = List_Of_Vertices[(*i)->getVertex_V1()]->getyCoordinate();
+          double z0 = List_Of_Vertices[(*i)->getVertex_V1()]->getzCoordinate();
+          double x1 = List_Of_Vertices[(*i)->getVertex_V2()]->getxCoordinate();
+          double y1 = List_Of_Vertices[(*i)->getVertex_V2()]->getyCoordinate();
+          double z1 = List_Of_Vertices[(*i)->getVertex_V2()]->getzCoordinate();
+          double x2 = List_Of_Vertices[(*i)->getVertex_V3()]->getxCoordinate();
+          double y2 = List_Of_Vertices[(*i)->getVertex_V3()]->getyCoordinate();
+          double z2 = List_Of_Vertices[(*i)->getVertex_V3()]->getzCoordinate();
+          double x3 = List_Of_Vertices[(*i)->getVertex_V4()]->getxCoordinate();
+          double y3 = List_Of_Vertices[(*i)->getVertex_V4()]->getyCoordinate();
+          double z3 = List_Of_Vertices[(*i)->getVertex_V4()]->getzCoordinate();
+          double x4 = List_Of_Vertices[(*i)->getVertex_V5()]->getxCoordinate();
+          double y4 = List_Of_Vertices[(*i)->getVertex_V5()]->getyCoordinate();
+          double z4 = List_Of_Vertices[(*i)->getVertex_V5()]->getzCoordinate();
+          double x5 = List_Of_Vertices[(*i)->getVertex_V6()]->getxCoordinate();
+          double y5 = List_Of_Vertices[(*i)->getVertex_V6()]->getyCoordinate();
+          double z5 = List_Of_Vertices[(*i)->getVertex_V6()]->getzCoordinate();
+          double x6 = List_Of_Vertices[(*i)->getVertex_V7()]->getxCoordinate();
+          double y6 = List_Of_Vertices[(*i)->getVertex_V7()]->getyCoordinate();
+          double z6 = List_Of_Vertices[(*i)->getVertex_V7()]->getzCoordinate();
+          double x7 = List_Of_Vertices[(*i)->getVertex_V8()]->getxCoordinate();
+          double y7 = List_Of_Vertices[(*i)->getVertex_V8()]->getyCoordinate();
+          double z7 = List_Of_Vertices[(*i)->getVertex_V8()]->getzCoordinate();
+
+          for(unsigned int k = 0; k < size_r; k++)
+          {
+              // All nodes
+              double x = (1.0-r_p[k])*(1.0-s_p[k])*(1.0-t_p[k])*x0 + (1.0+r_p[k])*(1.0-s_p[k])*(1.0-t_p[k])*x1 + (1.0+r_p[k])*(1.0+s_p[k])*(1.0-t_p[k])*x2 + (1.0-r_p[k])*(1.0+s_p[k])*(1.0-t_p[k])*x3 + (1.0-r_p[k])*(1.0-s_p[k])*(1.0+t_p[k])*x4 + (1.0+r_p[k])*(1.0-s_p[k])*(1.0+t_p[k])*x5 + (1.0+r_p[k])*(1.0+s_p[k])*(1.0+t_p[k])*x6 + (1.0-r_p[k])*(1.0+s_p[k])*(1.0+t_p[k])*x7;
+              double y = (1.0-r_p[k])*(1.0-s_p[k])*(1.0-t_p[k])*y0 + (1.0+r_p[k])*(1.0-s_p[k])*(1.0-t_p[k])*y1 + (1.0+r_p[k])*(1.0+s_p[k])*(1.0-t_p[k])*y2 + (1.0-r_p[k])*(1.0+s_p[k])*(1.0-t_p[k])*y3 + (1.0-r_p[k])*(1.0-s_p[k])*(1.0+t_p[k])*y4 + (1.0+r_p[k])*(1.0-s_p[k])*(1.0+t_p[k])*y5 + (1.0+r_p[k])*(1.0+s_p[k])*(1.0+t_p[k])*y6 + (1.0-r_p[k])*(1.0+s_p[k])*(1.0+t_p[k])*y7;
+              double z = (1.0-r_p[k])*(1.0-s_p[k])*(1.0-t_p[k])*z0 + (1.0+r_p[k])*(1.0-s_p[k])*(1.0-t_p[k])*z1 + (1.0+r_p[k])*(1.0+s_p[k])*(1.0-t_p[k])*z2 + (1.0-r_p[k])*(1.0+s_p[k])*(1.0-t_p[k])*z3 + (1.0-r_p[k])*(1.0-s_p[k])*(1.0+t_p[k])*z4 + (1.0+r_p[k])*(1.0-s_p[k])*(1.0+t_p[k])*z5 + (1.0+r_p[k])*(1.0+s_p[k])*(1.0+t_p[k])*z6 + (1.0-r_p[k])*(1.0+s_p[k])*(1.0+t_p[k])*z7;
+              x = x/8.0;
+              y = y/8.0;
+              z = z/8.0;
+
+              // store node physical coordinates for each element
+              (*i)->set_node_coordinates_x(x);
+              (*i)->set_node_coordinates_y(y);
+              (*i)->set_node_coordinates_z(z);
+
+                // Boundary Nodes
+                if (abs(t_p[k]+1.0) < NODETOL || Nz == 0)
+                {
+                    (*i)->set_node_on_face0(k);
+                }
+                else if (abs(t_p[k]-1.0) < NODETOL || Nz == 0)
+                {
+                    (*i)->set_node_on_face1(k);
+                }
+                if (abs(s_p[k]+1.0) < NODETOL || Ny == 0)
+                {
+                    (*i)->set_node_on_face2(k);
+                }
+                else if (abs(s_p[k]-1.0) < NODETOL || Ny == 0)
+                {
+                    (*i)->set_node_on_face3(k);
+                }
+                if (abs(r_p[k]+1.0) < NODETOL || Nz == 0)
+                {
+                    (*i)->set_node_on_face4(k);
+                }
+                else if (abs(r_p[k]-1.0) < NODETOL || Nz == 0)
+                {
+                    (*i)->set_node_on_face5(k);
+                }
+
+            }
+      }
+      VecRestoreArray(R, &r_p);
+      VecRestoreArray(S, &s_p);
+      VecRestoreArray(T, &t_p);
+
+      VecDestroy(&R);
+      VecDestroy(&S);
+      VecDestroy(&T);
+}
+/*--------------------------------------------------------------------------*/
 void set_Node_Coordinates_Uniform_Square2D(std::vector<Squares2D> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const unsigned int &N)
 {
     Vec R, S;
@@ -2173,6 +2265,8 @@ void NodesCuboid(unsigned int Nx, unsigned int Ny, unsigned int Nz, Vec &XX, Vec
     // function [x,y, z] = NodesCuboid(Nx, Ny, Nz, X, Y, Z);
     // Purpose  : Compute (x,y,z) nodes in cuboids for
     //             polynomial of order N
+
+    // What if only one of Nx, Ny and Nz is zero?
     Vec X, Y, Z;
     if (Nx==0 && Ny==0 && Nz==0)
     {

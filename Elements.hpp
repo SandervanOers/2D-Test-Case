@@ -149,8 +149,107 @@ extern void print(const std::vector<std::unique_ptr<Boundary>> &List_Of_Boundari
            \|      w  \|           \|         \|          \|         \|
             4----------5            4----16----5           4----16----5
 
+/*--------------------------------------------------------------------------*/
+class Element
+{
+    protected:
+        unsigned int ID;
+        unsigned int Number_Of_Nodes;
+        unsigned int DIM;
+        unsigned int pos;
 
+        int ID_Vertex_V1;
+        int ID_Vertex_V2;
+        int ID_Vertex_V3;
+        int ID_Vertex_V4;
+        int ID_Vertex_V5;
+        int ID_Vertex_V6;
+        int ID_Vertex_V7;
+        int ID_Vertex_V8;
+        unsigned int Order_Of_Polynomials_x;
+        unsigned int Order_Of_Polynomials_y;
+        unsigned int Order_Of_Polynomials_z;
+        std::vector<double> node_coordinates_x;
+        std::vector<double> node_coordinates_y;
+        std::vector<double> node_coordinates_z;
+        std::vector<unsigned int> node_on_face0;
+        std::vector<unsigned int> node_on_face1;
+        std::vector<unsigned int> node_on_face2;
+        std::vector<unsigned int> node_on_face3;
+        std::vector<unsigned int> node_on_face4;
+        std::vector<unsigned int> node_on_face5;
 
+    public:
+        Element(unsigned int IDg, unsigned int DIMg, int ID_V1, int ID_V2, int ID_V3, int ID_V4, int ID_V5, int ID_V6, int ID_V7, int ID_V8);
+        unsigned int getID() const ;
+        unsigned int get_pos() const;
+        virtual unsigned int getDIM() const;
+        void set_pos(unsigned int POS);
+
+        unsigned int getVertex_V1() const;
+        unsigned int getVertex_V2() const;
+        unsigned int getVertex_V3() const;
+        unsigned int getVertex_V4() const;
+        unsigned int getVertex_V5() const;
+        unsigned int getVertex_V6() const;
+        unsigned int getVertex_V7() const;
+        unsigned int getVertex_V8() const;
+        void set_Order_Of_Polynomials_x(unsigned int N);
+        void set_Order_Of_Polynomials_y(unsigned int N);
+        void set_Order_Of_Polynomials_z(unsigned int N);
+        unsigned int get_Order_Of_Polynomials_x() const;
+        unsigned int get_Order_Of_Polynomials_y() const;
+        unsigned int get_Order_Of_Polynomials_z() const;
+        unsigned int get_Number_Of_Nodes() const;
+        void set_Number_Of_Nodes(unsigned int Nnodes);
+        void set_node_coordinates_x(double x);
+        void set_node_coordinates_y(double y);
+        void set_node_coordinates_z(double z);
+        std::vector<double> get_node_coordinates_x() const;
+        std::vector<double> get_node_coordinates_y() const;
+        std::vector<double> get_node_coordinates_z() const;
+        void set_node_on_face0(unsigned int k);
+        void set_node_on_face1(unsigned int k);
+        void set_node_on_face2(unsigned int k);
+        void set_node_on_face3(unsigned int k);
+        void set_node_on_face4(unsigned int k);
+        void set_node_on_face5(unsigned int k);
+        std::vector<unsigned int> get_node_on_face0() const;
+        std::vector<unsigned int> get_node_on_face1() const;
+        std::vector<unsigned int> get_node_on_face2() const;
+        std::vector<unsigned int> get_node_on_face3() const;
+        std::vector<unsigned int> get_node_on_face4() const;
+        std::vector<unsigned int> get_node_on_face5() const;
+        std::vector<unsigned int> get_nodes_on_boundary(unsigned int Type) const;
+
+    virtual ~Element();
+};
+class Element1D: public Element
+{
+    public:
+        Element1D(unsigned int IDg, unsigned int ID_V1, unsigned int ID_V2): Element{ IDg, 1, ID_V1, ID_V2, -1, -1, -1, -1, -1, -1 }
+        {
+        }
+
+};
+class Element2D: public Element
+{
+    public:
+        Element2D(unsigned int IDg, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int ID_V4): Element{ IDg, 2, ID_V1, ID_V2, ID_V3, ID_V4, -1, -1, -1, -1 }
+        {
+        }
+
+};
+class Element3D: public Element
+{
+    public:
+        Element3D(unsigned int IDg, unsigned int ID_V1, unsigned int ID_V2, unsigned int ID_V3, unsigned int ID_V4, unsigned int ID_V5, unsigned int ID_V6, unsigned int ID_V7, unsigned int ID_V8): Element{ IDg, 3, ID_V1, ID_V2, ID_V3, ID_V4, ID_V5, ID_V6, ID_V7, ID_V8 }
+        {
+        }
+
+};
+
+extern void print(const std::vector<std::unique_ptr<Element>> &List_Of_Elements);
 /*--------------------------------------------------------------------------*/
 class Cuboid
 {
