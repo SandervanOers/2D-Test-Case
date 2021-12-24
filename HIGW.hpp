@@ -55,6 +55,7 @@ void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<s
 /*--------------------------------------------------------------------------*/
 //void Calculate_Jacobian_Cuboid(const Cuboid &Element, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const double &r_p, const double &s_p, const double &t_p, double &det_J, double &drdx, double &drdy, double &drdz, double &dsdx, double &dsdy, double &dsdz, double &dtdx, double &dtdy, double &dtdz, double &x, double &y, double &z);
 /*--------------------------------------------------------------------------*/
+void Calculate_Jacobian_Cuboid(const std::unique_ptr<Element> &Element, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const double &r_p, const double &s_p, const double &t_p, double &det_J, double &drdx, double &drdy, double &drdz, double &dsdx, double &dsdy, double &dsdz, double &dtdx, double &dtdy, double &dtdz, double &x, double &y, double &z);
 /*--------------------------------------------------------------------------*/
 void printFullMatrixInfo(Mat& matrix, const std::string& name);
 /*--------------------------------------------------------------------------*/

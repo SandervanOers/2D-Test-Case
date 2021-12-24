@@ -405,7 +405,6 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 3*N_Nodes, 3*N_Nodes, 3*Np, NULL, &M2);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &NDerivMat);
 
-
     std::cout << "Start Elemental Calculations " << std::endl;
     for (auto e = List_Of_Elements.begin(); e < List_Of_Elements.end(); e++)
     {
@@ -427,7 +426,6 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
             in[n] = n+pos;
         }
 
-        /*
         Mat M_Elemental;
         Mat invM_Elemental;
         MatCreateSeqAIJ(PETSC_COMM_WORLD, Np, Np, Np, NULL, &M_Elemental);
@@ -582,7 +580,7 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
                     /// Order 5, 9, 13, 17 give a nonzero difference
                     /// Independent of Order_Gaussian_Quadrature
 
-                    */
+
     }
     MatAssemblyBegin(M1, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(M1, MAT_FINAL_ASSEMBLY);
@@ -600,10 +598,11 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
     MatAssemblyEnd(invM, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(invM_small, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(invM_small, MAT_FINAL_ASSEMBLY);
-/*
+
     std::cout << "Start Boundary Calculations " << std::endl;
     for (auto f = List_Of_Boundaries.begin(); f < List_Of_Boundaries.end(); f++)
     {
+        /*
             double Jacobian = (*f).getJacobian();
             unsigned int Type_Boundary_Left = (*f).get_Type_Left();
             unsigned int Type_Boundary_Right = (*f).get_Type_Right();
@@ -802,12 +801,13 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
             VecRestoreArray(Weights, &w_a);
             VecDestroy(&Weights);
             VecDestroy(&QuadraturePoints);
+            */
     }
     MatAssemblyBegin(E, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(E, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(ET, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(ET, MAT_FINAL_ASSEMBLY);
-    */
+
 }
 /*--------------------------------------------------------------------------*/
 extern void create_Compressible_System_MidPoint(const Mat &E, const Mat &ET, const Mat &invM, const Mat &invM_small, const Mat &M1, const Mat &M1_small, const Mat &M2, const Mat &NMat, const Mat &NDerivMat, const unsigned int &N_Nodes, const unsigned int &N, const double &DeltaT, Mat &A, Mat &B)
@@ -5494,8 +5494,76 @@ void Calculate_Jacobian_Quadrilateral(const Squares2D &Quad, const std::vector<s
         }
 }*/
 /*--------------------------------------------------------------------------*/
-/*
-void Calculate_Jacobian_Cuboid(const Cuboid &Element, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const double &r_p, const double &s_p, const double &t_p, double &det_J, double &drdx, double &drdy, double &drdz, double &dsdx, double &dsdy, double &dsdz, double &dtdx, double &dtdy, double &dtdz, double &x, double &y, double &z)
+void Calculate_Jacobian_Cuboid(const std::unique_ptr<Element> &Element, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const double &r_p, const double &s_p, const double &t_p, double &det_J, double &drdx, double &drdy, double &drdz, double &dsdx, double &dsdy, double &dsdz, double &dtdx, double &dtdy, double &dtdz, double &x, double &y, double &z)
+{
+        double x0 = List_Of_Vertices[Element->getVertex_V1()]->getxCoordinate();
+        double y0 = List_Of_Vertices[Element->getVertex_V1()]->getyCoordinate();
+        double z0 = List_Of_Vertices[Element->getVertex_V1()]->getzCoordinate();
+        double x1 = List_Of_Vertices[Element->getVertex_V2()]->getxCoordinate();
+        double y1 = List_Of_Vertices[Element->getVertex_V2()]->getyCoordinate();
+        double z1 = List_Of_Vertices[Element->getVertex_V2()]->getzCoordinate();
+        double x2 = List_Of_Vertices[Element->getVertex_V3()]->getxCoordinate();
+        double y2 = List_Of_Vertices[Element->getVertex_V3()]->getyCoordinate();
+        double z2 = List_Of_Vertices[Element->getVertex_V3()]->getzCoordinate();
+        double x3 = List_Of_Vertices[Element->getVertex_V4()]->getxCoordinate();
+        double y3 = List_Of_Vertices[Element->getVertex_V4()]->getyCoordinate();
+        double z3 = List_Of_Vertices[Element->getVertex_V4()]->getzCoordinate();
+        double x4 = List_Of_Vertices[Element->getVertex_V5()]->getxCoordinate();
+        double y4 = List_Of_Vertices[Element->getVertex_V5()]->getyCoordinate();
+        double z4 = List_Of_Vertices[Element->getVertex_V5()]->getzCoordinate();
+        double x5 = List_Of_Vertices[Element->getVertex_V6()]->getxCoordinate();
+        double y5 = List_Of_Vertices[Element->getVertex_V6()]->getyCoordinate();
+        double z5 = List_Of_Vertices[Element->getVertex_V6()]->getzCoordinate();
+        double x6 = List_Of_Vertices[Element->getVertex_V7()]->getxCoordinate();
+        double y6 = List_Of_Vertices[Element->getVertex_V7()]->getyCoordinate();
+        double z6 = List_Of_Vertices[Element->getVertex_V7()]->getzCoordinate();
+        double x7 = List_Of_Vertices[Element->getVertex_V8()]->getxCoordinate();
+        double y7 = List_Of_Vertices[Element->getVertex_V8()]->getyCoordinate();
+        double z7 = List_Of_Vertices[Element->getVertex_V8()]->getzCoordinate();
+
+        x = (1.0-r_p)*(1.0-s_p)*(1.0-t_p)*x0 + (1.0+r_p)*(1.0-s_p)*(1.0-t_p)*x1 + (1.0+r_p)*(1.0+s_p)*(1.0-t_p)*x2 + (1.0-r_p)*(1.0+s_p)*(1.0-t_p)*x3 + (1.0-r_p)*(1.0-s_p)*(1.0+t_p)*x4 + (1.0+r_p)*(1.0-s_p)*(1.0+t_p)*x5 + (1.0+r_p)*(1.0+s_p)*(1.0+t_p)*x6 + (1.0-r_p)*(1.0+s_p)*(1.0+t_p)*x7;
+        y = (1.0-r_p)*(1.0-s_p)*(1.0-t_p)*y0 + (1.0+r_p)*(1.0-s_p)*(1.0-t_p)*y1 + (1.0+r_p)*(1.0+s_p)*(1.0-t_p)*y2 + (1.0-r_p)*(1.0+s_p)*(1.0-t_p)*y3 + (1.0-r_p)*(1.0-s_p)*(1.0+t_p)*y4 + (1.0+r_p)*(1.0-s_p)*(1.0+t_p)*y5 + (1.0+r_p)*(1.0+s_p)*(1.0+t_p)*y6 + (1.0-r_p)*(1.0+s_p)*(1.0+t_p)*y7;
+        z = (1.0-r_p)*(1.0-s_p)*(1.0-t_p)*z0 + (1.0+r_p)*(1.0-s_p)*(1.0-t_p)*z1 + (1.0+r_p)*(1.0+s_p)*(1.0-t_p)*z2 + (1.0-r_p)*(1.0+s_p)*(1.0-t_p)*z3 + (1.0-r_p)*(1.0-s_p)*(1.0+t_p)*z4 + (1.0+r_p)*(1.0-s_p)*(1.0+t_p)*z5 + (1.0+r_p)*(1.0+s_p)*(1.0+t_p)*z6 + (1.0-r_p)*(1.0+s_p)*(1.0+t_p)*z7;
+
+        x = x/8.0;
+        y = y/8.0;
+        z = z/8.0;
+
+        double dxdr = (-x0+x1+x2-x3-x4+x5+x6-x7)/8.0 + (x0-x1+x2-x3+x4-x5+x6-x7)/8.0*s_p + (x0-x1-x2+x3-x4+x5+x6-x7)/8.0*t_p + (-x0+x1-x2+x3+x4-x5+x6-x7)/8.0*s_p*t_p;
+        double dxds = (-x0-x1+x2+x3-x4-x5+x6+x7)/8.0 + (x0-x1+x2-x3+x4-x5+x6-x7)/8.0*r_p + (x0+x1-x2-x3-x4-x5+x6+x7)/8.0*t_p + (-x0+x1-x2+x3+x4-x5+x6-x7)/8.0*r_p*t_p;
+        double dxdt = (-x0-x1-x2-x3+x4+x5+x6+x7)/8.0 + (x0+x1-x2-x3-x4-x5+x6+x7)/8.0*s_p + (x0-x1-x2+x3-x4+x5+x6-x7)/8.0*r_p + (-x0+x1-x2+x3+x4-x5+x6-x7)/8.0*r_p*s_p;
+        double dydr = (-y0+y1+y2-y3-y4+y5+y6-y7)/8.0 + (y0-y1+y2-y3+y4-y5+y6-y7)/8.0*s_p + (y0-y1-y2+y3-y4+y5+y6-y7)/8.0*t_p + (-y0+y1-y2+y3+y4-y5+y6-y7)/8.0*s_p*t_p;
+        double dyds = (-y0-y1+y2+y3-y4-y5+y6+y7)/8.0 + (y0-y1+y2-y3+y4-y5+y6-y7)/8.0*r_p + (y0+y1-y2-y3-y4-y5+y6+y7)/8.0*t_p + (-y0+y1-y2+y3+y4-y5+y6-y7)/8.0*r_p*t_p;
+        double dydt = (-y0-y1-y2-y3+y4+y5+y6+y7)/8.0 + (y0+y1-y2-y3-y4-y5+y6+y7)/8.0*s_p + (y0-y1-y2+y3-y4+y5+y6-y7)/8.0*r_p + (-y0+y1-y2+y3+y4-y5+y6-y7)/8.0*r_p*s_p;
+        double dzdr = (-z0+z1+z2-z3-z4+z5+z6-z7)/8.0 + (z0-z1+z2-z3+z4-z5+z6-z7)/8.0*s_p + (z0-z1-z2+z3-z4+z5+z6-z7)/8.0*t_p + (-z0+z1-z2+z3+z4-z5+z6-z7)/8.0*s_p*t_p;
+        double dzds = (-z0-z1+z2+z3-z4-z5+z6+z7)/8.0 + (z0-z1+z2-z3+z4-z5+z6-z7)/8.0*r_p + (z0+z1-z2-z3-z4-z5+z6+z7)/8.0*t_p + (-z0+z1-z2+z3+z4-z5+z6-z7)/8.0*r_p*t_p;
+        double dzdt = (-z0-z1-z2-z3+z4+z5+z6+z7)/8.0 + (z0+z1-z2-z3-z4-z5+z6+z7)/8.0*s_p + (z0-z1-z2+z3-z4+z5+z6-z7)/8.0*r_p + (-z0+z1-z2+z3+z4-z5+z6-z7)/8.0*r_p*s_p;
+
+        //std::cout << "dxdr = " << dxdr << std::endl;
+        //std::cout << "dxds = " << dxds << std::endl;
+        //std::cout << "dxdt = " << dxdt << std::endl;
+        //std::cout << "dydr = " << dydr << std::endl;
+        //std::cout << "dyds = " << dyds << std::endl;
+        //std::cout << "dydt = " << dydt << std::endl;
+        //std::cout << "dzdr = " << dzdr << std::endl;
+        //std::cout << "dzds = " << dzds << std::endl;
+        //std::cout << "dzdt = " << dzdt << std::endl;
+        det_J = dzdt*(dxdr*dyds-dxds*dydr)-dzds*(dxdt*dydr-dxdr*dydt)+dzdr*(dxds*dydt-dxdt*dyds);
+
+        //std::cout << "dxdr*dyds-dxds*dydr = " << dxdr*dyds-dxds*dydr << std::endl;
+        drdx = (dyds*dzdt-dydt*dzds)/det_J;
+        drdy = -(dxds*dzdt-dxdt*dzds)/det_J;
+        drdz = (dxds*dydt-dxdt*dyds)/det_J;
+        dsdx = -(dydr*dzdt-dxdt*dydr)/det_J;
+        dsdy = (dxdr*dzdt-dxdt*dzdr)/det_J;
+        dsdz = -(dxdr*dydt-dxdt*dydr)/det_J;
+        dtdx = (dydr*dzds-dyds*dzdr)/det_J;
+        dtdy = -(dxdr*dzds-dxds*dzdr)/det_J;
+        dtdz = (dxdr*dyds-dxds*dydr)/det_J;
+        //std::cout << "det_Jacobian = " << det_J << std::endl;
+}
+/*--------------------------------------------------------------------------*/
+/*void Calculate_Jacobian_Cuboid(const Cuboid &Element, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const double &r_p, const double &s_p, const double &t_p, double &det_J, double &drdx, double &drdy, double &drdz, double &dsdx, double &dsdy, double &dsdz, double &dtdx, double &dtdy, double &dtdz, double &x, double &y, double &z)
 {
         double x0 = List_Of_Vertices[Element.getVertex_V1()].getxCoordinate();
         double y0 = List_Of_Vertices[Element.getVertex_V1()].getyCoordinate();

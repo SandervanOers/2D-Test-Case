@@ -161,8 +161,22 @@ std::cout << "Number_Of_TimeSteps_In_One_Period  =  " << Number_Of_TimeSteps_In_
 Mat E, ET, invM, M1, M2, M2_small, NMat, NDerivMat, invM_small, M1_small;
 create_Matrices_Cuboids(List_Of_Vertices, List_Of_Boundaries, List_Of_Elements, N_Nodes, N_Petsc, N_Petsc, N_Petsc, N_Q, Fr, E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat);
 
+MatDestroy(&E);
+MatDestroy(&ET);
+MatDestroy(&invM);
+MatDestroy(&invM_small);
+MatDestroy(&M2);
+MatDestroy(&NMat);
+MatDestroy(&NDerivMat);
 
 
+
+
+
+
+MatDestroy(&M1);
+MatDestroy(&M1_small);
+MatDestroy(&M2_small);
 auto t3 = std::chrono::high_resolution_clock::now();
 
 
