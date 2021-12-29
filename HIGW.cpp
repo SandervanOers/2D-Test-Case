@@ -602,20 +602,106 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
     std::cout << "Start Boundary Calculations " << std::endl;
     for (auto f = List_Of_Boundaries.begin(); f < List_Of_Boundaries.end(); f++)
     {
-        /*
-            double Jacobian = (*f).getJacobian();
-            unsigned int Type_Boundary_Left = (*f).get_Type_Left();
-            unsigned int Type_Boundary_Right = (*f).get_Type_Right();
-            double theta = (*f).get_theta();
-            double nx = (*f).get_nx();
-            double ny = (*f).get_ny();
-            double nz = (*f).get_nz();
+            // These boundaries are quadrilaterals
+            double Jacobian = (*f)->getJacobian();
+            unsigned int Type_Boundary_Left = (*f)->getTypeLeft();
+            unsigned int Type_Boundary_Right = (*f)->getTypeRight();
+            double theta = (*f)->get_theta();
+            double nx = (*f)->get_nx();
+            double ny = (*f)->get_ny();
+            double nz = (*f)->get_nz();
 
-            int left = (*f).getLeftElementID();
-            int right = (*f).getRightElementID();
+            auto left = (*f)->getLeftElementID();
+            auto right = (*f)->getRightElementID();
 
-            unsigned int posL = List_Of_Elements[left].get_pos();
-            unsigned int posR = List_Of_Elements[right].get_pos();
+            unsigned int posL = (*List_Of_Elements[left]).get_pos();
+            unsigned int posR = (*List_Of_Elements[right]).get_pos();
+
+            unsigned int Nx_left = (*List_Of_Elements[left]).get_Order_Of_Polynomials_x();
+            unsigned int Ny_left = (*List_Of_Elements[left]).get_Order_Of_Polynomials_y();
+            unsigned int Nz_left = (*List_Of_Elements[left]).get_Order_Of_Polynomials_z();
+            unsigned int Nx_right = (*List_Of_Elements[right]).get_Order_Of_Polynomials_x();
+            unsigned int Ny_right = (*List_Of_Elements[right]).get_Order_Of_Polynomials_y();
+            unsigned int Nz_right = (*List_Of_Elements[right]).get_Order_Of_Polynomials_z();
+
+            unsigned int Order_Polynomials_left = std::max({Nx_left,Ny_left,Nz_left});
+            unsigned int Order_Polynomials_right = std::max({Nx_right,Ny_right,Nz_right});
+
+            std::vector<unsigned int> Node_Numbers_On_Boundary_Left = (*List_Of_Elements[left]).get_nodes_on_boundary(Type_Boundary_Left);
+            std::vector<unsigned int> Node_Numbers_On_Boundary_Right = (*List_Of_Elements[right]).get_nodes_on_boundary(Type_Boundary_Right);
+
+            /// Or use two different gaussian quadratures
+            // unsigned int Order_Gaussian_Quadrature_L
+            // unsigned int Order_Gaussian_Quadrature_R
+            unsigned int Order_Gaussian_Quadrature  = ceil(std::max(2*Order_Polynomials_left, 2*Order_Polynomials_right)+3+N_Q);
+            Order_Gaussian_Quadrature = std::max((uint)10, Order_Gaussian_Quadrature);
+
+            //double J, drdx, drdy, dsdx, dsdy, x, y;
+            //Calculate_Jacobian_Quadrilateral((*e), List_Of_Vertices, qp[p], qp[q], J, drdx, drdy, dsdx, dsdy, x, y);
+
+/*
+
+        for (unsigned int k = 1; k <= Np; k++)
+        {
+            unsigned int alpha = (k-1)%(N+1);
+            unsigned int beta = (k-1)/(N+1);
+            for (unsigned int l = 1; l <= Np; l++)
+            {
+                unsigned int gamma = (l-1)%(N+1);
+                unsigned int delta = (l-1)/(N+1);
+                double value_ex = 0.0;
+                double value_ey = 0.0;
+                double value_m = 0.0;
+                double value_m1 = 0.0;
+                double value_n = 0.0;
+                double value_m2 = 0.0;
+                double value_n_deriv = 0.0;
+
+                double value_area = 0.0;
+                for (unsigned int p = 0; p <= Order_Gaussian_Quadrature; p++)
+                {
+                    double L_alpha = LagrangePolynomial(ri, qp[p], alpha);
+                    double L_gamma = LagrangePolynomial(ri, qp[p], gamma);
+                    for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
+                    {
+                        double J, drdx, drdy, dsdx, dsdy, x, y;
+                        Calculate_Jacobian_Quadrilateral((*e), List_Of_Vertices, qp[p], qp[q], J, drdx, drdy, dsdx, dsdy, x, y);
+                        //std::cout << "J = " << J << ", drdx = " << drdx << ", drdy = " << drdy << ", dsdy = " << dsdy << ", dsdx = " << dsdx  << std::endl;
+                        //std::cout << "qp[p] = " << qp[p] << ", qp[q] = " << qp[q] << std::endl;
+                        //std::cout << "ID = " << (*e).getID() << ", x = " << x << ", y = " << y << ", rho_0 = " << rho_0_2D_system2(y, rho_0_Deriv) << std::endl;
+                        double N2 = N_2_2DEB(y, rho_0_Deriv, Fr);
+                        double rho0deriv = rho_0_deriv_2DEB(y, rho_0_Deriv, Fr); // = - rho0 * N2 / g
+
+                        double L_beta = LagrangePolynomial(ri, qp[q], beta);
+                        double L_delta = LagrangePolynomial(ri, qp[q], delta);
+
+                        value_m += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J;
+                        value_m1 += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J / rho0;
+                        //if (N2 == 0)
+                        //{
+                        //    std::cout << "N2 is zero " << std::endl;
+                        //}
+                        value_m2 += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J / rho0 / N2 /Fr/Fr;
+
+                        value_n += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J * rho0;
+                        value_n_deriv += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J * rho0deriv;
+                        value_area += w[p]*w[q]*J;
+
+                        // w_q drho_0(r_q)/dr l_i(r_q) l_j(r_q)
+                        //value_ey += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J * rho0deriv;
+                        if (Np > 1)
+                        {
+                            double dL_gamma = LagrangePolynomialDeriv(ri, qp[p], gamma);
+                            double dL_delta = LagrangePolynomialDeriv(ri, qp[q], delta);
+                            //w_q rho_0(r_q) l_i(r_q) dl_j(r_q)/dx
+                            value_ex += w[p]*L_alpha*L_beta * w[q] * (drdx * dL_gamma * L_delta + dsdx * L_gamma* dL_delta) * J * rho0;
+                            //w_q rho_0(r_q) l_i(r_q) dl_j(r_q)/dy
+                            value_ey += w[p]*L_alpha*L_beta * w[q] * (drdy * dL_gamma * L_delta + dsdy * L_gamma* dL_delta) * J * rho0;
+                        }
+                    }
+                }
+                */
+            /*
 
             // We should expand: from face i -> (Nx, Ny), (Nx, Nz) or (Ny, Nz)
             unsigned int Order_Polynomials_left = (List_Of_Elements[left]).get_Order_Of_Polynomials_x();
@@ -5562,6 +5648,162 @@ void Calculate_Jacobian_Cuboid(const std::unique_ptr<Element> &Element, const st
         dtdz = (dxdr*dyds-dxds*dydr)/det_J;
         //std::cout << "det_Jacobian = " << det_J << std::endl;
 }
+/*--------------------------------------------------------------------------*/
+/*void Calculate_Jacobian_Cuboid_Face(const std::unique_ptr<Element> &Element, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const double &r_p, const double &s_p, const double &t_p, double &det_J, double &x, double &y, double &z, const int &face_number)
+{
+    // Want: physical coordinates x, y, z and
+    // Jacobian of the surface transformation
+
+  /*
+        Hexahedron:
+               s
+        3----------2
+        |\     ^   |\
+        | \    |   | \
+        |  \   |   |  \
+        |   7------+---6
+        |   |  +-- |-- | -> r
+        0---+---\--1   |
+         \  |    \  \  |
+          \ |     \  \ |
+           \|      t  \|
+            4----------5
+
+  * /
+        // physical coordinates of the vertices
+        double x0 = List_Of_Vertices[Element->getVertex_V1()]->getxCoordinate();
+        double y0 = List_Of_Vertices[Element->getVertex_V1()]->getyCoordinate();
+        double z0 = List_Of_Vertices[Element->getVertex_V1()]->getzCoordinate();
+        double x1 = List_Of_Vertices[Element->getVertex_V2()]->getxCoordinate();
+        double y1 = List_Of_Vertices[Element->getVertex_V2()]->getyCoordinate();
+        double z1 = List_Of_Vertices[Element->getVertex_V2()]->getzCoordinate();
+        double x2 = List_Of_Vertices[Element->getVertex_V3()]->getxCoordinate();
+        double y2 = List_Of_Vertices[Element->getVertex_V3()]->getyCoordinate();
+        double z2 = List_Of_Vertices[Element->getVertex_V3()]->getzCoordinate();
+        double x3 = List_Of_Vertices[Element->getVertex_V4()]->getxCoordinate();
+        double y3 = List_Of_Vertices[Element->getVertex_V4()]->getyCoordinate();
+        double z3 = List_Of_Vertices[Element->getVertex_V4()]->getzCoordinate();
+        double x4 = List_Of_Vertices[Element->getVertex_V5()]->getxCoordinate();
+        double y4 = List_Of_Vertices[Element->getVertex_V5()]->getyCoordinate();
+        double z4 = List_Of_Vertices[Element->getVertex_V5()]->getzCoordinate();
+        double x5 = List_Of_Vertices[Element->getVertex_V6()]->getxCoordinate();
+        double y5 = List_Of_Vertices[Element->getVertex_V6()]->getyCoordinate();
+        double z5 = List_Of_Vertices[Element->getVertex_V6()]->getzCoordinate();
+        double x6 = List_Of_Vertices[Element->getVertex_V7()]->getxCoordinate();
+        double y6 = List_Of_Vertices[Element->getVertex_V7()]->getyCoordinate();
+        double z6 = List_Of_Vertices[Element->getVertex_V7()]->getzCoordinate();
+        double x7 = List_Of_Vertices[Element->getVertex_V8()]->getxCoordinate();
+        double y7 = List_Of_Vertices[Element->getVertex_V8()]->getyCoordinate();
+        double z7 = List_Of_Vertices[Element->getVertex_V8()]->getzCoordinate();
+
+        // physical coordinates of the integration points (needed for background Density)
+        x = (1.0-r_p)*(1.0-s_p)*(1.0-t_p)*x0 + (1.0+r_p)*(1.0-s_p)*(1.0-t_p)*x1 + (1.0+r_p)*(1.0+s_p)*(1.0-t_p)*x2 + (1.0-r_p)*(1.0+s_p)*(1.0-t_p)*x3 + (1.0-r_p)*(1.0-s_p)*(1.0+t_p)*x4 + (1.0+r_p)*(1.0-s_p)*(1.0+t_p)*x5 + (1.0+r_p)*(1.0+s_p)*(1.0+t_p)*x6 + (1.0-r_p)*(1.0+s_p)*(1.0+t_p)*x7;
+        y = (1.0-r_p)*(1.0-s_p)*(1.0-t_p)*y0 + (1.0+r_p)*(1.0-s_p)*(1.0-t_p)*y1 + (1.0+r_p)*(1.0+s_p)*(1.0-t_p)*y2 + (1.0-r_p)*(1.0+s_p)*(1.0-t_p)*y3 + (1.0-r_p)*(1.0-s_p)*(1.0+t_p)*y4 + (1.0+r_p)*(1.0-s_p)*(1.0+t_p)*y5 + (1.0+r_p)*(1.0+s_p)*(1.0+t_p)*y6 + (1.0-r_p)*(1.0+s_p)*(1.0+t_p)*y7;
+        z = (1.0-r_p)*(1.0-s_p)*(1.0-t_p)*z0 + (1.0+r_p)*(1.0-s_p)*(1.0-t_p)*z1 + (1.0+r_p)*(1.0+s_p)*(1.0-t_p)*z2 + (1.0-r_p)*(1.0+s_p)*(1.0-t_p)*z3 + (1.0-r_p)*(1.0-s_p)*(1.0+t_p)*z4 + (1.0+r_p)*(1.0-s_p)*(1.0+t_p)*z5 + (1.0+r_p)*(1.0+s_p)*(1.0+t_p)*z6 + (1.0-r_p)*(1.0+s_p)*(1.0+t_p)*z7;
+        x = x/8.0;
+        y = y/8.0;
+        z = z/8.0;
+
+        double dxdr = 0.0, dxds = 0.0, dxdt = 0.0, dydr = 0.0, dyds = 0.0, dydt = 0.0, dzdr = 0.0, dzds = 0.0, dzdt = 0.0, Jacobian = 0.0;
+        // First substitute the coordinate of the reference cuboid (r,s,t = +-1), then differentiate to find the Jacobian
+        switch(face_number) // viewed from left element
+        {
+          case 0: // t = -1
+          {
+              dxdr = (-(1.0-s_p)*x0+(1.0-s_p)*x1+(1.0+s_p)*x2-(1.0+s_p)*x3)/4.0;
+              dydr = (-(1.0-s_p)*y0+(1.0-s_p)*y1+(1.0+s_p)*y2-(1.0+s_p)*y3)/4.0;
+              // dzdr = (-(1.0-s_p)*z0+(1.0-s_p)*z1+(1.0+s_p)*z2-(1.0+s_p)*z3)/4.0;
+              dxds = (-(1.0-r_p)*x0-(1.0+r_p)*x1+(1.0+r_p)*x2+(1.0-r_p)*x3)/4.0;
+              dyds = (-(1.0-r_p)*y0-(1.0+r_p)*y1+(1.0+r_p)*y2+(1.0-r_p)*y3)/4.0;
+              // dzds = (-(1.0-r_p)*z0-(1.0+r_p)*z1+(1.0+r_p)*z2+(1.0-r_p)*z3)/4.0;
+              Jacobian = dxdr*dyds-dxds*dydr;
+          }
+            case 1: // t = +1
+            {
+                //dzdt = 1.0;
+                dxdr = (-(1.0-s_p)*x4+(1.0-s_p)*x5+(1.0+s_p)*x6-(1.0+s_p)*x7)/4.0;
+                dydr = (-(1.0-s_p)*y4+(1.0-s_p)*y5+(1.0+s_p)*y6-(1.0+s_p)*y7)/4.0;
+                dzdr = (-(1.0-s_p)*z4+(1.0-s_p)*z5+(1.0+s_p)*z6-(1.0+s_p)*z7)/4.0;
+                dxds = (-(1.0-r_p)*x4-(1.0+r_p)*x5+(1.0+r_p)*x6+(1.0-r_p)*x7)/4.0;
+                dyds = (-(1.0-r_p)*y4-(1.0+r_p)*y5+(1.0+r_p)*y6+(1.0-r_p)*y7)/4.0;
+                dzds = (-(1.0-r_p)*z4-(1.0+r_p)*z5+(1.0+r_p)*z6+(1.0-r_p)*z7)/4.0;
+                Jacobian = dxdr*dyds-dxds*dydr;
+                drdx = dyds/Jacobian;
+                drdy = -dxds/Jacobian;
+                dsdx = -dydr/Jacobian;
+                dsdy = dxdr/Jacobian;
+            }
+              case 2: // s = -1
+              {
+                  //dzdt = 1.0;
+                  dxdr = (-(1.0-s_p)*x4+(1.0-s_p)*x5+(1.0+s_p)*x6-(1.0+s_p)*x7)/4.0;
+                  dydr = (-(1.0-s_p)*y4+(1.0-s_p)*y5+(1.0+s_p)*y6-(1.0+s_p)*y7)/4.0;
+                  dxds = (-(1.0-r_p)*x4-(1.0+r_p)*x5+(1.0+r_p)*x6+(1.0-r_p)*x7)/4.0;
+                  dyds = (-(1.0-r_p)*y4-(1.0+r_p)*y5+(1.0+r_p)*y6+(1.0-r_p)*y7)/4.0;
+                  Jacobian = dxdr*dyds-dxds*dydr;
+                  drdx = dyds/Jacobian;
+                  drdy = -dxds/Jacobian;
+                  dsdx = -dydr/Jacobian;
+                  dsdy = dxdr/Jacobian;
+              }
+          default:
+            std::cout << "Something went wrong in the connection of the boundaries" << std::endl;
+        }
+
+        det_J = Jacobian;
+
+            x = ((1.0-s_p)*(1.0-r_p)*x1 + (1.0-s_p)*(1.0+r_p)*x2 + (1.0+s_p)*(1.0+r_p)*x3 + (1.0+s_p)*(1.0-r_p)*x4)/4.0;
+            y = ((1.0-s_p)*(1.0-r_p)*y1 + (1.0-s_p)*(1.0+r_p)*y2 + (1.0+s_p)*(1.0+r_p)*y3 + (1.0+s_p)*(1.0-r_p)*y4)/4.0;
+
+            double dxdr = (x2+x3-x1-x4)/4.0 + (x1-x2+x3-x4)*s_p/4.0;
+            double dxds = (x3+x4-x2-x1)/4.0 + (x1-x2+x3-x4)*r_p/4.0;
+            double dydr = (y2+y3-y1-y4)/4.0 + (y1-y2+y3-y4)*s_p/4.0;
+            double dyds = (y3+y4-y2-y1)/4.0 + (y1-y2+y3-y4)*r_p/4.0;
+
+            Jacobian = dxdr*dyds-dxds*dydr;
+
+            drdx = dyds/Jacobian;
+            drdy = -dxds/Jacobian;
+            dsdx = -dydr/Jacobian;
+            dsdy = dxdr/Jacobian;
+
+        //
+        // double dxdr = (-x0+x1+x2-x3-x4+x5+x6-x7)/8.0 + (x0-x1+x2-x3+x4-x5+x6-x7)/8.0*s_p + (x0-x1-x2+x3-x4+x5+x6-x7)/8.0*t_p + (-x0+x1-x2+x3+x4-x5+x6-x7)/8.0*s_p*t_p;
+        // double dxds = (-x0-x1+x2+x3-x4-x5+x6+x7)/8.0 + (x0-x1+x2-x3+x4-x5+x6-x7)/8.0*r_p + (x0+x1-x2-x3-x4-x5+x6+x7)/8.0*t_p + (-x0+x1-x2+x3+x4-x5+x6-x7)/8.0*r_p*t_p;
+        // double dxdt = (-x0-x1-x2-x3+x4+x5+x6+x7)/8.0 + (x0+x1-x2-x3-x4-x5+x6+x7)/8.0*s_p + (x0-x1-x2+x3-x4+x5+x6-x7)/8.0*r_p + (-x0+x1-x2+x3+x4-x5+x6-x7)/8.0*r_p*s_p;
+        // double dydr = (-y0+y1+y2-y3-y4+y5+y6-y7)/8.0 + (y0-y1+y2-y3+y4-y5+y6-y7)/8.0*s_p + (y0-y1-y2+y3-y4+y5+y6-y7)/8.0*t_p + (-y0+y1-y2+y3+y4-y5+y6-y7)/8.0*s_p*t_p;
+        // double dyds = (-y0-y1+y2+y3-y4-y5+y6+y7)/8.0 + (y0-y1+y2-y3+y4-y5+y6-y7)/8.0*r_p + (y0+y1-y2-y3-y4-y5+y6+y7)/8.0*t_p + (-y0+y1-y2+y3+y4-y5+y6-y7)/8.0*r_p*t_p;
+        // double dydt = (-y0-y1-y2-y3+y4+y5+y6+y7)/8.0 + (y0+y1-y2-y3-y4-y5+y6+y7)/8.0*s_p + (y0-y1-y2+y3-y4+y5+y6-y7)/8.0*r_p + (-y0+y1-y2+y3+y4-y5+y6-y7)/8.0*r_p*s_p;
+        // double dzdr = (-z0+z1+z2-z3-z4+z5+z6-z7)/8.0 + (z0-z1+z2-z3+z4-z5+z6-z7)/8.0*s_p + (z0-z1-z2+z3-z4+z5+z6-z7)/8.0*t_p + (-z0+z1-z2+z3+z4-z5+z6-z7)/8.0*s_p*t_p;
+        // double dzds = (-z0-z1+z2+z3-z4-z5+z6+z7)/8.0 + (z0-z1+z2-z3+z4-z5+z6-z7)/8.0*r_p + (z0+z1-z2-z3-z4-z5+z6+z7)/8.0*t_p + (-z0+z1-z2+z3+z4-z5+z6-z7)/8.0*r_p*t_p;
+        // double dzdt = (-z0-z1-z2-z3+z4+z5+z6+z7)/8.0 + (z0+z1-z2-z3-z4-z5+z6+z7)/8.0*s_p + (z0-z1-z2+z3-z4+z5+z6-z7)/8.0*r_p + (-z0+z1-z2+z3+z4-z5+z6-z7)/8.0*r_p*s_p;
+
+        //std::cout << "dxdr = " << dxdr << std::endl;
+        //std::cout << "dxds = " << dxds << std::endl;
+        //std::cout << "dxdt = " << dxdt << std::endl;
+        //std::cout << "dydr = " << dydr << std::endl;
+        //std::cout << "dyds = " << dyds << std::endl;
+        //std::cout << "dydt = " << dydt << std::endl;
+        //std::cout << "dzdr = " << dzdr << std::endl;
+        //std::cout << "dzds = " << dzds << std::endl;
+        //std::cout << "dzdt = " << dzdt << std::endl;
+
+
+
+        det_J = dzdt*(dxdr*dyds-dxds*dydr)-dzds*(dxdt*dydr-dxdr*dydt)+dzdr*(dxds*dydt-dxdt*dyds);
+
+        //std::cout << "dxdr*dyds-dxds*dydr = " << dxdr*dyds-dxds*dydr << std::endl;
+        drdx = (dyds*dzdt-dydt*dzds)/det_J;
+        drdy = -(dxds*dzdt-dxdt*dzds)/det_J;
+        drdz = (dxds*dydt-dxdt*dyds)/det_J;
+        dsdx = -(dydr*dzdt-dxdt*dydr)/det_J;
+        dsdy = (dxdr*dzdt-dxdt*dzdr)/det_J;
+        dsdz = -(dxdr*dydt-dxdt*dydr)/det_J;
+        dtdx = (dydr*dzds-dyds*dzdr)/det_J;
+        dtdy = -(dxdr*dzds-dxds*dzdr)/det_J;
+        dtdz = (dxdr*dyds-dxds*dydr)/det_J;
+        //std::cout << "det_Jacobian = " << det_J << std::endl;
+}*/
 /*--------------------------------------------------------------------------*/
 /*void Calculate_Jacobian_Cuboid(const Cuboid &Element, const std::vector<VertexCoordinates3D> &List_Of_Vertices, const double &r_p, const double &s_p, const double &t_p, double &det_J, double &drdx, double &drdy, double &drdz, double &dsdx, double &dsdy, double &dsdz, double &dtdx, double &dtdy, double &dtdz, double &x, double &y, double &z)
 {

@@ -73,6 +73,8 @@ void Connect_3D(const Mat &EToV, const unsigned int &Number_Of_Elements, const u
 /*--------------------------------------------------------------------------*/
 //void create_ListInternalBoundaries(const unsigned int &Number_Of_Elements, Mat &EToE, Mat &EToF, std::vector<InternalBoundariesCuboid> &List_Of_Boundaries);
 /*--------------------------------------------------------------------------*/
+void Calculate_CuboidFaceNormals(const std::vector<std::unique_ptr<Element>> &List_Of_Elements, std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices);
+/*--------------------------------------------------------------------------*/
 void create_ListInternalBoundaries(const unsigned int &Number_Of_Elements, Mat &EToE, Mat &EToF, std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries);
 /*--------------------------------------------------------------------------*/
 void Calculate_Jacobian_Square(std::vector<Squares2D> &List_Of_Elements, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices);

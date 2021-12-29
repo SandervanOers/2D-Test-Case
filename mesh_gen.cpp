@@ -1330,14 +1330,13 @@ void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::
     }
 }
 /*--------------------------------------------------------------------------*/
-/*void Calculate_CuboidFaceNormals(const std::vector<Cuboid> &List_Of_Elements, std::vector<InternalBoundariesCuboid> &List_Of_Boundaries, const std::vector<VertexCoordinates3D> &List_Of_Vertices)
+void Calculate_CuboidFaceNormals(const std::vector<std::unique_ptr<Element>> &List_Of_Elements, std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices)
 {
     for(auto f = List_Of_Boundaries.begin(); f < List_Of_Boundaries.end(); f++)
     {
-        //std::cout << std::endl;
-        int left = (*f).getLeftElementID();
-        int left_face = (*f).get_Type_Left();
-        int right = (*f).getRightElementID();
+        int left = (*f)->getLeftElementID();
+        int left_face = (*f)->getTypeLeft();
+        int right = (*f)->getRightElementID();
 
         double x1, x2, x3, y1, y2, y3, z1, z2, z3;
         x1 = x2 = x3 = y1 = y2 = y3 = z1 = z2 = z3 = 0.0;
@@ -1345,70 +1344,70 @@ void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::
         switch(left_face)
         {
             case 0:
-                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getxCoordinate();
-                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getyCoordinate();
-                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getzCoordinate();
-                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getxCoordinate();
-                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getyCoordinate();
-                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getzCoordinate();
-                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getxCoordinate();
-                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getyCoordinate();
-                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getzCoordinate();
+                x1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V1()]->getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V1()]->getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V1()]->getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V2()]->getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V2()]->getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V2()]->getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V3()]->getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V3()]->getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V3()]->getzCoordinate();
                 break;
             case 1:
-                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getxCoordinate();
-                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getyCoordinate();
-                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getzCoordinate();
-                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getxCoordinate();
-                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getyCoordinate();
-                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getzCoordinate();
-                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getxCoordinate();
-                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getyCoordinate();
-                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getzCoordinate();
+                x1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V5()]->getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V5()]->getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V5()]->getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V6()]->getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V6()]->getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V6()]->getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V7()]->getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V7()]->getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V7()]->getzCoordinate();
                 break;
             case 2:
-                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getxCoordinate();
-                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getyCoordinate();
-                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getzCoordinate();
-                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getxCoordinate();
-                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getyCoordinate();
-                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V5()].getzCoordinate();
-                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getxCoordinate();
-                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getyCoordinate();
-                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V6()].getzCoordinate();
+                x1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V1()]->getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V1()]->getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V1()]->getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V5()]->getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V5()]->getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V5()]->getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V6()]->getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V6()]->getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V6()]->getzCoordinate();
                 break;
             case 3:
-                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getxCoordinate();
-                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getyCoordinate();
-                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getzCoordinate();
-                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getxCoordinate();
-                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getyCoordinate();
-                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getzCoordinate();
-                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getxCoordinate();
-                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getyCoordinate();
-                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getzCoordinate();
+                x1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V4()]->getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V4()]->getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V4()]->getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V8()]->getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V8()]->getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V8()]->getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V7()]->getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V7()]->getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V7()]->getzCoordinate();
                 break;
             case 4:
-                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getxCoordinate();
-                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getyCoordinate();
-                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V1()].getzCoordinate();
-                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getxCoordinate();
-                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getyCoordinate();
-                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V4()].getzCoordinate();
-                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getxCoordinate();
-                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getyCoordinate();
-                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V8()].getzCoordinate();
+                x1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V1()]->getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V1()]->getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V1()]->getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V4()]->getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V4()]->getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V4()]->getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V8()]->getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V8()]->getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V8()]->getzCoordinate();
                 break;
             case 5:
-                x1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getxCoordinate();
-                y1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getyCoordinate();
-                z1 = List_Of_Vertices[List_Of_Elements[left].getVertex_V2()].getzCoordinate();
-                x2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getxCoordinate();
-                y2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getyCoordinate();
-                z2 = List_Of_Vertices[List_Of_Elements[left].getVertex_V3()].getzCoordinate();
-                x3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getxCoordinate();
-                y3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getyCoordinate();
-                z3 = List_Of_Vertices[List_Of_Elements[left].getVertex_V7()].getzCoordinate();
+                x1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V2()]->getxCoordinate();
+                y1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V2()]->getyCoordinate();
+                z1 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V2()]->getzCoordinate();
+                x2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V3()]->getxCoordinate();
+                y2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V3()]->getyCoordinate();
+                z2 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V3()]->getzCoordinate();
+                x3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V7()]->getxCoordinate();
+                y3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V7()]->getyCoordinate();
+                z3 = List_Of_Vertices[List_Of_Elements[left]->getVertex_V7()]->getzCoordinate();
                 break;
             default:
                 std::cout << "Something went wrong in the calculation of the normals" << std::endl;
@@ -1434,34 +1433,15 @@ void Calculate_Area_Square(std::vector<Squares2D> &List_Of_Elements, const std::
         //std::cout << "Boundary ID = " << (*f).getID() << ". Left El = " << left << ", Right El = " << right << ", left face = " << left_face << std::endl;
         //std::cout << nx << " " << ny << " " << nz << std::endl;
 
-        //double Length = sqrt(dx*dx+dy*dy);
         double Area = 2.0*2.0;
         double detJacobian = length_n/Area;
         std::cout << "detJacobian = " << detJacobian << std::endl;
-        (*f).setJacobian(detJacobian);
-        (*f).set_nx(nx);
-        (*f).set_ny(ny);
-        (*f).set_nz(nz);
-
-        /*
-        double dx = x[1]-x[0];
-        double dy = y[1]-y[0];
-        double Length = sqrt(dx*dx+dy*dy);
-        double ReferenceLength = 2.0;
-        double Jacobian = Length/ReferenceLength; // Sign Boundary Jacobian. Can this be negative?
-        (*f).setJacobian(Jacobian);
-        //(*f).setJacobian(Length);
-        (*f).set_nx(dy/Length);
-        (*f).set_ny(-dx/Length);
-
-        std::cout << "Boundary ID = " << (*f).getID() << ". Left El = " << left << ", Right El = " << right << std::endl;
-        std::cout << "x[1] = " << x[1] << ", x[0] = " << x[0] << "y[1] = " << y[1] << ", y[0] = " << y[0] << std::endl;
-        std::cout << "J = " << Jacobian << ". nx = " << dy/Length << ", ny = " << -dx/Length << std::endl;
-        std::cout << "Length = " << Length << std::endl;
-        * /
-
+        (*f)->setJacobian(detJacobian);
+        (*f)->set_nx(nx);
+        (*f)->set_ny(ny);
+        (*f)->set_nz(nz);
     }
-}*/
+}
 /*--------------------------------------------------------------------------*/
 void Calculate_Jacobian_Boundaries_Square(const std::vector<Squares2D> &List_Of_Elements, std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries, const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices)
 {

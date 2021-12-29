@@ -144,10 +144,13 @@ MatDestroy(&EToV);
 
 print(List_Of_Boundaries);
 
-
 set_Order_Polynomials_Uniform(List_Of_Elements, N_Petsc, N_Petsc, N_Petsc);
 set_theta_Uniform(List_Of_Boundaries, theta);
 set_Node_Coordinates_Uniform(List_Of_Elements, List_Of_Vertices, N_Petsc, N_Petsc, N_Petsc);
+Calculate_CuboidFaceNormals(List_Of_Elements, List_Of_Boundaries, List_Of_Vertices);
+
+
+
 unsigned int N_Nodes = get_Number_Of_Nodes(List_Of_Elements);
 std::cout << "Total Number of Nodes = " << N_Nodes << std::endl;
 unsigned int N_Elements = List_Of_Elements.size();
