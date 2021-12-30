@@ -1245,7 +1245,7 @@ void set_Node_Coordinates_Uniform(std::vector<std::unique_ptr<Element>> &List_Of
                 {
                     (*i)->set_node_on_face0(k);
                 }
-                else if (abs(t_p[k]-1.0) < NODETOL || Nz == 0)
+                if (abs(t_p[k]-1.0) < NODETOL || Nz == 0)
                 {
                     (*i)->set_node_on_face1(k);
                 }
@@ -1253,15 +1253,15 @@ void set_Node_Coordinates_Uniform(std::vector<std::unique_ptr<Element>> &List_Of
                 {
                     (*i)->set_node_on_face2(k);
                 }
-                else if (abs(s_p[k]-1.0) < NODETOL || Ny == 0)
+                if (abs(s_p[k]-1.0) < NODETOL || Ny == 0)
                 {
                     (*i)->set_node_on_face3(k);
                 }
-                if (abs(r_p[k]+1.0) < NODETOL || Nz == 0)
+                if (abs(r_p[k]+1.0) < NODETOL || Nx == 0)
                 {
                     (*i)->set_node_on_face4(k);
                 }
-                else if (abs(r_p[k]-1.0) < NODETOL || Nz == 0)
+                if (abs(r_p[k]-1.0) < NODETOL || Nx == 0)
                 {
                     (*i)->set_node_on_face5(k);
                 }

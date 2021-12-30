@@ -60,8 +60,8 @@ class Boundary
         double nz;
         int ID_Left_Element;
         int ID_Right_Element;
-        unsigned int Type_Left;  // 1 2 3 4 5
-        unsigned int Type_Right; // 1 2 3 4 6
+        unsigned int Type_Left;  // 0 1 2 3 4 5
+        unsigned int Type_Right; // 0 1 2 3 4 5
         double theta;
         double Jacobian;
         Boundary(unsigned int IDg, unsigned int DIMg, int ID_El_L, int ID_El_R, int Type_L, int Type_R);

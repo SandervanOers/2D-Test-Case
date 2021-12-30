@@ -125,24 +125,23 @@ load_msh_mesh(mesh_name, EToV, List_Of_Vertices, List_Of_Elements, element_num, 
 
 
 
-print(List_Of_Vertices);
+//print(List_Of_Vertices);
 
-std::cout << "EToV = " << std::endl;
-MatView(EToV, viewer);
-
+//std::cout << "EToV = " << std::endl;
+//
 Mat EToE, EToF;
 Connect_3D(EToV, element_num, node_num, EToE, EToF, List_Of_Boundaries);
-std::cout << "EToE = " << std::endl;
-MatView(EToE, viewer_dense);
-std::cout << "EToF = " << std::endl;
-MatView(EToF, viewer_dense);
+//std::cout << "EToE = " << std::endl;
+//MatView(EToE, viewer_dense);
+//std::cout << "EToF = " << std::endl;
+//MatView(EToF, viewer_dense);
 MatDestroy(&EToE);
 MatDestroy(&EToF);
 MatDestroy(&EToV);
 //VecDestroy(&VX);
 //VecDestroy(&VY);
 
-print(List_Of_Boundaries);
+//print(List_Of_Boundaries);
 
 set_Order_Polynomials_Uniform(List_Of_Elements, N_Petsc, N_Petsc, N_Petsc);
 set_theta_Uniform(List_Of_Boundaries, theta);

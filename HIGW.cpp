@@ -395,7 +395,7 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
     double Np = (N+1)*(N+1)*(N+1);
     //Mat Ex, ExT, Ey, EyT;
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 3*N_Nodes, N_Nodes, 9*Np, NULL, &E);   //number of possible nonzero blocks are 9: element and his 8 neighbours (3D)
-    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, 3*N_Nodes, 3*5*Np, NULL, &ET);
+    MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, 3*N_Nodes, 3*9*Np, NULL, &ET);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 3*N_Nodes, 3*N_Nodes, 3*Np, NULL, &invM);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, N_Nodes, N_Nodes, 3*Np, NULL, &invM_small);
     MatCreateSeqAIJ(PETSC_COMM_WORLD, 3*N_Nodes, 3*N_Nodes, 3*Np, NULL, &M1);
@@ -443,7 +443,7 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
         VecGetArray(Weights, &w);
         VecGetArray(QuadraturePoints, &qp);
         double rho0 = 1.0;
-
+        //std::cout << "Np = " << Np << ", Nx = " << Nx << std::endl;
         for (unsigned int k = 1; k <= Np; k++)
         {
             unsigned int alpha = (k-1)%(Nx+1);            // r
@@ -453,6 +453,7 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
 
             for (unsigned int l = 1; l <= Np; l++)
             {
+                //std::cout << "k = " << k << ", l = " << l << std::endl;
                 unsigned int gamma = (l-1)%(Nx+1);
                 unsigned int ll = (l-1)/(Nx+1);
                 unsigned int delta = (ll)%(Ny+1);
@@ -614,6 +615,7 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
             auto left = (*f)->getLeftElementID();
             auto right = (*f)->getRightElementID();
 
+            //std::cout << "left = " << left << std::endl;
             unsigned int posL = (*List_Of_Elements[left]).get_pos();
             unsigned int posR = (*List_Of_Elements[right]).get_pos();
 
@@ -626,9 +628,29 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
 
             unsigned int Order_Polynomials_left = std::max({Nx_left,Ny_left,Nz_left});
             unsigned int Order_Polynomials_right = std::max({Nx_right,Ny_right,Nz_right});
+            //std::cout << "Type_Boundary_Left = " << Type_Boundary_Left << std::endl;
+            //std::cout << "Type_Boundary_Right = " << Type_Boundary_Right << std::endl;
 
             std::vector<unsigned int> Node_Numbers_On_Boundary_Left = (*List_Of_Elements[left]).get_nodes_on_boundary(Type_Boundary_Left);
             std::vector<unsigned int> Node_Numbers_On_Boundary_Right = (*List_Of_Elements[right]).get_nodes_on_boundary(Type_Boundary_Right);
+
+            //std::cout << "Nodes face 0 = "<< std::endl;
+            //std::vector<unsigned int> values0 = (*List_Of_Elements[left]).get_node_on_face0();
+            //for (auto const& value : values0)
+            //{
+            //    std::cout << value << std::endl;
+            //}
+            //std::cout << std::endl;
+            //std::cout << std::endl;
+
+            //std::cout << "Nodes face 1 = "<< std::endl;
+            //std::vector<unsigned int> values1 = (*List_Of_Elements[left]).get_node_on_face1();
+            //for (auto const& value : values1)
+            //{
+            //    std::cout << value << std::endl;
+            //}
+            //std::cout << std::endl;
+            //std::cout << std::endl;
 
             /// Or use two different gaussian quadratures
             // unsigned int Order_Gaussian_Quadrature_L
@@ -636,90 +658,16 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
             unsigned int Order_Gaussian_Quadrature  = ceil(std::max(2*Order_Polynomials_left, 2*Order_Polynomials_right)+3+N_Q);
             Order_Gaussian_Quadrature = std::max((uint)10, Order_Gaussian_Quadrature);
 
-            //double J, drdx, drdy, dsdx, dsdy, x, y;
-            //Calculate_Jacobian_Quadrilateral((*e), List_Of_Vertices, qp[p], qp[q], J, drdx, drdy, dsdx, dsdy, x, y);
-
-/*
-
-        for (unsigned int k = 1; k <= Np; k++)
-        {
-            unsigned int alpha = (k-1)%(N+1);
-            unsigned int beta = (k-1)/(N+1);
-            for (unsigned int l = 1; l <= Np; l++)
-            {
-                unsigned int gamma = (l-1)%(N+1);
-                unsigned int delta = (l-1)/(N+1);
-                double value_ex = 0.0;
-                double value_ey = 0.0;
-                double value_m = 0.0;
-                double value_m1 = 0.0;
-                double value_n = 0.0;
-                double value_m2 = 0.0;
-                double value_n_deriv = 0.0;
-
-                double value_area = 0.0;
-                for (unsigned int p = 0; p <= Order_Gaussian_Quadrature; p++)
-                {
-                    double L_alpha = LagrangePolynomial(ri, qp[p], alpha);
-                    double L_gamma = LagrangePolynomial(ri, qp[p], gamma);
-                    for (unsigned int q = 0; q <= Order_Gaussian_Quadrature; q++)
-                    {
-                        double J, drdx, drdy, dsdx, dsdy, x, y;
-                        Calculate_Jacobian_Quadrilateral((*e), List_Of_Vertices, qp[p], qp[q], J, drdx, drdy, dsdx, dsdy, x, y);
-                        //std::cout << "J = " << J << ", drdx = " << drdx << ", drdy = " << drdy << ", dsdy = " << dsdy << ", dsdx = " << dsdx  << std::endl;
-                        //std::cout << "qp[p] = " << qp[p] << ", qp[q] = " << qp[q] << std::endl;
-                        //std::cout << "ID = " << (*e).getID() << ", x = " << x << ", y = " << y << ", rho_0 = " << rho_0_2D_system2(y, rho_0_Deriv) << std::endl;
-                        double N2 = N_2_2DEB(y, rho_0_Deriv, Fr);
-                        double rho0deriv = rho_0_deriv_2DEB(y, rho_0_Deriv, Fr); // = - rho0 * N2 / g
-
-                        double L_beta = LagrangePolynomial(ri, qp[q], beta);
-                        double L_delta = LagrangePolynomial(ri, qp[q], delta);
-
-                        value_m += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J;
-                        value_m1 += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J / rho0;
-                        //if (N2 == 0)
-                        //{
-                        //    std::cout << "N2 is zero " << std::endl;
-                        //}
-                        value_m2 += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J / rho0 / N2 /Fr/Fr;
-
-                        value_n += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J * rho0;
-                        value_n_deriv += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J * rho0deriv;
-                        value_area += w[p]*w[q]*J;
-
-                        // w_q drho_0(r_q)/dr l_i(r_q) l_j(r_q)
-                        //value_ey += w[p]*L_alpha*L_beta * w[q]*L_gamma*L_delta * J * rho0deriv;
-                        if (Np > 1)
-                        {
-                            double dL_gamma = LagrangePolynomialDeriv(ri, qp[p], gamma);
-                            double dL_delta = LagrangePolynomialDeriv(ri, qp[q], delta);
-                            //w_q rho_0(r_q) l_i(r_q) dl_j(r_q)/dx
-                            value_ex += w[p]*L_alpha*L_beta * w[q] * (drdx * dL_gamma * L_delta + dsdx * L_gamma* dL_delta) * J * rho0;
-                            //w_q rho_0(r_q) l_i(r_q) dl_j(r_q)/dy
-                            value_ey += w[p]*L_alpha*L_beta * w[q] * (drdy * dL_gamma * L_delta + dsdy * L_gamma* dL_delta) * J * rho0;
-                        }
-                    }
-                }
-                */
-            /*
-
-            // We should expand: from face i -> (Nx, Ny), (Nx, Nz) or (Ny, Nz)
-            unsigned int Order_Polynomials_left = (List_Of_Elements[left]).get_Order_Of_Polynomials_x();
-            unsigned int Order_Polynomials_right = (List_Of_Elements[right]).get_Order_Of_Polynomials_x();
-
-            //std::cout << "(Order_Polynomials_left, Order_Polynomials_right) = " << Order_Polynomials_left << ", " << Order_Polynomials_left << std::endl;
-            std::vector<unsigned int> Node_Numbers_On_Boundary_Left = List_Of_Elements[left].get_nodes_on_boundary(Type_Boundary_Left);
-            std::vector<unsigned int> Node_Numbers_On_Boundary_Right = List_Of_Elements[right].get_nodes_on_boundary(Type_Boundary_Right);
+            //std::cout << "Node Numbers = "<< std::endl;
+            //for (auto l = Node_Numbers_On_Boundary_Left.begin(); l < Node_Numbers_On_Boundary_Left.end(); l++)
+            //{
+            //  std::cout << (*l) << std::endl;
+            //}
+            //std::cout << std::endl;
+            //std::cout << std::endl;
 
             auto size_left = Node_Numbers_On_Boundary_Left.size();
             auto size_right = Node_Numbers_On_Boundary_Right.size();
-
-            /// Or use two different gaussian quadratures
-            // unsigned int Order_Gaussian_Quadrature_L
-            // unsigned int Order_Gaussian_Quadrature_R
-            unsigned int Order_Gaussian_Quadrature  = ceil(std::max(2*Order_Polynomials_left, 2*Order_Polynomials_right)+3+N_Q);
-            Order_Gaussian_Quadrature = 3;//std::max((uint)10, Order_Gaussian_Quadrature);
-            // Order_Gaussian_Quadrature+1 = Number of Points
 
             Vec Weights;
             Vec QuadraturePoints;
@@ -729,24 +677,35 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
             VecGetArray(QuadraturePoints, &qp_a);
             VecGetArray(Weights, &w_a);
 
-            Vec ri_x_left, ri_x_right, ri_y_left, ri_y_right;
+            Vec ri_x_left, ri_x_right, ri_y_left, ri_y_right, ri_z_left, ri_z_right;
             ri_x_left = JacobiGL(0, 0, Order_Polynomials_left);
             ri_y_left = JacobiGL(0, 0, Order_Polynomials_left);
+            ri_z_left = JacobiGL(0, 0, Order_Polynomials_left);
             ri_x_right = JacobiGL(0, 0, Order_Polynomials_right);
             ri_y_right = JacobiGL(0, 0, Order_Polynomials_right);
+            ri_z_right = JacobiGL(0, 0, Order_Polynomials_right);
+
+            //std::cout << "ri_y_left = "<< std::endl;
+            //VecView(ri_y_left, PETSC_VIEWER_STDOUT_SELF);
+
+            //std::cout << "size_left = " << size_left << std::endl;
+            //std::cout << "Order_Polynomials_left = " << Order_Polynomials_left << std::endl;
 
             double rho0 = 1.0;
-
             //std::cout << "det J = " << Jacobian << std::endl;
             // GLL
+            //std::cout << "GLL" << std::endl;
             for (unsigned int k = 1; k < size_left+1; k++)
             {
+                //std::cout << "k = " <<  k << std::endl;
                 unsigned int alpha = (k-1)%(Order_Polynomials_left+1);
                 unsigned int beta = (k-1)/(Order_Polynomials_left+1);
                 for (unsigned int l = 1; l < size_left+1; l++)
                 {
+                    //std::cout << "l = " <<  l << std::endl;
                     unsigned int gamma = (l-1)%(Order_Polynomials_left+1);
                     unsigned int delta = (l-1)/(Order_Polynomials_left+1);
+                    //std::cout << alpha << " " << beta << " " << gamma << " " << delta << std::endl;
                     // E Matrix
                     double value_e = 0.0;
                     //std::cout << alpha << " " << beta << " " << gamma << " " << delta << std::endl;
@@ -765,7 +724,7 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
                     }
                     unsigned int i = k - 1;
                     unsigned int j = l - 1;
-                    std::cout << value_e << " " << nx << " " << ny << " " << nz << std::endl;
+                    //std::cout << value_e << " " << nx << " " << ny << " " << nz << std::endl;
                     MatSetValue(E,  posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], nx*value_e, ADD_VALUES);
                     MatSetValue(ET, posL+Node_Numbers_On_Boundary_Left[j], posL+Node_Numbers_On_Boundary_Left[i], -nx*value_e, ADD_VALUES);
                     MatSetValue(E,  N_Nodes+posL+Node_Numbers_On_Boundary_Left[i], posL+Node_Numbers_On_Boundary_Left[j], ny*value_e, ADD_VALUES);
@@ -775,18 +734,21 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
 
                 }
             }
-            /*
+
             // GLR
-            for (unsigned int k = 1; k <= size_left+1; k++)
+            for (unsigned int k = 1; k < size_left+1; k++)
             {
+                //std::cout << "k = " <<  k << std::endl;
                 unsigned int alpha = (k-1)%(Order_Polynomials_left+1);
                 unsigned int beta = (k-1)/(Order_Polynomials_left+1);
-                for (unsigned int l = 1; l <= size_right+1; l++)
+                for (unsigned int l = 1; l < size_right+1; l++)
                 {
+                    //std::cout << "l = " <<  l << std::endl;
                     unsigned int gamma = (l-1)%(Order_Polynomials_right+1);
                     unsigned int delta = (l-1)/(Order_Polynomials_right+1);
                     // E Matrix
                     double value_e = 0.0;
+                    //std::cout << alpha << " " << beta << " " << gamma << " " << delta << std::endl;
                     for (unsigned int p = 0; p <= Order_Gaussian_Quadrature; p++)
                     {
                         double L_alpha = LagrangePolynomial(ri_x_left, qp_a[p], alpha);
@@ -810,14 +772,17 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
                 }
             }
             // GRL
-            for (unsigned int k = 1; k <= size_right+1; k++)
+            for (unsigned int k = 1; k < size_right+1; k++)
             {
+                //std::cout << "k = " <<  k << std::endl;
                 unsigned int alpha = (k-1)%(Order_Polynomials_right+1);
                 unsigned int beta = (k-1)/(Order_Polynomials_right+1);
-                for (unsigned int l = 1; l <= size_left+1; l++)
+                for (unsigned int l = 1; l < size_left+1; l++)
                 {
+                    //std::cout << "l = " <<  l << std::endl;
                     unsigned int gamma = (l-1)%(Order_Polynomials_left+1);
                     unsigned int delta = (l-1)/(Order_Polynomials_left+1);
+                    //std::cout << alpha << " " << beta << " " << gamma << " " << delta << std::endl;
                     // E Matrix
                     double value_e = 0.0;
                     for (unsigned int p = 0; p <= Order_Gaussian_Quadrature; p++)
@@ -842,14 +807,15 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
                 }
             }
             // GRR
-            for (unsigned int k = 1; k <= size_right+1; k++)
+            for (unsigned int k = 1; k < size_right+1; k++)
             {
                 unsigned int alpha = (k-1)%(Order_Polynomials_right+1);
                 unsigned int beta = (k-1)/(Order_Polynomials_right+1);
-                for (unsigned int l = 1; l <= size_right+1; l++)
+                for (unsigned int l = 1; l < size_right+1; l++)
                 {
                     unsigned int gamma = (l-1)%(Order_Polynomials_right+1);
                     unsigned int delta = (l-1)/(Order_Polynomials_right+1);
+                    //std::cout << alpha << " " << beta << " " << gamma << " " << delta << std::endl;
                     // E Matrix
                     double value_e = 0.0;
                     for (unsigned int p = 0; p <= Order_Gaussian_Quadrature; p++)
@@ -878,16 +844,18 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
 
             //std::cout << "qp = " << std::endl;
             //    VecView(QuadraturePoints, PETSC_VIEWER_STDOUT_SELF);
-            * /
+
             VecDestroy(&ri_x_left);
             VecDestroy(&ri_y_left);
+            VecDestroy(&ri_z_left);
             VecDestroy(&ri_x_right);
             VecDestroy(&ri_y_right);
+            VecDestroy(&ri_z_right);
             VecRestoreArray(QuadraturePoints, &qp_a);
             VecRestoreArray(Weights, &w_a);
             VecDestroy(&Weights);
             VecDestroy(&QuadraturePoints);
-            */
+
     }
     MatAssemblyBegin(E, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(E, MAT_FINAL_ASSEMBLY);

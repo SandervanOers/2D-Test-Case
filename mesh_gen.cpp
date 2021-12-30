@@ -731,6 +731,7 @@ void Connect_3D(const Mat &EToV, const unsigned int &Number_Of_Elements, const u
   }
   sortrows(spNodetoNode,0);
 
+  /*
   std::cout << "spNodetoNode sorted = " << std::endl;
   for ( const std::vector<unsigned int> &v : spNodetoNode )
   {
@@ -739,7 +740,7 @@ void Connect_3D(const Mat &EToV, const unsigned int &Number_Of_Elements, const u
           std::cout << x << " " ;
       }
       std::cout << std::endl;
-  }
+  }*/
 
   std::vector<unsigned int> indices;
   //std::cout << "indices = " << std::endl;
@@ -1429,13 +1430,13 @@ void Calculate_CuboidFaceNormals(const std::vector<std::unique_ptr<Element>> &Li
         ny = ny/length_n;
         nz = nz/length_n;
 
-        std::cout << "length_n = " << length_n << std::endl;
+        //std::cout << "length_n = " << length_n << std::endl;
         //std::cout << "Boundary ID = " << (*f).getID() << ". Left El = " << left << ", Right El = " << right << ", left face = " << left_face << std::endl;
         //std::cout << nx << " " << ny << " " << nz << std::endl;
 
         double Area = 2.0*2.0;
         double detJacobian = length_n/Area;
-        std::cout << "detJacobian = " << detJacobian << std::endl;
+        //std::cout << "detJacobian = " << detJacobian << std::endl;
         (*f)->setJacobian(detJacobian);
         (*f)->set_nx(nx);
         (*f)->set_ny(ny);
