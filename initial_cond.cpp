@@ -679,3 +679,63 @@ extern double N_2_2DEB_Bucket(const double &z, const double &beta, const double 
     return 1.0;
 }
 /*--------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
+// EB - Exact Solution 3D
+/*--------------------------------------------------------------------------*/
+extern double calculate_sigma_3DEB(const double &beta, const unsigned int &kx, const unsigned int &ky, const unsigned int &kz, const double &Fr)
+{
+    double kxd = (double)kx;
+    double kyd = (double)ky;
+    double kzd = (double)kz;
+    double N2 = N_2_3DEB(0.0, beta, Fr);
+    return sqrt(Fr*Fr*N2*(kxd*kxd+kyd*kyd)/(4.0*PETSC_PI*PETSC_PI*(kxd*kxd+kyd*kyd+kzd*kzd)));
+}
+extern double Exact_Solution_mx_3DEB(const double &x, const double &y, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &ky, const unsigned int &kz, const double &Fr)
+{
+    double kxd = (double)kx;
+    double kyd = (double)ky;
+    double kzd = (double)kz;
+    return -kzd*kxd/(kxd*kxd+kyd*kyd)*sin(2.0*PETSC_PI*kxd*x)*cos(2.0*PETSC_PI*kyd*y)*cos(2.0*PETSC_PI*kzd*z)*sin(2.0*PETSC_PI*sigma*t+0.1);
+}
+extern double Exact_Solution_my_3DEB(const double &x, const double &y, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &ky, const unsigned int &kz, const double &Fr)
+{
+    double kxd = (double)kx;
+    double kyd = (double)ky;
+    double kzd = (double)kz;
+    return -kzd*kyd/(kxd*kxd+kyd*kyd)*cos(2.0*PETSC_PI*kxd*x)*sin(2.0*PETSC_PI*kyd*y)*cos(2.0*PETSC_PI*kzd*z)*sin(2.0*PETSC_PI*sigma*t+0.1);
+}
+extern double Exact_Solution_mz_3DEB(const double &x, const double &y, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &ky, const unsigned int &kz, const double &Fr)
+{
+    double kxd = (double)kx;
+    double kyd = (double)ky;
+    double kzd = (double)kz;
+    return cos(2.0*PETSC_PI*kxd*x)*cos(2.0*PETSC_PI*kyd*y)*sin(2.0*PETSC_PI*kzd*z)*sin(2.0*PETSC_PI*sigma*t+0.1);
+}
+extern double Exact_Solution_r_3DEB(const double &x, const double &y, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &ky, const unsigned int &kz, const double &Fr)
+{
+    double kxd = (double)kx;
+    double kyd = (double)ky;
+    double kzd = (double)kz;
+    double N2 = N_2_3DEB(0.0, beta, Fr);
+    return N2/(sigma)*cos(2.0*PETSC_PI*kxd*x)*cos(2.0*PETSC_PI*kyd*y)*sin(2.0*PETSC_PI*kzd*z)*cos(2.0*PETSC_PI*sigma*t+0.1);
+}
+extern double Exact_Solution_p_3DEB(const double &x, const double &y, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &ky, const unsigned int &kz, const double &Fr)
+{
+    double kxd = (double)kx;
+    double kyd = (double)ky;
+    double kzd = (double)kz;
+    return kzd*sigma/(kxd*kxd+kyd*kyd)*cos(2.0*PETSC_PI*kxd*x)*cos(2.0*PETSC_PI*kyd*y)*cos(2.0*PETSC_PI*kzd*z)*cos(2.0*PETSC_PI*sigma*t+0.1);
+}
+extern double rho_0_3DEB(const double &z, const double &beta, const double &Fr)
+{
+    return 1.0;
+}
+extern double rho_0_deriv_3DEB(const double &z, const double &beta, const double &Fr)
+{
+    return Fr*Fr*(-beta);
+}
+extern double N_2_3DEB(const double &z, const double &beta, const double &Fr)
+{
+    return beta;
+}
+/*--------------------------------------------------------------------------*/

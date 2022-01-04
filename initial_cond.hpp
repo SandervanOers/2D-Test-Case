@@ -193,7 +193,18 @@ extern double rho_0_2DEB_Bucket(const double &z, const double &beta, const doubl
 extern double rho_0_deriv_2DEB_Bucket(const double &z, const double &beta, const double &Fr);
 extern double N_2_2DEB_Bucket(const double &z, const double &beta, const double &Fr);
 /*--------------------------------------------------------------------------*/
-
+// EB - Exact Solution 3D
+/*--------------------------------------------------------------------------*/
+extern double calculate_sigma_3DEB(const double &beta, const unsigned int &kx, const unsigned int &ky, const unsigned int &kz, const double &Fr);
+extern double Exact_Solution_mx_3DEB(const double &x, const double &y, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &ky, const unsigned int &kz, const double &Fr);
+extern double Exact_Solution_my_3DEB(const double &x, const double &y, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &ky, const unsigned int &kz, const double &Fr);
+extern double Exact_Solution_mz_3DEB(const double &x, const double &y, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &ky, const unsigned int &kz, const double &Fr);
+extern double Exact_Solution_r_3DEB(const double &x, const double &y, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &ky, const unsigned int &kz, const double &Fr);
+extern double Exact_Solution_p_3DEB(const double &x, const double &y, const double &z, const double &t, const double &beta, const double &sigma, const unsigned int &kx, const unsigned int &ky, const unsigned int &kz, const double &Fr);
+extern double rho_0_3DEB(const double &z, const double &beta, const double &Fr);
+extern double rho_0_deriv_3DEB(const double &z, const double &beta, const double &Fr);
+extern double N_2_3DEB(const double &z, const double &beta, const double &Fr);
+/*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/
 
 #endif

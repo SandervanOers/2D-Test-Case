@@ -25,16 +25,16 @@ auto t1 = std::chrono::high_resolution_clock::now();
 PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=10, Method=1; // Method is meant for time integrator: Midpoint vs Stormer-Verlet vs Third Order
 PetscInt   Number_Of_Periods = 64; // 48 periods forced, 16 decay
 PetscInt   kmode=1;
-PetscScalar N2 = 0.0;//(0.37*5.7558)*(0.37*5.7558);
+PetscScalar N2 = 1.0;//(0.37*5.7558)*(0.37*5.7558);
 PetscScalar   theta = 0.5;
 PetscInt    N_Petsc = 0, N_Q=0;
-PetscScalar nu = 1;
-PetscInt    Dimensions = 2;
-PetscScalar F0 = 3.4*pow(10.0,-6.0);
+PetscScalar nu = 0;//1;
+PetscInt    Dimensions = 3;
+PetscScalar F0 = 0.0;//3.4*pow(10.0,-6.0);
 PetscScalar omega = 0.5*std::sqrt(2.0);//0.16*5.7558;
 PetscScalar Fr = 1;
 PetscScalar Re = 1.8*pow(10.0,4.0);
-PetscScalar gamma = std::atan2(1,3);// PETSC_PI/20.0;
+PetscScalar gamma = 0.0;//std::atan2(1,3);// PETSC_PI/20.0;
 /*// Read in options from command line
 PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=100, Method=1;
 PetscInt   Number_Of_Periods = 64;//30,
@@ -90,12 +90,11 @@ double Eold = 0;
 
     Eold = 0.0;
 //int Number_Of_Polynomial_Steps = N_Petsc    ;
-//for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < 8-Number_Of_Polynomial_Steps; Number_Of_Spatial_Steps++) //std::max(4,7-Number_Of_Polynomial_Steps)
-//{
+for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < 4; Number_Of_Spatial_Steps++) //std::max(4,7-Number_Of_Polynomial_Steps)
+{
 
-int Number_Of_Spatial_Steps = 0;
 auto t0 = std::chrono::high_resolution_clock::now();
-//Number_Of_Elements_Petsc = pow(2.0, (double)Number_Of_Spatial_Steps);
+Number_Of_Elements_Petsc = pow(2.0, (double)Number_Of_Spatial_Steps);
 //N_Petsc = Number_Of_Polynomial_Steps;
 
 std::string mesh_name;
@@ -155,13 +154,34 @@ std::cout << "Total Number of Nodes = " << N_Nodes << std::endl;
 unsigned int N_Elements = List_Of_Elements.size();
 std::cout << "Total Number of Elements = " << N_Elements << std::endl;
 
+PetscInt kxmode, kymode, kzmode;
+kxmode = 1;
+kymode = 1;
+kzmode = 1;
+double rho_0_Deriv = N2;
+PetscScalar   sigma;
+sigma = calculate_sigma_3DEB(rho_0_Deriv, kxmode, kymode, kzmode, Fr);
+PetscPrintf(PETSC_COMM_SELF,"Frequency %6.4e\n",(double)sigma);
 
-PetscScalar DeltaT = 2.0*PETSC_PI/(double)Number_Of_TimeSteps_In_One_Period;
+PetscScalar DeltaT = 1.0/(double)Number_Of_TimeSteps_In_One_Period/sigma;
+//PetscScalar DeltaT = 2.0*PETSC_PI/(double)Number_Of_TimeSteps_In_One_Period;
 unsigned int Number_Of_TimeSteps = Number_Of_TimeSteps_In_One_Period*Number_Of_Periods;
 std::cout << "Number_Of_TimeSteps_In_One_Period  =  " << Number_Of_TimeSteps_In_One_Period << " => Delta T = " << DeltaT << std::endl;
 
 Mat E, ET, invM, M1, M2, M2_small, NMat, NDerivMat, invM_small, M1_small;
 create_Matrices_Cuboids(List_Of_Vertices, List_Of_Boundaries, List_Of_Elements, N_Nodes, N_Petsc, N_Petsc, N_Petsc, N_Q, Fr, E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat);
+
+Vec Forcing_a;
+ComputeForcing(List_Of_Elements, N_Nodes, Forcing_a);
+
+Mat A, B;
+Mat DIV;
+//double Re = 100000;//pow(10,5);//3.25*100000;
+// Send List of Elements -> Get Np per Element for preallocation
+create_WA_System_Forced_MidPoint3D(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, Forcing_a, N_Nodes, N_Petsc, DeltaT, nu, A, B, DIV, Re, Fr, gamma);
+//create_EB_System_MidPoint(E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat, N_Nodes, N_Petsc, DeltaT, 0.0, A, B, DIV, Re, Fr);
+
+VecDestroy(&Forcing_a);
 
 MatDestroy(&E);
 MatDestroy(&ET);
@@ -172,13 +192,88 @@ MatDestroy(&NMat);
 MatDestroy(&NDerivMat);
 
 
+Vec Initial_Condition;
+compute_InitialCondition_3DEB(List_Of_Elements, N_Nodes, rho_0_Deriv, Fr, kxmode, kymode, kzmode, Initial_Condition, Number_Of_Elements_Petsc, Number_Of_TimeSteps_In_One_Period, N_Petsc, DIV);
+
+//std::cout << "IC = " << std::endl;
+//VecView(Initial_Condition, PETSC_VIEWER_STDOUT_SELF);
 
 
+Vec Sol;
+Simulate_WA_Forced3D(A, B, M1_small, M2_small, DIV, Initial_Condition, List_Of_Elements, N_Nodes, Number_Of_TimeSteps, DeltaT, Sol, 5, F0, omega);
 
+MatDestroy(&A);
+MatDestroy(&B);
+MatDestroy(&DIV);
 
+double Error = calculate_Error3D_FV(Initial_Condition, Sol, 2, 1.0/sqrt(Number_Of_Elements_Petsc), 1.0/sqrt(Number_Of_Elements_Petsc), 1.0/sqrt(Number_Of_Elements_Petsc), 1);
+
+    char szFileName[255] = {0};
+    std::string store_solution = "Solution/Solutions/Sol_n"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+"N"+std::to_string(N_Petsc)+"Ts"+std::to_string(Number_Of_TimeSteps_In_One_Period)+".txt";
+    std::string store_IC       = "Solution/Solutions/IC_n"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+"N"+std::to_string(N_Petsc)+"Ts"+std::to_string(Number_Of_TimeSteps_In_One_Period)+".txt";
+    const char *store_solution_char = store_solution.c_str();
+    const char *store_IC_char = store_IC.c_str();
+    PetscViewer viewer2;
+    sprintf(szFileName, store_solution_char);
+    PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer2);
+    VecView(Sol, viewer2);
+    PetscViewerDestroy(&viewer2);
+    PetscViewer viewer3;
+    sprintf(szFileName, store_IC_char);
+    PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer3);
+    VecView(Initial_Condition, viewer3);
+    PetscViewerDestroy(&viewer3);
+
+VecDestroy(&Initial_Condition);
+
+VecDestroy(&Sol);
 MatDestroy(&M1);
 MatDestroy(&M1_small);
 MatDestroy(&M2_small);
+
+auto t2 = std::chrono::high_resolution_clock::now();
+
+double Enew = Error;
+std::vector<double> L2Error;
+L2Error.push_back(Number_Of_Elements_Petsc);
+L2Error.push_back(N_Petsc);
+L2Error.push_back(Enew);
+double Order = 0.0;
+if (Number_Of_Spatial_Steps > 0)
+{
+    Order = log(Eold/Enew)/log(2);
+}
+L2Error.push_back(Order);
+L2Error.push_back(std::chrono::duration_cast<std::chrono::seconds>(t2-t0).count());
+L2Errors.push_back(L2Error);
+
+//FILE *g = fopen("L2Errors.txt", "a");
+//fprintf(g, "%d \t %d \t %1.16e \t %1.1e \t %1.1e \n", Number_Of_Elements, N, Enew, Order, std::chrono::duration_cast<std::chrono::milliseconds>(t2-t0).count()/1000.0);
+//fclose(g);
+
+Eold = Enew;
+std::cout << "**********************************************************"<< std::endl;
+std::cout << "L2 Errors " << std::endl;
+std::cout << "   h \t N \t \t Er \t Order \t t " << std::endl;
+for (auto i = L2Errors.begin(); i != L2Errors.end(); ++i)
+{
+    std::cout << std::setw(5) << std::setprecision(4) << (*i)[0] << "    " << std::setw(4) << (*i)[1] << "    " << std::setw(10) << std::setprecision(4) << (*i)[2] << "    " << std::setw(5) << std::setprecision(2) << (*i)[3] << "    " << std::setw(5) << std::setprecision(4) << (*i)[4] << std::endl;
+}
+std::cout << "**********************************************************"<< std::endl;
+}
+//}
+
+std::cout << "**********************************************************"<< std::endl;
+std::cout << "L2 Errors " << std::endl;
+std::cout << "   h \t N \t \t Er \t Order \t t " << std::endl;
+for (auto i = L2Errors.begin(); i != L2Errors.end(); ++i)
+{
+    std::cout << std::setw(5) << std::setprecision(4) << (*i)[0] << "    " << std::setw(4) << (*i)[1] << "    " << std::setw(10) << std::setprecision(4) << (*i)[2] << "    " << std::setw(5) << std::setprecision(2) << (*i)[3] << "    " << std::setw(5) << std::setprecision(4) << (*i)[4] << std::endl;
+}
+std::cout << "**********************************************************"<< std::endl;
+
+
+
 auto t3 = std::chrono::high_resolution_clock::now();
 
 
