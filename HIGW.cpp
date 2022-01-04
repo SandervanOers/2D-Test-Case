@@ -388,7 +388,7 @@ void create_Matrices_Quads_EB(const std::vector<std::unique_ptr<Vertex>> &List_O
 
 }
 /*--------------------------------------------------------------------------*/
-extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries, const std::vector<std::unique_ptr<Element>> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Nx_e, const unsigned int &Ny_e, const unsigned int &Nz_e, const unsigned int &N_Q, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
+extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &List_Of_Vertices, const std::vector<std::unique_ptr<Boundary>> &List_Of_Boundaries, const std::vector<std::unique_ptr<Element>> &List_Of_Elements, const unsigned int &N_Nodes, const unsigned int &Nx_e, const unsigned int &Ny_e, const unsigned int &Nz_e, const unsigned int &N_Q, const double &rho_0_Deriv, const double &Fr, Mat &E, Mat &ET, Mat &invM, Mat &invM_small, Mat &M1, Mat &M1_small, Mat &M2, Mat &M2_small, Mat &NMat, Mat &NDerivMat)
 {
     // estimate the number of nonzeros
     double N = std::max({Nx_e,Ny_e,Nz_e});
@@ -484,8 +484,8 @@ extern void create_Matrices_Cuboids(const std::vector<std::unique_ptr<Vertex>> &
                             double J, drdx, drdy, drdz, dsdx, dsdy, dsdz, dtdx, dtdy, dtdz, x, y, z;
                             Calculate_Jacobian_Cuboid((*e), List_Of_Vertices, qp[p], qp[q], qp[r], J, drdx, drdy, drdz, dsdx, dsdy, dsdz, dtdx, dtdy, dtdz, x, y, z);
 
-                            double N2 = 1;          // ref to calculation based on (x,y,z)
-                            double rho0deriv = -1;  // ref to calculation based on (x,y,z)
+                            double N2 = N_2_3DEB(z, rho_0_Deriv, Fr);          // ref to calculation based on (x,y,z)
+                            double rho0deriv = rho_0_deriv_3DEB(z, rho_0_Deriv, Fr);  // ref to calculation based on (x,y,z)
 
                             value_m  += w[p]*L_alpha*L_gamma * w[q]*L_beta*L_delta * w[r]*L_zeta*L_epsilon * J;
                             value_m1 += w[p]*L_alpha*L_gamma * w[q]*L_beta*L_delta * w[r]*L_zeta*L_epsilon * J / rho0;
@@ -4629,10 +4629,11 @@ extern void Simulate_WA_Forced3D(const Mat &A, const Mat &B, const Mat &M1_small
     for (unsigned int k=0;k<N_Nodes; k++)
         ix[k] = 4*N_Nodes+k;
 
+    std::cout << "Number_Of_TimeSteps = " << Number_Of_TimeSteps << std::endl;
 
     for (unsigned int t = 0; t < Number_Of_TimeSteps; t++)
     {
-        time = (t)*DeltaT;//(t+1)*DeltaT;
+        time = (t+1.0)*DeltaT;//check timing for forcing
         fprintf(f, "%1.16e \t %1.16e \t %1.16e\n", time, H1, M1);
 
 
@@ -4640,7 +4641,7 @@ extern void Simulate_WA_Forced3D(const Mat &A, const Mat &B, const Mat &M1_small
         // Forcing at half time Step
         PetscScalar Forcing = 0.0;
         if (t < (3.0/4.0*Number_Of_TimeSteps))
-            { Forcing = F0*sin(omega*(time+DeltaT/2.0));}
+            { Forcing = F0*sin(omega*(time-DeltaT/2.0));}
         PetscScalar Fx[N_Nodes];
         for (unsigned int k=0;k<N_Nodes; k++)
             {Fx[k] = Forcing;}

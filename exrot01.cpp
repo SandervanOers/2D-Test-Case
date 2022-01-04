@@ -22,8 +22,8 @@ PetscInitialize(&argc,&args,(char*)0,help);
 
 auto t1 = std::chrono::high_resolution_clock::now();
 // Read in options from command line
-PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=10, Method=1; // Method is meant for time integrator: Midpoint vs Stormer-Verlet vs Third Order
-PetscInt   Number_Of_Periods = 64; // 48 periods forced, 16 decay
+PetscInt   Number_Of_Elements_Petsc=2, Number_Of_TimeSteps_In_One_Period=100, Method=1; // Method is meant for time integrator: Midpoint vs Stormer-Verlet vs Third Order
+PetscInt   Number_Of_Periods = 1; // 48 periods forced, 16 decay
 PetscInt   kmode=1;
 PetscScalar N2 = 1.0;//(0.37*5.7558)*(0.37*5.7558);
 PetscScalar   theta = 0.5;
@@ -31,7 +31,7 @@ PetscInt    N_Petsc = 0, N_Q=0;
 PetscScalar nu = 0;//1;
 PetscInt    Dimensions = 3;
 PetscScalar F0 = 0.0;//3.4*pow(10.0,-6.0);
-PetscScalar omega = 0.5*std::sqrt(2.0);//0.16*5.7558;
+PetscScalar omega = 0.0;//0.5*std::sqrt(2.0);//0.16*5.7558;
 PetscScalar Fr = 1;
 PetscScalar Re = 1.8*pow(10.0,4.0);
 PetscScalar gamma = 0.0;//std::atan2(1,3);// PETSC_PI/20.0;
@@ -90,7 +90,7 @@ double Eold = 0;
 
     Eold = 0.0;
 //int Number_Of_Polynomial_Steps = N_Petsc    ;
-for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < 4; Number_Of_Spatial_Steps++) //std::max(4,7-Number_Of_Polynomial_Steps)
+for (int Number_Of_Spatial_Steps = 1; Number_Of_Spatial_Steps < 12; Number_Of_Spatial_Steps++) //std::max(4,7-Number_Of_Polynomial_Steps)
 {
 
 auto t0 = std::chrono::high_resolution_clock::now();
@@ -169,7 +169,7 @@ unsigned int Number_Of_TimeSteps = Number_Of_TimeSteps_In_One_Period*Number_Of_P
 std::cout << "Number_Of_TimeSteps_In_One_Period  =  " << Number_Of_TimeSteps_In_One_Period << " => Delta T = " << DeltaT << std::endl;
 
 Mat E, ET, invM, M1, M2, M2_small, NMat, NDerivMat, invM_small, M1_small;
-create_Matrices_Cuboids(List_Of_Vertices, List_Of_Boundaries, List_Of_Elements, N_Nodes, N_Petsc, N_Petsc, N_Petsc, N_Q, Fr, E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat);
+create_Matrices_Cuboids(List_Of_Vertices, List_Of_Boundaries, List_Of_Elements, N_Nodes, N_Petsc, N_Petsc, N_Petsc, N_Q, rho_0_Deriv, Fr, E, ET, invM, invM_small, M1, M1_small, M2, M2_small, NMat, NDerivMat);
 
 Vec Forcing_a;
 ComputeForcing(List_Of_Elements, N_Nodes, Forcing_a);
@@ -206,7 +206,7 @@ MatDestroy(&A);
 MatDestroy(&B);
 MatDestroy(&DIV);
 
-double Error = calculate_Error3D_FV(Initial_Condition, Sol, 2, 1.0/sqrt(Number_Of_Elements_Petsc), 1.0/sqrt(Number_Of_Elements_Petsc), 1.0/sqrt(Number_Of_Elements_Petsc), 1);
+double Error = calculate_Error3D_FV(Initial_Condition, Sol, 2, 1.0/(Number_Of_Elements_Petsc), 1.0/(Number_Of_Elements_Petsc), 1.0/(Number_Of_Elements_Petsc), 1);
 
     char szFileName[255] = {0};
     std::string store_solution = "Solution/Solutions/Sol_n"+std::to_string(Number_Of_Elements_Petsc)+"x"+std::to_string(Number_Of_Elements_Petsc)+"N"+std::to_string(N_Petsc)+"Ts"+std::to_string(Number_Of_TimeSteps_In_One_Period)+".txt";
@@ -223,6 +223,9 @@ double Error = calculate_Error3D_FV(Initial_Condition, Sol, 2, 1.0/sqrt(Number_O
     PetscViewerASCIIOpen(PETSC_COMM_WORLD, szFileName, &viewer3);
     VecView(Initial_Condition, viewer3);
     PetscViewerDestroy(&viewer3);
+
+    //VecView(Initial_Condition, viewer_dense);
+    //VecView(Sol, viewer_dense);
 
 VecDestroy(&Initial_Condition);
 
